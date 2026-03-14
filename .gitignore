@@ -1,0 +1,17 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+venv/
+env/
+.env
+
+# Database files
+*.db
+*.sqlite3
+
+# Test receipts and logs
+*.txt
+*.log
