@@ -680,6 +680,39 @@ def get_sale_items(sale_id: int) -> List[Dict]:
         return [dict(row) for row in cursor.fetchall()]
 
 
+def get_sale_with_items(sale_id: int) -> Optional[Dict]:
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT
+                s.id,
+                s.timestamp,
+                s.subtotal,
+                s.discount,
+                s.total,
+                s.status,
+                s.paid_amount,
+                s.balance_due,
+                s.payment_status,
+                u.username AS cashier,
+                c.name AS customer_name,
+                c.contact AS customer_contact
+            FROM sales s
+            LEFT JOIN users u ON u.id = s.cashier_id
+            LEFT JOIN customers c ON c.id = s.customer_id
+            WHERE s.id = ?
+            """,
+            (int(sale_id),),
+        )
+        sale = cursor.fetchone()
+        if not sale:
+            return None
+
+        items = get_sale_items(int(sale_id))
+        return {"sale": dict(sale), "items": items}
+
+
 def recall_held_sale(sale_id: int) -> Tuple[bool, Dict]:
     with get_connection() as conn:
         cursor = conn.cursor()

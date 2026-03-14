@@ -2,6 +2,7 @@ import customtkinter as ctk
 from tkinter import messagebox, simpledialog, ttk
 
 from database import queries
+from hardware.printer import generate_and_print_receipt
 
 
 class BillingView(ctk.CTkFrame):
@@ -624,6 +625,7 @@ class BillingView(ctk.CTkFrame):
             return
 
         if self.active_held_sale_id is not None:
+            sale_id = int(self.active_held_sale_id)
             success, result = queries.complete_held_sale(
                 sale_id=self.active_held_sale_id,
                 customer_id=customer_id,
@@ -631,7 +633,8 @@ class BillingView(ctk.CTkFrame):
                 payment_status=payment_mode,
             )
             if success:
-                messagebox.showinfo("Success", f"Held bill completed.\n{result}")
+                receipt_msg = self._generate_receipt_feedback(sale_id)
+                messagebox.showinfo("Success", f"Held bill completed.\n{result}\n\n{receipt_msg}")
                 self.clear_cart()
             else:
                 messagebox.showerror("Checkout Failed", result)
@@ -650,7 +653,20 @@ class BillingView(ctk.CTkFrame):
         )
 
         if success:
-            messagebox.showinfo("Success", f"Sale complete.\nInvoice ID: {result}")
+            sale_id = int(result)
+            receipt_msg = self._generate_receipt_feedback(sale_id)
+            messagebox.showinfo("Success", f"Sale complete.\nInvoice ID: {result}\n\n{receipt_msg}")
             self.clear_cart()
         else:
             messagebox.showerror("Checkout Failed", result)
+
+    def _generate_receipt_feedback(self, sale_id):
+        receipt_result = generate_and_print_receipt(int(sale_id))
+        if receipt_result.get("ok"):
+            if receipt_result.get("mode") == "file":
+                return (
+                    f"Receipt saved: {receipt_result.get('path')}\n"
+                    f"Print fallback reason: {receipt_result.get('detail')}"
+                )
+            return "Receipt printed to ESC/POS device."
+        return f"Receipt generation failed: {receipt_result.get('detail')}"
