@@ -53,11 +53,13 @@ class AdminView(ctk.CTkFrame):
         self.dashboard_tab = self.tabs.add("Dashboard")
         self.inventory_tab = self.tabs.add("Inventory")
         self.users_tab = self.tabs.add("Users")
+        self.customers_tab = self.tabs.add("Customers")
         self.expenses_tab = self.tabs.add("Expenses")
 
         self._build_dashboard_tab()
         self._build_inventory_tab()
         self._build_users_tab()
+        self._build_customers_tab()
         self._build_expenses_tab()
 
     def _build_dashboard_tab(self):
@@ -198,6 +200,42 @@ class AdminView(ctk.CTkFrame):
         )
         self.expenses_table.pack(fill="both", expand=True, padx=10, pady=(0, 10))
 
+    def _build_customers_tab(self):
+        controls = ctk.CTkFrame(self.customers_tab)
+        controls.pack(fill="x", padx=10, pady=10)
+
+        self.customer_search_entry = ctk.CTkEntry(controls, width=240, placeholder_text="Search customer name/contact")
+        self.customer_search_entry.grid(row=0, column=0, padx=4, pady=8)
+
+        search_btn = ctk.CTkButton(controls, text="Search", width=90, command=self.refresh_customers)
+        search_btn.grid(row=0, column=1, padx=4, pady=8)
+
+        self.customer_payment_entry = ctk.CTkEntry(controls, width=120, placeholder_text="Payment amount")
+        self.customer_payment_entry.grid(row=0, column=2, padx=10, pady=8)
+
+        settle_btn = ctk.CTkButton(controls, text="Record Payment", width=130, command=self.settle_customer_balance)
+        settle_btn.grid(row=0, column=3, padx=4, pady=8)
+
+        split = ctk.CTkFrame(self.customers_tab)
+        split.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        split.grid_columnconfigure((0, 1), weight=1)
+        split.grid_rowconfigure(0, weight=1)
+
+        self.customers_table = self._create_table(
+            split,
+            columns=("id", "name", "contact", "outstanding"),
+            headings=("ID", "Name", "Contact", "Outstanding"),
+        )
+        self.customers_table.grid(row=0, column=0, sticky="nsew", padx=(0, 6), pady=0)
+        self.customers_table.bind("<<TreeviewSelect>>", self.on_customer_select)
+
+        self.customer_ledger_table = self._create_table(
+            split,
+            columns=("sale", "date", "total", "paid", "balance", "status"),
+            headings=("Sale", "Date", "Total", "Paid", "Balance", "Payment"),
+        )
+        self.customer_ledger_table.grid(row=0, column=1, sticky="nsew", padx=(6, 0), pady=0)
+
     def _create_table(self, parent, columns, headings):
         table = ttk.Treeview(parent, columns=columns, show="headings")
         for column, heading in zip(columns, headings):
@@ -212,6 +250,7 @@ class AdminView(ctk.CTkFrame):
     def refresh_all(self):
         self.refresh_products()
         self.refresh_users()
+        self.refresh_customers()
         self.refresh_expenses()
         self.refresh_dashboard()
 
@@ -298,6 +337,74 @@ class AdminView(ctk.CTkFrame):
                     f"{float(row['total_sales'] or 0.0):.2f}",
                 ),
             )
+
+    def refresh_customers(self):
+        self._clear_table(self.customers_table)
+        self._clear_table(self.customer_ledger_table)
+
+        search_text = self.customer_search_entry.get().strip()
+        rows = queries.search_customers(search_text, limit=200)
+
+        for row in rows:
+            self.customers_table.insert(
+                "",
+                "end",
+                values=(
+                    row["id"],
+                    row["name"],
+                    row.get("contact") or "",
+                    f"{float(row['total_outstanding']):.2f}",
+                ),
+            )
+
+    def on_customer_select(self, event=None):
+        selection = self.customers_table.selection()
+        if not selection:
+            return
+
+        values = self.customers_table.item(selection[0], "values")
+        customer_id = int(values[0])
+        ledger = queries.get_customer_ledger(customer_id)
+
+        self._clear_table(self.customer_ledger_table)
+        for row in ledger.get("sales", []):
+            self.customer_ledger_table.insert(
+                "",
+                "end",
+                values=(
+                    row["id"],
+                    row["timestamp"],
+                    f"{float(row['total']):.2f}",
+                    f"{float(row['paid_amount']):.2f}",
+                    f"{float(row['balance_due']):.2f}",
+                    row["payment_status"],
+                ),
+            )
+
+    def settle_customer_balance(self):
+        selection = self.customers_table.selection()
+        if not selection:
+            messagebox.showwarning("Select Customer", "Select a customer first.")
+            return
+
+        values = self.customers_table.item(selection[0], "values")
+        customer_id = int(values[0])
+
+        amount_text = self.customer_payment_entry.get().strip()
+        try:
+            amount = float(amount_text)
+        except ValueError:
+            messagebox.showerror("Invalid", "Payment amount must be numeric.")
+            return
+
+        success, message = queries.record_customer_payment(customer_id, amount)
+        if success:
+            messagebox.showinfo("Recorded", message)
+            self.customer_payment_entry.delete(0, "end")
+            self.refresh_customers()
+            self.refresh_dashboard()
+        else:
+            messagebox.showerror("Error", message)
 
     def _get_selected_product(self):
         selection = self.products_table.selection()
