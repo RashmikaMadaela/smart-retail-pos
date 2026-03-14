@@ -12,7 +12,7 @@ class LoginView(ctk.CTkFrame):
         self.login_box = ctk.CTkFrame(self, width=400, height=400, corner_radius=15)
         self.login_box.place(relx=0.5, rely=0.5, anchor="center")
 
-        self.title_label = ctk.CTkLabel(self.login_box, text="Smart Retail POS", font=ctk.CTkFont(size=28, weight="bold"))
+        self.title_label = ctk.CTkLabel(self.login_box, text="Priyanka Stores", font=ctk.CTkFont(size=28, weight="bold"))
         self.title_label.pack(pady=(40, 30))
 
         self.username_entry = ctk.CTkEntry(self.login_box, placeholder_text="Username", width=250, height=40)

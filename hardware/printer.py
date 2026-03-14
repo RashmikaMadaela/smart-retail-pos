@@ -16,7 +16,7 @@ def build_receipt_text(payload: Dict) -> str:
     items = payload["items"]
 
     lines = []
-    lines.append("SMART RETAIL POS")
+    lines.append("PRIYANKA STORES")
     lines.append("------------------------------")
     lines.append(f"Invoice: {sale['id']}")
     lines.append(f"Date: {sale['timestamp']}")
