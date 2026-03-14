@@ -39,6 +39,6 @@ class LoginView(ctk.CTkFrame):
         
         if success:
             # We found the user, transition to the billing screen!
-            self.controller.show_billing_screen(user_data)
+            self.controller.route_after_login(user_data)
         else:
             messagebox.showerror("Access Denied", "Invalid username or password.")
