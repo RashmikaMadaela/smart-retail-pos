@@ -96,6 +96,11 @@ pytest -q
 - Preferred: ESC/POS thermal printer (`python-escpos`)
 - Fallback: printable file output when printer is unavailable
 
+ESC/POS environment variables (optional):
+
+- `POS_PRINTER_VENDOR_ID` (example: `0x04b8`)
+- `POS_PRINTER_PRODUCT_ID` (example: `0x0202`)
+
 ## Implementation Workflow
 
 Work is executed in phase steps A-H. After each completed phase step:
@@ -105,3 +110,7 @@ Work is executed in phase steps A-H. After each completed phase step:
 3. Push to remote.
 
 See `docs/prd_acceptance_checklist.md` for a detailed acceptance list.
+
+## Demo Guide
+
+Use `docs/demo_runbook.md` for step-by-step cashier/admin demo scenarios and validation commands.
