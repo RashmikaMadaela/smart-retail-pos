@@ -732,6 +732,10 @@ def complete_held_sale(
     customer_id: Optional[int] = None,
     paid_amount: Optional[float] = None,
     payment_status: Optional[str] = None,
+    cart_items: Optional[List[Dict]] = None,
+    subtotal: Optional[float] = None,
+    global_discount: Optional[float] = None,
+    total_amount: Optional[float] = None,
 ) -> Tuple[bool, str]:
     try:
         with get_connection() as conn:
@@ -743,20 +747,34 @@ def complete_held_sale(
             if sale["status"] != "HELD":
                 return False, "Error: Sale is not held."
 
-            cursor.execute(
-                """
-                SELECT product_id, qty, sold_at_price AS price, item_discount AS discount
-                FROM sale_items
-                WHERE sale_id = ?
-                """,
-                (int(sale_id),),
-            )
-            items = [dict(row) for row in cursor.fetchall()]
-            normalized_items = _normalize_cart_items(items)
+            if cart_items is not None:
+                normalized_items = _normalize_cart_items(cart_items)
+                resolved_subtotal = float(sale["subtotal"]) if subtotal is None else float(subtotal)
+                resolved_discount = float(sale["discount"]) if global_discount is None else float(global_discount)
+                resolved_total = float(sale["total"]) if total_amount is None else float(total_amount)
+            else:
+                cursor.execute(
+                    """
+                    SELECT product_id, qty, sold_at_price AS price, item_discount AS discount
+                    FROM sale_items
+                    WHERE sale_id = ?
+                    """,
+                    (int(sale_id),),
+                )
+                items = [dict(row) for row in cursor.fetchall()]
+                normalized_items = _normalize_cart_items(items)
+                resolved_subtotal = float(sale["subtotal"])
+                resolved_discount = float(sale["discount"])
+                resolved_total = float(sale["total"])
+
+            _validate_non_negative(resolved_subtotal, "Subtotal")
+            _validate_non_negative(resolved_discount, "Global discount")
+            _validate_non_negative(resolved_total, "Total amount")
+
             _ensure_stock_available(cursor, normalized_items)
 
             resolved_paid, balance_due, resolved_payment_status = _compute_payment_state(
-                float(sale["total"]),
+                resolved_total,
                 paid_amount,
                 payment_status,
             )
@@ -770,6 +788,9 @@ def complete_held_sale(
                 SET
                     status = 'COMPLETED',
                     customer_id = ?,
+                    subtotal = ?,
+                    discount = ?,
+                    total = ?,
                     paid_amount = ?,
                     balance_due = ?,
                     payment_status = ?,
@@ -778,12 +799,32 @@ def complete_held_sale(
                 """,
                 (
                     customer_id,
+                    resolved_subtotal,
+                    resolved_discount,
+                    resolved_total,
                     resolved_paid,
                     balance_due,
                     resolved_payment_status,
                     int(sale_id),
                 ),
             )
+
+            cursor.execute("DELETE FROM sale_items WHERE sale_id = ?", (int(sale_id),))
+
+            for item in normalized_items:
+                cursor.execute(
+                    """
+                    INSERT INTO sale_items (sale_id, product_id, qty, sold_at_price, item_discount)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (
+                        int(sale_id),
+                        item["product_id"],
+                        item["qty"],
+                        item["price"],
+                        item["discount"],
+                    ),
+                )
 
             for item in normalized_items:
                 cursor.execute(

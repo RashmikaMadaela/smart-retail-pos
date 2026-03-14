@@ -14,6 +14,7 @@ class BillingView(ctk.CTkFrame):
         self.cart = []
         self.product_search_map = {}
         self.active_held_sale_id = None
+        self.current_item_id = None
 
         self.current_subtotal = 0.0
         self.current_line_discount = 0.0
@@ -54,6 +55,25 @@ class BillingView(ctk.CTkFrame):
             command=self.add_to_cart_from_barcode,
         )
         add_scan_btn.pack(side="right", padx=(0, 8), pady=8)
+
+        qty_discount_bar = ctk.CTkFrame(self.left_frame)
+        qty_discount_bar.pack(fill="x", padx=10, pady=(0, 6))
+
+        ctk.CTkLabel(qty_discount_bar, text="Add Qty").pack(side="left", padx=(8, 4), pady=8)
+        self.add_qty_entry = ctk.CTkEntry(qty_discount_bar, width=80)
+        self.add_qty_entry.pack(side="left", padx=(0, 8), pady=8)
+        self.add_qty_entry.insert(0, "1")
+
+        ctk.CTkLabel(qty_discount_bar, text="Item Disc").pack(side="left", padx=(0, 4), pady=8)
+        self.add_discount_entry = ctk.CTkEntry(qty_discount_bar, width=90)
+        self.add_discount_entry.pack(side="left", padx=(0, 8), pady=8)
+        self.add_discount_entry.insert(0, "0")
+
+        ctk.CTkLabel(
+            qty_discount_bar,
+            text="Use decimal qty for loose items (e.g., 1.25).",
+            text_color="gray60",
+        ).pack(side="left", padx=4, pady=8)
 
         search_bar = ctk.CTkFrame(self.left_frame)
         search_bar.pack(fill="x", padx=10, pady=(0, 6))
@@ -109,6 +129,39 @@ class BillingView(ctk.CTkFrame):
         self.cart_table.column("disc", width=70, anchor="e")
         self.cart_table.column("total", width=90, anchor="e")
         self.cart_table.pack(fill="both", expand=True, padx=8, pady=8)
+        self.cart_table.bind("<<TreeviewSelect>>", self.on_cart_selection_change)
+
+        quick_edit = ctk.CTkFrame(self.left_frame)
+        quick_edit.pack(fill="x", padx=10, pady=(0, 6))
+
+        self.current_item_var = ctk.StringVar(value="Current item: Auto")
+        ctk.CTkLabel(quick_edit, textvariable=self.current_item_var).pack(side="left", padx=(8, 12), pady=8)
+
+        ctk.CTkLabel(quick_edit, text="Qty").pack(side="left", padx=(0, 4), pady=8)
+        self.quick_qty_entry = ctk.CTkEntry(quick_edit, width=80)
+        self.quick_qty_entry.pack(side="left", padx=(0, 8), pady=8)
+
+        ctk.CTkLabel(quick_edit, text="Disc").pack(side="left", padx=(0, 4), pady=8)
+        self.quick_discount_entry = ctk.CTkEntry(quick_edit, width=80)
+        self.quick_discount_entry.pack(side="left", padx=(0, 8), pady=8)
+
+        apply_item_edit_btn = ctk.CTkButton(
+            quick_edit,
+            text="Apply to Current",
+            width=130,
+            command=self.apply_quick_item_edit,
+        )
+        apply_item_edit_btn.pack(side="left", padx=4, pady=8)
+
+        remove_current_btn = ctk.CTkButton(
+            quick_edit,
+            text="Remove Current",
+            width=130,
+            fg_color="#B03030",
+            hover_color="#8B2323",
+            command=self.remove_current_item,
+        )
+        remove_current_btn.pack(side="left", padx=4, pady=8)
 
         qty_actions = ctk.CTkFrame(self.left_frame)
         qty_actions.pack(fill="x", padx=10, pady=(0, 10))
@@ -266,15 +319,6 @@ class BillingView(ctk.CTkFrame):
             return None
         return values[0]
 
-    def _recalled_bill_guard(self):
-        if self.active_held_sale_id is not None:
-            messagebox.showwarning(
-                "Held Bill Active",
-                "You recalled a held bill. Complete it or clear cart before modifying items.",
-            )
-            return True
-        return False
-
     def _validate_add_stock(self, product, quantity_to_add):
         product_id = product["barcode_id"]
         stock = float(product.get("stock", 0.0))
@@ -288,29 +332,52 @@ class BillingView(ctk.CTkFrame):
             return False
         return True
 
-    def _add_product_to_cart(self, product):
-        if self._recalled_bill_guard():
+    def _parse_add_inputs(self):
+        qty_text = self.add_qty_entry.get().strip() or "1"
+        discount_text = self.add_discount_entry.get().strip() or "0"
+
+        try:
+            qty = float(qty_text)
+            discount = float(discount_text)
+        except ValueError:
+            messagebox.showerror("Invalid Value", "Add quantity and discount must be numeric.")
+            return None, None
+
+        if qty <= 0:
+            messagebox.showerror("Invalid Value", "Add quantity must be greater than zero.")
+            return None, None
+        if discount < 0:
+            messagebox.showerror("Invalid Value", "Item discount cannot be negative.")
+            return None, None
+
+        return qty, discount
+
+    def _add_product_to_cart(self, product, qty, discount):
+        if discount > float(product["sell_price"]):
+            messagebox.showerror("Invalid Value", "Item discount cannot exceed unit price.")
             return
 
-        if not self._validate_add_stock(product, 1.0):
+        if not self._validate_add_stock(product, qty):
             return
 
         product_id = product["barcode_id"]
         existing = self._find_cart_item(product_id)
 
         if existing:
-            existing["qty"] += 1.0
+            existing["qty"] += qty
+            existing["discount"] = discount
         else:
             self.cart.append(
                 {
                     "product_id": product_id,
                     "name": product["name"],
-                    "qty": 1.0,
+                    "qty": qty,
                     "price": float(product["sell_price"]),
-                    "discount": 0.0,
+                    "discount": discount,
                 }
             )
 
+        self.current_item_id = product_id
         self.refresh_cart_table()
 
     def add_to_cart_from_barcode(self, event=None):
@@ -325,7 +392,11 @@ class BillingView(ctk.CTkFrame):
             messagebox.showerror("Not Found", "Item not found in database.")
             return
 
-        self._add_product_to_cart(product)
+        qty, discount = self._parse_add_inputs()
+        if qty is None:
+            return
+
+        self._add_product_to_cart(product, qty, discount)
 
     def search_products(self):
         search_text = self.search_entry.get().strip()
@@ -359,7 +430,48 @@ class BillingView(ctk.CTkFrame):
             messagebox.showwarning("Select Item", "Search and select a valid item first.")
             return
 
-        self._add_product_to_cart(product)
+        qty, discount = self._parse_add_inputs()
+        if qty is None:
+            return
+
+        self._add_product_to_cart(product, qty, discount)
+
+    def _resolve_current_item(self):
+        if self.current_item_id:
+            current = self._find_cart_item(self.current_item_id)
+            if current:
+                return current
+
+        selected = self._selected_cart_item()
+        if selected:
+            self.current_item_id = selected["product_id"]
+            return selected
+
+        if self.cart:
+            self.current_item_id = self.cart[-1]["product_id"]
+            return self.cart[-1]
+        return None
+
+    def _sync_quick_editor(self):
+        item = self._resolve_current_item()
+        if not item:
+            self.current_item_var.set("Current item: Auto")
+            self.quick_qty_entry.delete(0, "end")
+            self.quick_discount_entry.delete(0, "end")
+            return
+
+        self.current_item_var.set(f"Current item: {item['name']}")
+        self.quick_qty_entry.delete(0, "end")
+        self.quick_qty_entry.insert(0, f"{float(item['qty']):.2f}")
+        self.quick_discount_entry.delete(0, "end")
+        self.quick_discount_entry.insert(0, f"{float(item['discount']):.2f}")
+
+    def on_cart_selection_change(self, event=None):
+        item = self._selected_cart_item()
+        if not item:
+            return
+        self.current_item_id = item["product_id"]
+        self._sync_quick_editor()
 
     def _selected_cart_item(self):
         product_id = self._selected_product_id()
@@ -368,12 +480,9 @@ class BillingView(ctk.CTkFrame):
         return self._find_cart_item(product_id)
 
     def increase_selected_qty(self):
-        if self._recalled_bill_guard():
-            return
-
-        item = self._selected_cart_item()
+        item = self._resolve_current_item()
         if not item:
-            messagebox.showwarning("No Selection", "Select an item from cart first.")
+            messagebox.showwarning("No Items", "Add an item to cart first.")
             return
 
         product = queries.get_product(item["product_id"])
@@ -385,41 +494,35 @@ class BillingView(ctk.CTkFrame):
             return
 
         item["qty"] += 1.0
+        self.current_item_id = item["product_id"]
         self.refresh_cart_table()
 
     def decrease_selected_qty(self):
-        if self._recalled_bill_guard():
-            return
-
-        item = self._selected_cart_item()
+        item = self._resolve_current_item()
         if not item:
-            messagebox.showwarning("No Selection", "Select an item from cart first.")
+            messagebox.showwarning("No Items", "Add an item to cart first.")
             return
 
         item["qty"] -= 1.0
         if item["qty"] <= 0:
             self.cart = [x for x in self.cart if x["product_id"] != item["product_id"]]
+            self.current_item_id = None
         self.refresh_cart_table()
 
     def remove_selected_item(self):
-        if self._recalled_bill_guard():
-            return
-
-        item = self._selected_cart_item()
+        item = self._resolve_current_item()
         if not item:
-            messagebox.showwarning("No Selection", "Select an item from cart first.")
+            messagebox.showwarning("No Items", "Add an item to cart first.")
             return
 
         self.cart = [x for x in self.cart if x["product_id"] != item["product_id"]]
+        self.current_item_id = None
         self.refresh_cart_table()
 
     def apply_line_discount(self):
-        if self._recalled_bill_guard():
-            return
-
-        item = self._selected_cart_item()
+        item = self._resolve_current_item()
         if not item:
-            messagebox.showwarning("No Selection", "Select an item from cart first.")
+            messagebox.showwarning("No Items", "Add an item to cart first.")
             return
 
         discount_text = self.line_discount_entry.get().strip() or "0"
@@ -437,7 +540,58 @@ class BillingView(ctk.CTkFrame):
             return
 
         item["discount"] = discount
+        self.current_item_id = item["product_id"]
         self.refresh_cart_table()
+
+    def apply_quick_item_edit(self):
+        item = self._resolve_current_item()
+        if not item:
+            messagebox.showwarning("No Items", "Add an item to cart first.")
+            return
+
+        qty_text = self.quick_qty_entry.get().strip()
+        discount_text = self.quick_discount_entry.get().strip()
+        try:
+            qty = float(qty_text)
+            discount = float(discount_text)
+        except ValueError:
+            messagebox.showerror("Invalid Value", "Quantity and discount must be numeric.")
+            return
+
+        if qty <= 0:
+            messagebox.showerror("Invalid Value", "Quantity must be greater than zero.")
+            return
+        if discount < 0:
+            messagebox.showerror("Invalid Value", "Discount cannot be negative.")
+            return
+        if discount > item["price"]:
+            messagebox.showerror("Invalid Value", "Discount cannot exceed unit price.")
+            return
+
+        product = queries.get_product(item["product_id"])
+        if not product:
+            messagebox.showerror("Error", "Product no longer exists.")
+            return
+
+        other_qty = sum(
+            float(x["qty"])
+            for x in self.cart
+            if x["product_id"] == item["product_id"] and x is not item
+        )
+        if other_qty + qty > float(product.get("stock", 0.0)):
+            messagebox.showerror(
+                "Insufficient Stock",
+                f"Only {float(product.get('stock', 0.0)):.2f} available for {product['name']}",
+            )
+            return
+
+        item["qty"] = qty
+        item["discount"] = discount
+        self.current_item_id = item["product_id"]
+        self.refresh_cart_table()
+
+    def remove_current_item(self):
+        self.remove_selected_item()
 
     def _calculate_global_discount(self, subtotal_after_line_discount):
         discount_text = self.global_discount_entry.get().strip()
@@ -463,6 +617,7 @@ class BillingView(ctk.CTkFrame):
         return discount_value
 
     def refresh_cart_table(self):
+        selected_product_id = self.current_item_id
         for row in self.cart_table.get_children():
             self.cart_table.delete(row)
 
@@ -491,6 +646,13 @@ class BillingView(ctk.CTkFrame):
                 ),
             )
 
+        for row in self.cart_table.get_children():
+            values = self.cart_table.item(row, "values")
+            if values and values[0] == selected_product_id:
+                self.cart_table.selection_set(row)
+                self.cart_table.focus(row)
+                break
+
         subtotal_after_line = max(0.0, subtotal - line_discount_total)
         global_discount = self._calculate_global_discount(subtotal_after_line)
         global_discount = min(global_discount, subtotal_after_line)
@@ -505,10 +667,12 @@ class BillingView(ctk.CTkFrame):
         self.line_discount_var.set(f"Line Discounts: Rs. {self.current_line_discount:.2f}")
         self.global_discount_var.set(f"Global Discount: Rs. {self.current_global_discount:.2f}")
         self.total_var.set(f"Total: Rs. {self.current_total:.2f}")
+        self._sync_quick_editor()
 
     def clear_cart(self):
         self.cart = []
         self.active_held_sale_id = None
+        self.current_item_id = None
         self.refresh_cart_table()
 
     def _resolve_customer_for_credit(self, payment_mode):
@@ -598,13 +762,14 @@ class BillingView(ctk.CTkFrame):
 
         self.cart = recalled_items
         self.active_held_sale_id = int(selected_id)
+        self.current_item_id = recalled_items[0]["product_id"] if recalled_items else None
         self.global_discount_entry.delete(0, "end")
         self.global_discount_entry.insert(0, f"{float(payload['sale']['discount']):.2f}")
         self.discount_mode.set("AMOUNT")
         self.payment_mode.set("PAID")
         self.paid_amount_entry.delete(0, "end")
         self.refresh_cart_table()
-        messagebox.showinfo("Recalled", f"Hold ID {selected_id} loaded. Complete sale to finalize.")
+        messagebox.showinfo("Recalled", f"Hold ID {selected_id} loaded. You can now edit items, qty, and discounts.")
 
     def process_checkout(self):
         if not self.cart:
@@ -631,6 +796,10 @@ class BillingView(ctk.CTkFrame):
                 customer_id=customer_id,
                 paid_amount=paid_amount,
                 payment_status=payment_mode,
+                cart_items=self.cart,
+                subtotal=self.current_subtotal,
+                global_discount=self.current_global_discount,
+                total_amount=self.current_total,
             )
             if success:
                 receipt_msg = self._generate_receipt_feedback(sale_id)
