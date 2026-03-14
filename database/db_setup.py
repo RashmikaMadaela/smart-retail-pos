@@ -5,6 +5,15 @@ import hashlib
 # Ensure the database is created in the same folder as this script
 DB_PATH = os.path.join(os.path.dirname(__file__), 'pos.db')
 
+
+def _ensure_column(cursor, table_name, column_name, column_definition):
+    cursor.execute(f"PRAGMA table_info({table_name})")
+    existing_columns = {row[1] for row in cursor.fetchall()}
+    if column_name not in existing_columns:
+        cursor.execute(
+            f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}"
+        )
+
 def setup_database():
     # Connect to SQLite (this creates the file if it doesn't exist)
     conn = sqlite3.connect(DB_PATH)
@@ -59,6 +68,9 @@ def setup_database():
             discount REAL DEFAULT 0.0,
             total REAL NOT NULL,
             status TEXT NOT NULL, -- 'COMPLETED', 'HELD', 'VOID'
+            paid_amount REAL DEFAULT 0.0,
+            balance_due REAL DEFAULT 0.0,
+            payment_status TEXT DEFAULT 'PAID', -- 'PAID', 'PARTIAL', 'UNPAID'
             FOREIGN KEY(cashier_id) REFERENCES users(id),
             FOREIGN KEY(customer_id) REFERENCES customers(id)
         )
@@ -84,9 +96,16 @@ def setup_database():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             description TEXT NOT NULL,
             amount REAL NOT NULL,
-            date DATETIME DEFAULT CURRENT_TIMESTAMP
+            date DATETIME DEFAULT CURRENT_TIMESTAMP,
+            category TEXT DEFAULT 'General'
         )
     ''')
+
+    # Apply idempotent schema upgrades for existing databases.
+    _ensure_column(cursor, "sales", "paid_amount", "REAL DEFAULT 0.0")
+    _ensure_column(cursor, "sales", "balance_due", "REAL DEFAULT 0.0")
+    _ensure_column(cursor, "sales", "payment_status", "TEXT DEFAULT 'PAID'")
+    _ensure_column(cursor, "expenses", "category", "TEXT DEFAULT 'General'")
 
     # --- SEED DATA: Create a default Admin user ---
     # We use a simple SHA-256 hash for the default password "admin123"
