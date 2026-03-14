@@ -155,12 +155,14 @@ class AdminView(ctk.CTkFrame):
         stock_btn.grid(row=0, column=8, padx=4, pady=6)
         del_btn.grid(row=0, column=9, padx=4, pady=6)
 
-        self.products_table = self._create_table(
+        products_card, self.products_table = self._create_labeled_table_card(
             self.inventory_tab,
+            title="Inventory Table",
+            subtitle="All products with buy/sell price, current stock, and minimum stock.",
             columns=("id", "name", "buy", "sell", "stock", "min"),
             headings=("ID", "Name", "Buy", "Sell", "Stock", "Min"),
         )
-        self.products_table.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        products_card.pack(fill="both", expand=True, padx=10, pady=(0, 10))
         self.products_table.bind("<<TreeviewSelect>>", self.on_product_select)
 
     def _build_users_tab(self):
@@ -179,12 +181,14 @@ class AdminView(ctk.CTkFrame):
         add_user_btn = ctk.CTkButton(controls, text="Create User", width=110, command=self.create_user)
         add_user_btn.grid(row=0, column=3, padx=4, pady=8)
 
-        self.users_table = self._create_table(
+        users_card, self.users_table = self._create_labeled_table_card(
             self.users_tab,
+            title="Users Table",
+            subtitle="Registered staff accounts and their assigned role.",
             columns=("id", "username", "role"),
             headings=("ID", "Username", "Role"),
         )
-        self.users_table.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        users_card.pack(fill="both", expand=True, padx=10, pady=(0, 10))
 
     def _build_expenses_tab(self):
         controls = ctk.CTkFrame(self.expenses_tab)
@@ -201,12 +205,14 @@ class AdminView(ctk.CTkFrame):
         add_exp_btn = ctk.CTkButton(controls, text="Add Expense", width=120, command=self.add_expense)
         add_exp_btn.grid(row=0, column=3, padx=4, pady=8)
 
-        self.expenses_table = self._create_table(
+        expenses_card, self.expenses_table = self._create_labeled_table_card(
             self.expenses_tab,
+            title="Expenses Table",
+            subtitle="Operational expenses by date and category.",
             columns=("id", "date", "category", "description", "amount"),
             headings=("ID", "Date", "Category", "Description", "Amount"),
         )
-        self.expenses_table.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        expenses_card.pack(fill="both", expand=True, padx=10, pady=(0, 10))
 
     def _build_customers_tab(self):
         controls = ctk.CTkFrame(self.customers_tab)
@@ -229,20 +235,24 @@ class AdminView(ctk.CTkFrame):
         split.grid_columnconfigure((0, 1), weight=1)
         split.grid_rowconfigure(0, weight=1)
 
-        self.customers_table = self._create_table(
+        customers_card, self.customers_table = self._create_labeled_table_card(
             split,
+            title="Customers Outstanding",
+            subtitle="Customer balances that are still due.",
             columns=("id", "name", "contact", "outstanding"),
             headings=("ID", "Name", "Contact", "Outstanding"),
         )
-        self.customers_table.grid(row=0, column=0, sticky="nsew", padx=(0, 6), pady=0)
+        customers_card.grid(row=0, column=0, sticky="nsew", padx=(0, 6), pady=0)
         self.customers_table.bind("<<TreeviewSelect>>", self.on_customer_select)
 
-        self.customer_ledger_table = self._create_table(
+        ledger_card, self.customer_ledger_table = self._create_labeled_table_card(
             split,
+            title="Customer Ledger",
+            subtitle="Sales linked to selected customer with paid and balance values.",
             columns=("sale", "date", "total", "paid", "balance", "status"),
             headings=("Sale", "Date", "Total", "Paid", "Balance", "Payment"),
         )
-        self.customer_ledger_table.grid(row=0, column=1, sticky="nsew", padx=(6, 0), pady=0)
+        ledger_card.grid(row=0, column=1, sticky="nsew", padx=(6, 0), pady=0)
 
     def _create_table(self, parent, columns, headings):
         table = ttk.Treeview(parent, columns=columns, show="headings")
