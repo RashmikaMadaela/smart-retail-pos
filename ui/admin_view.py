@@ -84,33 +84,41 @@ class AdminView(ctk.CTkFrame):
         grids.grid_columnconfigure((0, 1), weight=1)
         grids.grid_rowconfigure((0, 1), weight=1)
 
-        self.top_sellers_table = self._create_table(
+        top_sellers_card, self.top_sellers_table = self._create_labeled_table_card(
             grids,
+            title="Top Sellers",
+            subtitle="Highest moving products by quantity sold.",
             columns=("product", "qty", "revenue"),
             headings=("Product", "Qty", "Revenue"),
         )
-        self.top_sellers_table.grid(row=0, column=0, sticky="nsew", padx=6, pady=6)
+        top_sellers_card.grid(row=0, column=0, sticky="nsew", padx=6, pady=6)
 
-        self.low_stock_table = self._create_table(
+        low_stock_card, self.low_stock_table = self._create_labeled_table_card(
             grids,
+            title="Low Stock Alerts",
+            subtitle="Items where current stock is below minimum stock level.",
             columns=("id", "name", "stock", "min"),
             headings=("ID", "Name", "Stock", "Min"),
         )
-        self.low_stock_table.grid(row=0, column=1, sticky="nsew", padx=6, pady=6)
+        low_stock_card.grid(row=0, column=1, sticky="nsew", padx=6, pady=6)
 
-        self.dead_stock_table = self._create_table(
+        dead_stock_card, self.dead_stock_table = self._create_labeled_table_card(
             grids,
+            title="Dead Stock",
+            subtitle="Products with no completed sales in the last 30 days.",
             columns=("id", "name"),
             headings=("ID", "Dead Stock Item"),
         )
-        self.dead_stock_table.grid(row=1, column=0, sticky="nsew", padx=6, pady=6)
+        dead_stock_card.grid(row=1, column=0, sticky="nsew", padx=6, pady=6)
 
-        self.peak_hours_table = self._create_table(
+        peak_hours_card, self.peak_hours_table = self._create_labeled_table_card(
             grids,
+            title="Peak Hours",
+            subtitle="Completed sales volume and total sales by hour.",
             columns=("hour", "count", "sales"),
             headings=("Hour", "Sales Count", "Total Sales"),
         )
-        self.peak_hours_table.grid(row=1, column=1, sticky="nsew", padx=6, pady=6)
+        peak_hours_card.grid(row=1, column=1, sticky="nsew", padx=6, pady=6)
 
     def _build_inventory_tab(self):
         controls = ctk.CTkFrame(self.inventory_tab)
@@ -242,6 +250,26 @@ class AdminView(ctk.CTkFrame):
             table.heading(column, text=heading)
             table.column(column, width=120, anchor="w")
         return table
+
+    def _create_labeled_table_card(self, parent, title, subtitle, columns, headings):
+        card = ctk.CTkFrame(parent)
+
+        ctk.CTkLabel(
+            card,
+            text=title,
+            font=ctk.CTkFont(size=15, weight="bold"),
+        ).pack(anchor="w", padx=8, pady=(8, 0))
+
+        ctk.CTkLabel(
+            card,
+            text=subtitle,
+            font=ctk.CTkFont(size=12),
+            text_color="gray60",
+        ).pack(anchor="w", padx=8, pady=(0, 6))
+
+        table = self._create_table(card, columns=columns, headings=headings)
+        table.pack(fill="both", expand=True, padx=8, pady=(0, 8))
+        return card, table
 
     def _clear_table(self, table):
         for row in table.get_children():
