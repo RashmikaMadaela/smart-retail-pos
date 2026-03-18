@@ -52,12 +52,14 @@ class AdminView(ctk.CTkFrame):
 
         self.dashboard_tab = self.tabs.add("Dashboard")
         self.inventory_tab = self.tabs.add("Inventory")
+        self.suppliers_tab = self.tabs.add("Suppliers")
         self.users_tab = self.tabs.add("Users")
         self.customers_tab = self.tabs.add("Customers")
         self.expenses_tab = self.tabs.add("Expenses")
 
         self._build_dashboard_tab()
         self._build_inventory_tab()
+        self._build_suppliers_tab()
         self._build_users_tab()
         self._build_customers_tab()
         self._build_expenses_tab()
@@ -130,6 +132,9 @@ class AdminView(ctk.CTkFrame):
         self.item_sell_entry = ctk.CTkEntry(controls, width=90, placeholder_text="Sell")
         self.item_stock_entry = ctk.CTkEntry(controls, width=90, placeholder_text="Stock")
         self.item_min_entry = ctk.CTkEntry(controls, width=90, placeholder_text="Min")
+        self.item_disc_pct_entry = ctk.CTkEntry(controls, width=90, placeholder_text="Disc %")
+        self.item_surcharge_enabled_entry = ctk.CTkEntry(controls, width=90, placeholder_text="Card Fee On(0/1)")
+        self.item_surcharge_pct_entry = ctk.CTkEntry(controls, width=90, placeholder_text="Card Fee %")
 
         self.item_id_entry.grid(row=0, column=0, padx=4, pady=6)
         self.item_name_entry.grid(row=0, column=1, padx=4, pady=6)
@@ -137,6 +142,9 @@ class AdminView(ctk.CTkFrame):
         self.item_sell_entry.grid(row=0, column=3, padx=4, pady=6)
         self.item_stock_entry.grid(row=0, column=4, padx=4, pady=6)
         self.item_min_entry.grid(row=0, column=5, padx=4, pady=6)
+        self.item_disc_pct_entry.grid(row=0, column=6, padx=4, pady=6)
+        self.item_surcharge_enabled_entry.grid(row=0, column=7, padx=4, pady=6)
+        self.item_surcharge_pct_entry.grid(row=0, column=8, padx=4, pady=6)
 
         add_btn = ctk.CTkButton(controls, text="Add Item", width=100, command=self.add_product)
         upd_btn = ctk.CTkButton(controls, text="Update Item", width=100, command=self.update_product)
@@ -150,20 +158,114 @@ class AdminView(ctk.CTkFrame):
             command=self.delete_product,
         )
 
-        add_btn.grid(row=0, column=6, padx=4, pady=6)
-        upd_btn.grid(row=0, column=7, padx=4, pady=6)
-        stock_btn.grid(row=0, column=8, padx=4, pady=6)
-        del_btn.grid(row=0, column=9, padx=4, pady=6)
+        add_btn.grid(row=0, column=9, padx=4, pady=6)
+        upd_btn.grid(row=0, column=10, padx=4, pady=6)
+        stock_btn.grid(row=0, column=11, padx=4, pady=6)
+        del_btn.grid(row=0, column=12, padx=4, pady=6)
 
         products_card, self.products_table = self._create_labeled_table_card(
             self.inventory_tab,
             title="Inventory Table",
-            subtitle="All products with buy/sell price, current stock, and minimum stock.",
-            columns=("id", "name", "buy", "sell", "stock", "min"),
-            headings=("ID", "Name", "Buy", "Sell", "Stock", "Min"),
+            subtitle="Products with stock, default discount %, and card surcharge configuration.",
+            columns=("id", "name", "buy", "sell", "stock", "min", "disc", "s_on", "s_pct"),
+            headings=("ID", "Name", "Buy", "Sell", "Stock", "Min", "Disc%", "CardFeeOn", "CardFee%"),
         )
         products_card.pack(fill="both", expand=True, padx=10, pady=(0, 10))
         self.products_table.bind("<<TreeviewSelect>>", self.on_product_select)
+
+    def _build_suppliers_tab(self):
+        top = ctk.CTkFrame(self.suppliers_tab)
+        top.pack(fill="x", padx=10, pady=10)
+
+        self.supplier_name_entry = ctk.CTkEntry(top, width=220, placeholder_text="Supplier Name")
+        self.supplier_contact_entry = ctk.CTkEntry(top, width=160, placeholder_text="Contact")
+        self.supplier_opening_entry = ctk.CTkEntry(top, width=110, placeholder_text="Opening Bal")
+
+        self.supplier_name_entry.grid(row=0, column=0, padx=4, pady=6)
+        self.supplier_contact_entry.grid(row=0, column=1, padx=4, pady=6)
+        self.supplier_opening_entry.grid(row=0, column=2, padx=4, pady=6)
+
+        ctk.CTkButton(top, text="Add Supplier", width=120, command=self.add_supplier).grid(row=0, column=3, padx=4, pady=6)
+        ctk.CTkButton(top, text="Refresh", width=90, command=self.refresh_suppliers).grid(row=0, column=4, padx=4, pady=6)
+
+        supplier_card, self.suppliers_table = self._create_labeled_table_card(
+            self.suppliers_tab,
+            title="Supplier Ledger",
+            subtitle="Track total outstanding payable by supplier.",
+            columns=("id", "name", "contact", "outstanding"),
+            headings=("ID", "Name", "Contact", "Outstanding"),
+        )
+        supplier_card.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        self.suppliers_table.bind("<<TreeviewSelect>>", self.on_supplier_select)
+
+        receive = ctk.CTkFrame(self.suppliers_tab)
+        receive.pack(fill="x", padx=10, pady=(0, 10))
+
+        ctk.CTkLabel(receive, text="Receive Batch", font=ctk.CTkFont(size=15, weight="bold")).grid(row=0, column=0, padx=6, pady=6, sticky="w")
+        self.selected_supplier_var = ctk.StringVar(value="Select supplier")
+        self.supplier_option_menu = ctk.CTkOptionMenu(receive, variable=self.selected_supplier_var, values=["Select supplier"], width=220)
+        self.supplier_option_menu.grid(row=0, column=1, padx=4, pady=6)
+        self.batch_ref_entry = ctk.CTkEntry(receive, width=160, placeholder_text="Batch Ref")
+        self.batch_ref_entry.grid(row=0, column=2, padx=4, pady=6)
+        self.batch_paid_entry = ctk.CTkEntry(receive, width=110, placeholder_text="Initial Paid")
+        self.batch_paid_entry.grid(row=0, column=3, padx=4, pady=6)
+
+        self.batch_product_id_entry = ctk.CTkEntry(receive, width=120, placeholder_text="Product ID")
+        self.batch_qty_entry = ctk.CTkEntry(receive, width=90, placeholder_text="Qty")
+        self.batch_cost_entry = ctk.CTkEntry(receive, width=90, placeholder_text="Unit Cost")
+        self.batch_disc_entry = ctk.CTkEntry(receive, width=90, placeholder_text="Disc %")
+        self.batch_product_id_entry.grid(row=1, column=0, padx=4, pady=6)
+        self.batch_qty_entry.grid(row=1, column=1, padx=4, pady=6)
+        self.batch_cost_entry.grid(row=1, column=2, padx=4, pady=6)
+        self.batch_disc_entry.grid(row=1, column=3, padx=4, pady=6)
+
+        ctk.CTkButton(receive, text="Add Line", width=100, command=self.add_batch_line).grid(row=1, column=4, padx=4, pady=6)
+        ctk.CTkButton(receive, text="Receive Stock", width=120, command=self.receive_batch).grid(row=1, column=5, padx=4, pady=6)
+
+        self.batch_lines = []
+        self.batch_lines_table = self._create_table(
+            receive,
+            columns=("product", "qty", "cost", "disc"),
+            headings=("Product", "Qty", "Unit Cost", "Disc %"),
+        )
+        self.batch_lines_table.grid(row=2, column=0, columnspan=6, sticky="nsew", padx=4, pady=(4, 10))
+
+        settle = ctk.CTkFrame(self.suppliers_tab)
+        settle.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        settle.grid_columnconfigure((0, 1), weight=1)
+
+        batches_card, self.supplier_batches_table = self._create_labeled_table_card(
+            settle,
+            title="Supplier Batches",
+            subtitle="Select batch/invoice and settle partial payments manually.",
+            columns=("id", "ref", "total", "paid", "balance", "status"),
+            headings=("ID", "Ref", "Total", "Paid", "Balance", "Status"),
+        )
+        batches_card.grid(row=0, column=0, sticky="nsew", padx=(0, 6), pady=0)
+
+        payments_card, self.supplier_payments_table = self._create_labeled_table_card(
+            settle,
+            title="Supplier Payments",
+            subtitle="Recorded supplier settlements.",
+            columns=("id", "batch", "amount", "method", "time"),
+            headings=("ID", "Batch", "Amount", "Method", "Paid At"),
+        )
+        payments_card.grid(row=0, column=1, sticky="nsew", padx=(6, 0), pady=0)
+
+        settlement_controls = ctk.CTkFrame(self.suppliers_tab)
+        settlement_controls.pack(fill="x", padx=10, pady=(0, 10))
+        self.supplier_pay_amount_entry = ctk.CTkEntry(settlement_controls, width=120, placeholder_text="Pay Amount")
+        self.supplier_pay_amount_entry.pack(side="left", padx=6, pady=6)
+        self.supplier_pay_method_var = ctk.StringVar(value="CASH")
+        ctk.CTkOptionMenu(
+            settlement_controls,
+            variable=self.supplier_pay_method_var,
+            values=["CASH", "CARD", "BANK"],
+            width=120,
+        ).pack(side="left", padx=6, pady=6)
+        self.supplier_pay_note_entry = ctk.CTkEntry(settlement_controls, width=220, placeholder_text="Note")
+        self.supplier_pay_note_entry.pack(side="left", padx=6, pady=6)
+        ctk.CTkButton(settlement_controls, text="Settle Selected Batch", width=170, command=self.settle_supplier_batch).pack(side="left", padx=6, pady=6)
 
     def _build_users_tab(self):
         controls = ctk.CTkFrame(self.users_tab)
@@ -287,6 +389,7 @@ class AdminView(ctk.CTkFrame):
 
     def refresh_all(self):
         self.refresh_products()
+        self.refresh_suppliers()
         self.refresh_users()
         self.refresh_customers()
         self.refresh_expenses()
@@ -305,8 +408,37 @@ class AdminView(ctk.CTkFrame):
                     f"{float(product['sell_price']):.2f}",
                     f"{float(product['stock']):.2f}",
                     f"{float(product['min_stock']):.2f}",
+                    f"{float(product.get('default_discount_pct', 0.0)):.2f}",
+                    int(product.get('card_surcharge_enabled', 0)),
+                    f"{float(product.get('card_surcharge_pct', 0.0)):.2f}",
                 ),
             )
+
+    def refresh_suppliers(self):
+        self._clear_table(self.suppliers_table)
+        suppliers = queries.list_suppliers(limit=500)
+
+        menu_values = ["Select supplier"]
+        for supplier in suppliers:
+            label = f"{supplier['id']} | {supplier['name']}"
+            menu_values.append(label)
+            self.suppliers_table.insert(
+                "",
+                "end",
+                values=(
+                    supplier["id"],
+                    supplier["name"],
+                    supplier.get("contact") or "",
+                    f"{float(supplier.get('total_outstanding', 0.0)):.2f}",
+                ),
+            )
+
+        self.supplier_option_menu.configure(values=menu_values)
+        if self.selected_supplier_var.get() not in menu_values:
+            self.selected_supplier_var.set("Select supplier")
+
+        self._clear_table(self.supplier_batches_table)
+        self._clear_table(self.supplier_payments_table)
 
     def refresh_users(self):
         self._clear_table(self.users_table)
@@ -463,6 +595,9 @@ class AdminView(ctk.CTkFrame):
             self.item_sell_entry,
             self.item_stock_entry,
             self.item_min_entry,
+            self.item_disc_pct_entry,
+            self.item_surcharge_enabled_entry,
+            self.item_surcharge_pct_entry,
         ]
         for entry in fields:
             entry.delete(0, "end")
@@ -473,6 +608,9 @@ class AdminView(ctk.CTkFrame):
         self.item_sell_entry.insert(0, values[3])
         self.item_stock_entry.insert(0, values[4])
         self.item_min_entry.insert(0, values[5])
+        self.item_disc_pct_entry.insert(0, values[6])
+        self.item_surcharge_enabled_entry.insert(0, values[7])
+        self.item_surcharge_pct_entry.insert(0, values[8])
 
     def add_product(self):
         try:
@@ -480,8 +618,11 @@ class AdminView(ctk.CTkFrame):
             sell_price = float(self.item_sell_entry.get() or 0)
             stock = float(self.item_stock_entry.get() or 0)
             min_stock = float(self.item_min_entry.get() or 0)
+            default_discount_pct = float(self.item_disc_pct_entry.get() or 0)
+            surcharge_enabled = int(self.item_surcharge_enabled_entry.get() or 0) == 1
+            surcharge_pct = float(self.item_surcharge_pct_entry.get() or 0)
         except ValueError:
-            messagebox.showerror("Invalid", "Buy, sell, stock, and min fields must be numeric.")
+            messagebox.showerror("Invalid", "Numeric fields contain invalid values.")
             return
 
         success, result = queries.add_product(
@@ -491,6 +632,9 @@ class AdminView(ctk.CTkFrame):
             sell_price=sell_price,
             stock=stock,
             min_stock=min_stock,
+            default_discount_pct=default_discount_pct,
+            card_surcharge_enabled=surcharge_enabled,
+            card_surcharge_pct=surcharge_pct,
         )
         if success:
             messagebox.showinfo("Success", f"Product saved as {result}")
@@ -505,8 +649,11 @@ class AdminView(ctk.CTkFrame):
             buy_price = float(self.item_buy_entry.get() or 0)
             sell_price = float(self.item_sell_entry.get() or 0)
             min_stock = float(self.item_min_entry.get() or 0)
+            default_discount_pct = float(self.item_disc_pct_entry.get() or 0)
+            surcharge_enabled = int(self.item_surcharge_enabled_entry.get() or 0) == 1
+            surcharge_pct = float(self.item_surcharge_pct_entry.get() or 0)
         except ValueError:
-            messagebox.showerror("Invalid", "Buy, sell, and min fields must be numeric.")
+            messagebox.showerror("Invalid", "Numeric fields contain invalid values.")
             return
 
         success, message = queries.update_product(
@@ -515,6 +662,9 @@ class AdminView(ctk.CTkFrame):
             buy_price=buy_price,
             sell_price=sell_price,
             min_stock=min_stock,
+            default_discount_pct=default_discount_pct,
+            card_surcharge_enabled=surcharge_enabled,
+            card_surcharge_pct=surcharge_pct,
         )
         if success:
             messagebox.showinfo("Updated", message)
@@ -589,5 +739,179 @@ class AdminView(ctk.CTkFrame):
             self.exp_category_entry.delete(0, "end")
             self.refresh_expenses()
             self.refresh_dashboard()
+        else:
+            messagebox.showerror("Error", message)
+
+    def _selected_supplier_id(self):
+        label = self.selected_supplier_var.get().strip()
+        if "|" not in label:
+            return None
+        try:
+            return int(label.split("|")[0].strip())
+        except ValueError:
+            return None
+
+    def on_supplier_select(self, event=None):
+        selection = self.suppliers_table.selection()
+        if not selection:
+            return
+
+        values = self.suppliers_table.item(selection[0], "values")
+        supplier_id = int(values[0])
+        self.selected_supplier_var.set(f"{supplier_id} | {values[1]}")
+        self._refresh_supplier_ledger(supplier_id)
+
+    def _refresh_supplier_ledger(self, supplier_id):
+        self._clear_table(self.supplier_batches_table)
+        self._clear_table(self.supplier_payments_table)
+
+        ledger = queries.get_supplier_ledger(int(supplier_id))
+        for batch in ledger.get("batches", []):
+            self.supplier_batches_table.insert(
+                "",
+                "end",
+                values=(
+                    batch["id"],
+                    batch.get("reference_no") or "-",
+                    f"{float(batch['total_cost']):.2f}",
+                    f"{float(batch['paid_amount']):.2f}",
+                    f"{float(batch['balance_due']):.2f}",
+                    batch["status"],
+                ),
+            )
+
+        for payment in ledger.get("payments", []):
+            self.supplier_payments_table.insert(
+                "",
+                "end",
+                values=(
+                    payment["id"],
+                    payment.get("batch_id") or "-",
+                    f"{float(payment['amount']):.2f}",
+                    payment.get("method") or "CASH",
+                    payment.get("paid_at") or "",
+                ),
+            )
+
+    def add_supplier(self):
+        name = self.supplier_name_entry.get().strip()
+        contact = self.supplier_contact_entry.get().strip()
+        try:
+            opening_balance = float(self.supplier_opening_entry.get().strip() or 0)
+        except ValueError:
+            messagebox.showerror("Invalid", "Opening balance must be numeric.")
+            return
+
+        success, message = queries.create_supplier(name=name, contact=contact, opening_balance=opening_balance)
+        if success:
+            messagebox.showinfo("Saved", message)
+            self.supplier_name_entry.delete(0, "end")
+            self.supplier_contact_entry.delete(0, "end")
+            self.supplier_opening_entry.delete(0, "end")
+            self.refresh_suppliers()
+        else:
+            messagebox.showerror("Error", message)
+
+    def add_batch_line(self):
+        product_id = self.batch_product_id_entry.get().strip()
+        try:
+            qty = float(self.batch_qty_entry.get().strip() or 0)
+            unit_cost = float(self.batch_cost_entry.get().strip() or 0)
+            disc_pct = float(self.batch_disc_entry.get().strip() or 0)
+        except ValueError:
+            messagebox.showerror("Invalid", "Qty, unit cost, and discount must be numeric.")
+            return
+
+        if not product_id or qty <= 0:
+            messagebox.showwarning("Input", "Product ID and positive qty are required.")
+            return
+
+        self.batch_lines.append(
+            {
+                "product_id": product_id,
+                "qty_received": qty,
+                "unit_cost": unit_cost,
+                "line_discount_pct": disc_pct,
+            }
+        )
+
+        self.batch_lines_table.insert(
+            "",
+            "end",
+            values=(product_id, f"{qty:.2f}", f"{unit_cost:.2f}", f"{disc_pct:.2f}"),
+        )
+
+        self.batch_product_id_entry.delete(0, "end")
+        self.batch_qty_entry.delete(0, "end")
+        self.batch_cost_entry.delete(0, "end")
+        self.batch_disc_entry.delete(0, "end")
+
+    def receive_batch(self):
+        supplier_id = self._selected_supplier_id()
+        if supplier_id is None:
+            messagebox.showwarning("Supplier", "Select supplier before receiving stock.")
+            return
+        if not self.batch_lines:
+            messagebox.showwarning("Batch", "Add at least one line item.")
+            return
+
+        try:
+            paid_amount = float(self.batch_paid_entry.get().strip() or 0)
+        except ValueError:
+            messagebox.showerror("Invalid", "Initial paid must be numeric.")
+            return
+
+        success, result = queries.receive_supplier_batch(
+            supplier_id=supplier_id,
+            reference_no=self.batch_ref_entry.get().strip(),
+            items=self.batch_lines,
+            paid_amount=paid_amount,
+        )
+        if success:
+            messagebox.showinfo("Received", f"Batch received. Batch ID: {result}")
+            self.batch_lines = []
+            self.batch_ref_entry.delete(0, "end")
+            self.batch_paid_entry.delete(0, "end")
+            self._clear_table(self.batch_lines_table)
+            self.refresh_products()
+            self.refresh_dashboard()
+            self.refresh_suppliers()
+            self._refresh_supplier_ledger(supplier_id)
+        else:
+            messagebox.showerror("Error", result)
+
+    def settle_supplier_batch(self):
+        supplier_id = self._selected_supplier_id()
+        if supplier_id is None:
+            messagebox.showwarning("Supplier", "Select supplier first.")
+            return
+
+        selection = self.supplier_batches_table.selection()
+        if not selection:
+            messagebox.showwarning("Batch", "Select a supplier batch to settle.")
+            return
+
+        values = self.supplier_batches_table.item(selection[0], "values")
+        batch_id = int(values[0])
+
+        try:
+            amount = float(self.supplier_pay_amount_entry.get().strip() or 0)
+        except ValueError:
+            messagebox.showerror("Invalid", "Payment amount must be numeric.")
+            return
+
+        success, message = queries.record_supplier_payment(
+            supplier_id=supplier_id,
+            batch_id=batch_id,
+            amount=amount,
+            method=self.supplier_pay_method_var.get().strip().upper(),
+            note=self.supplier_pay_note_entry.get().strip(),
+        )
+        if success:
+            messagebox.showinfo("Saved", message)
+            self.supplier_pay_amount_entry.delete(0, "end")
+            self.supplier_pay_note_entry.delete(0, "end")
+            self.refresh_suppliers()
+            self._refresh_supplier_ledger(supplier_id)
         else:
             messagebox.showerror("Error", message)
