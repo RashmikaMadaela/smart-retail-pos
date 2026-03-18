@@ -20,6 +20,7 @@ class BillingView(ctk.CTkFrame):
         self.current_line_discount = 0.0
         self.current_global_discount = 0.0
         self.current_card_surcharge = 0.0
+        self.current_base_total = 0.0
         self.current_total = 0.0
 
         self.setup_ui()
@@ -770,12 +771,14 @@ class BillingView(ctk.CTkFrame):
         global_discount = min(global_discount, subtotal_after_line)
         subtotal_after_discounts = max(0.0, subtotal_after_line - global_discount)
         card_surcharge = self._calculate_card_surcharge_preview(subtotal_after_discounts)
-        total = max(0.0, subtotal_after_discounts + card_surcharge)
+        base_total = max(0.0, subtotal_after_discounts)
+        total = max(0.0, base_total + card_surcharge)
 
         self.current_subtotal = round(subtotal, 2)
         self.current_line_discount = round(line_discount_total, 2)
         self.current_global_discount = round(global_discount, 2)
         self.current_card_surcharge = round(card_surcharge, 2)
+        self.current_base_total = round(base_total, 2)
         self.current_total = round(total, 2)
 
         self.subtotal_var.set(f"Subtotal: Rs. {self.current_subtotal:.2f}")
@@ -915,7 +918,7 @@ class BillingView(ctk.CTkFrame):
             cart_items=self.cart,
             subtotal=self.current_subtotal,
             global_discount=self.current_global_discount,
-            total_amount=self.current_total,
+            total_amount=self.current_base_total,
         )
         if success:
             messagebox.showinfo("Held", f"Bill held successfully. Hold ID: {result}")
@@ -992,7 +995,7 @@ class BillingView(ctk.CTkFrame):
                 cart_items=self.cart,
                 subtotal=self.current_subtotal,
                 global_discount=self.current_global_discount,
-                total_amount=self.current_total,
+                total_amount=self.current_base_total,
                 payment_method=self.payment_method.get().strip().upper(),
             )
             if success:
@@ -1009,7 +1012,7 @@ class BillingView(ctk.CTkFrame):
             cart_items=self.cart,
             subtotal=self.current_subtotal,
             global_discount=self.current_global_discount,
-            total_amount=self.current_total,
+            total_amount=self.current_base_total,
             status="COMPLETED",
             paid_amount=paid_amount,
             payment_status=payment_mode,
