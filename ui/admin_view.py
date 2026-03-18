@@ -2,6 +2,7 @@ import customtkinter as ctk
 from tkinter import messagebox, ttk
 
 from database import queries
+from hardware.printer import generate_and_print_product_sticker
 
 
 class AdminView(ctk.CTkFrame):
@@ -157,11 +158,15 @@ class AdminView(ctk.CTkFrame):
             hover_color="#8B2323",
             command=self.delete_product,
         )
+        self.sticker_copies_entry = ctk.CTkEntry(controls, width=70, placeholder_text="Copies")
+        print_sticker_btn = ctk.CTkButton(controls, text="Print Sticker", width=120, command=self.print_sticker)
 
         add_btn.grid(row=0, column=9, padx=4, pady=6)
         upd_btn.grid(row=0, column=10, padx=4, pady=6)
         stock_btn.grid(row=0, column=11, padx=4, pady=6)
         del_btn.grid(row=0, column=12, padx=4, pady=6)
+        self.sticker_copies_entry.grid(row=0, column=13, padx=4, pady=6)
+        print_sticker_btn.grid(row=0, column=14, padx=4, pady=6)
 
         products_card, self.products_table = self._create_labeled_table_card(
             self.inventory_tab,
@@ -705,6 +710,38 @@ class AdminView(ctk.CTkFrame):
             self.refresh_dashboard()
         else:
             messagebox.showerror("Error", message)
+
+    def print_sticker(self):
+        barcode = self.item_id_entry.get().strip()
+        if not barcode:
+            values = self._get_selected_product()
+            if values:
+                barcode = str(values[0]).strip()
+
+        if not barcode:
+            messagebox.showwarning("Select Item", "Select an item first.")
+            return
+
+        copies_text = self.sticker_copies_entry.get().strip()
+        if not copies_text:
+            copies = 1
+        else:
+            try:
+                copies = int(copies_text)
+            except ValueError:
+                messagebox.showerror("Invalid", "Copies must be a whole number.")
+                return
+
+        result = generate_and_print_product_sticker(barcode, copies=copies)
+        if result.get("ok"):
+            path = result.get("path")
+            detail = result.get("detail") or "Sticker generated successfully."
+            if path:
+                messagebox.showinfo("Sticker", f"{detail}\nSaved: {path}")
+            else:
+                messagebox.showinfo("Sticker", detail)
+        else:
+            messagebox.showerror("Error", result.get("detail") or "Failed to generate sticker.")
 
     def create_user(self):
         success, message = queries.create_user(
