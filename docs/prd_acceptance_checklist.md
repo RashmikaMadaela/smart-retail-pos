@@ -19,6 +19,9 @@
 - [ ] Admin can update stock quantities.
 - [ ] Admin can change selling prices for future sales.
 - [ ] Low stock alert flags items where stock is below min stock.
+- [ ] Product-level default discount percent is configurable.
+- [ ] Product-level card surcharge settings are configurable.
+- [ ] Inventory supports barcode sticker generation and print fallback.
 
 ## POS Billing
 
@@ -30,6 +33,18 @@
 - [ ] Recall bill feature restores held transaction.
 - [ ] Completed sale stores immutable sold-at price in line items.
 - [ ] Receipt generation is triggered after checkout.
+- [ ] Cashier can quick-add missing products in billing flow.
+- [ ] Payment method supports CASH and CARD.
+- [ ] Card surcharge is automatically applied for configured items on CARD payments.
+- [ ] Paid amount preview shows change or remaining balance before checkout.
+
+## Supplier Ledger and Batch Management
+
+- [ ] Admin can create supplier profiles.
+- [ ] Admin can receive supplier batches with product lines, unit cost, and discounts.
+- [ ] Batch receive increases product stock.
+- [ ] Partial supplier settlement is supported for selected batch.
+- [ ] Supplier outstanding payable updates after receive and settlement.
 
 ## Customer Ledger
 
@@ -57,6 +72,7 @@
 - [ ] USB barcode scanner works as keyboard emulation.
 - [ ] ESC/POS thermal print path is supported.
 - [ ] Fallback receipt output works if no printer is configured.
+- [ ] Sticker generation and fallback output works if printer/image path is unavailable.
 
 ## Database Coverage
 
@@ -66,6 +82,10 @@
 - [ ] `sale_items` table stores line items.
 - [ ] `customers` table stores ledger identity and outstanding balances.
 - [ ] `expenses` table stores operational expenses.
+- [ ] `suppliers` table stores supplier identities and outstanding values.
+- [ ] `supplier_batches` table stores supplier invoices/stock receipts.
+- [ ] `supplier_batch_items` table stores received line-level product details.
+- [ ] `supplier_payments` table stores supplier settlement records.
 
 ## Out of Scope (Must Stay Excluded)
 

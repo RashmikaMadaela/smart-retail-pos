@@ -1,79 +1,86 @@
-# Demo Runbook - Smart Retail POS Phase 1 MVP
+# Demo Runbook - Smart Retail POS
 
 ## Pre-Demo Setup
 
 1. Install dependencies:
 
 ```bash
-e:/Github/smart-retail-pos/venv/Scripts/python.exe -m pip install -r requirements.txt
+venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
 2. Initialize database:
 
 ```bash
-e:/Github/smart-retail-pos/venv/Scripts/python.exe database/db_setup.py
+venv\Scripts\python.exe database\db_setup.py
 ```
 
-3. Launch app:
+3. Launch application:
 
 ```bash
-e:/Github/smart-retail-pos/venv/Scripts/python.exe main.py
+venv\Scripts\python.exe main.py
 ```
 
-## Demo Flow 1 - Cashier Billing
+## Demo Flow 1 - Cashier Billing and Checkout
 
-1. Log in as `admin`/`admin123` and click `Open Billing`.
-2. Add products by barcode and by name search.
-3. Apply line discount to a selected item.
-4. Apply global discount (amount or percent).
-5. Show hold bill and recall bill.
-6. Complete checkout with payment mode `PAID`.
-7. Confirm receipt behavior:
-- ESC/POS if printer IDs are configured.
-- Fallback text receipt at `receipts/receipt_<id>.txt`.
+1. Log in with admin/admin123 and open Billing.
+2. Add products via barcode input and product search.
+3. Edit quantity and line discount from the current item panel.
+4. Switch payment method between CASH and CARD.
+5. Show surcharge auto-application for products marked with card surcharge.
+6. Enter Paid Amount and show live Change or Balance Due preview.
+7. Use Hold Bill and Recall Bill.
+8. Complete checkout and show receipt behavior:
+- ESC/POS print when configured and available.
+- File fallback at receipts/receipt_<sale_id>.txt.
 
-## Demo Flow 2 - Credit Ledger
+## Demo Flow 2 - Customer Credit and Settlement
 
-1. In billing, select `PARTIAL` or `UNPAID` payment mode.
-2. Enter customer name/contact and checkout.
-3. Open admin dashboard and show outstanding reflected in customer ledger queries.
-4. Run a settlement using data-layer helper if needed:
+1. In billing, complete a PARTIAL or UNPAID sale with customer details.
+2. Open Admin > Customers and verify outstanding amount.
+3. Record customer payment and verify ledger + outstanding update.
 
-```bash
-e:/Github/smart-retail-pos/venv/Scripts/python.exe -c "from database import queries; print(queries.record_customer_payment(1, 50))"
-```
+## Demo Flow 3 - Supplier Batch Receiving and Partial Settlement
 
-## Demo Flow 3 - Admin Operations
+1. Open Admin > Suppliers.
+2. Add a supplier.
+3. Add one or more batch lines with product ID, qty, unit cost, and discount percent.
+4. Receive stock with optional initial payment.
+5. Verify stock increase in Inventory table.
+6. Select batch and settle a partial payment.
+7. Verify batch balance, status, and supplier outstanding are updated.
 
-1. Inventory tab:
-- Add item (barcoded and blank barcode SYS item).
-- Update sell/buy/min stock fields.
-- Set stock quantity and verify low-stock panel updates.
-2. Users tab:
-- Create a `Cashier` account.
-3. Expenses tab:
-- Add categorized expense entry.
-4. Dashboard tab:
-- Show Gross Sales, COGS, Expenses, Net Profit.
-- Show Top Sellers, Dead Stock, and Peak Hours tables.
+## Demo Flow 4 - Inventory and Label Printing
+
+1. Open Admin > Inventory.
+2. Add or select a product.
+3. Enter Copies and click Print Sticker.
+4. Show output behavior:
+- ESC/POS image print when configured and available.
+- Fallback saved under receipts/stickers/.
+
+## Demo Flow 5 - Admin Controls and Analytics
+
+1. Admin > Users: create a Cashier account.
+2. Admin > Expenses: add categorized expense.
+3. Admin > Dashboard: verify KPI cards and labeled analytics tables.
 
 ## Validation Commands
 
 1. Run tests:
 
 ```bash
-e:/Github/smart-retail-pos/venv/Scripts/python.exe -m pytest -q
+venv\Scripts\python.exe -m pytest -q
 ```
 
 2. Optional smoke script:
 
 ```bash
-e:/Github/smart-retail-pos/venv/Scripts/python.exe test_logic.py
+venv\Scripts\python.exe test_logic.py
 ```
 
-## Known Limits (Per PRD)
+## Known Limits
 
 - No cloud sync.
-- No Docker/CI-CD deployment.
+- No Docker/CI-CD pipeline included.
 - No AI/NLQ integration.
-- No WhatsApp receipts.
+- No WhatsApp receipt integration.
