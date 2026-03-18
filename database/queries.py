@@ -51,12 +51,14 @@ def _normalize_cart_items(cart_items: List[Dict]) -> List[Dict]:
         qty = float(item.get("qty", 0))
         price = float(item.get("price", 0))
         discount = float(item.get("discount", 0.0))
+        applied_surcharge = float(item.get("applied_surcharge", 0.0))
 
         if not product_id:
             raise ValueError("Cart item product_id is required.")
         _validate_positive(qty, f"Quantity for {product_id}")
         _validate_non_negative(price, f"Price for {product_id}")
         _validate_non_negative(discount, f"Discount for {product_id}")
+        _validate_non_negative(applied_surcharge, f"Surcharge for {product_id}")
         if discount > price:
             raise ValueError(f"Item discount cannot exceed unit price for {product_id}.")
 
@@ -66,6 +68,7 @@ def _normalize_cart_items(cart_items: List[Dict]) -> List[Dict]:
                 "qty": qty,
                 "price": price,
                 "discount": discount,
+                "applied_surcharge": applied_surcharge,
             }
         )
 
@@ -125,6 +128,33 @@ def _ensure_stock_available(cursor: sqlite3.Cursor, cart_items: List[Dict]) -> N
             )
 
 
+def _resolve_item_surcharge(cursor: sqlite3.Cursor, item: Dict, payment_method: str) -> float:
+    if (payment_method or "CASH").strip().upper() != "CARD":
+        return 0.0
+
+    cursor.execute(
+        """
+        SELECT card_surcharge_enabled, card_surcharge_pct
+        FROM products
+        WHERE barcode_id = ?
+        """,
+        (item["product_id"],),
+    )
+    product = cursor.fetchone()
+    if not product:
+        return 0.0
+
+    if int(product["card_surcharge_enabled"] or 0) != 1:
+        return 0.0
+
+    surcharge_pct = float(product["card_surcharge_pct"] or 0.0)
+    if surcharge_pct <= 0:
+        return 0.0
+
+    line_base = float(item["qty"]) * max(0.0, float(item["price"]) - float(item["discount"]))
+    return round(line_base * (surcharge_pct / 100.0), 2)
+
+
 # --- Inventory Management ---
 
 def add_product(
@@ -134,6 +164,9 @@ def add_product(
     sell_price: float,
     stock: float,
     min_stock: float,
+    default_discount_pct: float = 0.0,
+    card_surcharge_enabled: bool = False,
+    card_surcharge_pct: float = 0.0,
 ) -> Tuple[bool, str]:
     with get_connection() as conn:
         cursor = conn.cursor()
@@ -146,6 +179,8 @@ def add_product(
         _validate_non_negative(sell_price, "Selling price")
         _validate_non_negative(stock, "Stock")
         _validate_non_negative(min_stock, "Minimum stock")
+        _validate_non_negative(default_discount_pct, "Default discount percent")
+        _validate_non_negative(card_surcharge_pct, "Card surcharge percent")
 
         product_id = (barcode or "").strip() or _generate_sys_barcode(cursor)
 
@@ -162,6 +197,19 @@ def add_product(
                     float(sell_price),
                     float(stock),
                     float(min_stock),
+                ),
+            )
+            cursor.execute(
+                """
+                UPDATE products
+                SET default_discount_pct = ?, card_surcharge_enabled = ?, card_surcharge_pct = ?
+                WHERE barcode_id = ?
+                """,
+                (
+                    float(default_discount_pct),
+                    1 if card_surcharge_enabled else 0,
+                    float(card_surcharge_pct),
+                    product_id,
                 ),
             )
             conn.commit()
@@ -212,6 +260,9 @@ def update_product(
     buy_price: float,
     sell_price: float,
     min_stock: float,
+    default_discount_pct: Optional[float] = None,
+    card_surcharge_enabled: Optional[bool] = None,
+    card_surcharge_pct: Optional[float] = None,
 ) -> Tuple[bool, str]:
     try:
         product_name = (name or "").strip()
@@ -221,6 +272,10 @@ def update_product(
         _validate_non_negative(buy_price, "Buying price")
         _validate_non_negative(sell_price, "Selling price")
         _validate_non_negative(min_stock, "Minimum stock")
+        if default_discount_pct is not None:
+            _validate_non_negative(default_discount_pct, "Default discount percent")
+        if card_surcharge_pct is not None:
+            _validate_non_negative(card_surcharge_pct, "Card surcharge percent")
 
         with get_connection() as conn:
             cursor = conn.cursor()
@@ -238,6 +293,21 @@ def update_product(
                     barcode,
                 ),
             )
+            if default_discount_pct is not None:
+                cursor.execute(
+                    "UPDATE products SET default_discount_pct = ? WHERE barcode_id = ?",
+                    (float(default_discount_pct), barcode),
+                )
+            if card_surcharge_enabled is not None:
+                cursor.execute(
+                    "UPDATE products SET card_surcharge_enabled = ? WHERE barcode_id = ?",
+                    (1 if card_surcharge_enabled else 0, barcode),
+                )
+            if card_surcharge_pct is not None:
+                cursor.execute(
+                    "UPDATE products SET card_surcharge_pct = ? WHERE barcode_id = ?",
+                    (float(card_surcharge_pct), barcode),
+                )
             conn.commit()
             if cursor.rowcount == 0:
                 return False, "Error: Product not found."
@@ -305,6 +375,293 @@ def list_low_stock_products() -> List[Dict]:
             """
         )
         return [dict(row) for row in cursor.fetchall()]
+
+
+# --- Suppliers and Batch Receiving ---
+
+def create_supplier(
+    name: str,
+    contact: str = "",
+    opening_balance: float = 0.0,
+    notes: str = "",
+) -> Tuple[bool, str]:
+    supplier_name = (name or "").strip()
+    if not supplier_name:
+        return False, "Error: Supplier name is required."
+
+    try:
+        _validate_non_negative(opening_balance, "Opening balance")
+    except ValueError as err:
+        return False, f"Error: {err}"
+
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                """
+                INSERT INTO suppliers (name, contact, opening_balance, total_outstanding, notes)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    supplier_name,
+                    (contact or "").strip(),
+                    float(opening_balance),
+                    float(opening_balance),
+                    (notes or "").strip(),
+                ),
+            )
+            conn.commit()
+            return True, "Supplier created successfully."
+        except sqlite3.IntegrityError:
+            return False, "Error: Supplier already exists."
+
+
+def list_suppliers(limit: int = 200) -> List[Dict]:
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT * FROM suppliers ORDER BY name ASC LIMIT ?",
+            (int(limit),),
+        )
+        return [dict(row) for row in cursor.fetchall()]
+
+
+def search_suppliers(search_text: str, limit: int = 50) -> List[Dict]:
+    pattern = f"%{(search_text or '').strip()}%"
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT *
+            FROM suppliers
+            WHERE name LIKE ? OR contact LIKE ?
+            ORDER BY name ASC
+            LIMIT ?
+            """,
+            (pattern, pattern, int(limit)),
+        )
+        return [dict(row) for row in cursor.fetchall()]
+
+
+def receive_supplier_batch(
+    supplier_id: int,
+    reference_no: str,
+    items: List[Dict],
+    paid_amount: float = 0.0,
+) -> Tuple[bool, str]:
+    if not items:
+        return False, "Error: Batch must contain at least one item."
+
+    try:
+        _validate_non_negative(paid_amount, "Paid amount")
+    except ValueError as err:
+        return False, f"Error: {err}"
+
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM suppliers WHERE id = ?", (int(supplier_id),))
+        if not cursor.fetchone():
+            return False, "Error: Supplier not found."
+
+        normalized_items = []
+        total_cost = 0.0
+        for item in items:
+            product_id = (item.get("product_id") or "").strip()
+            qty_received = float(item.get("qty_received", 0.0))
+            unit_cost = float(item.get("unit_cost", 0.0))
+            line_discount_pct = float(item.get("line_discount_pct", 0.0))
+
+            if not product_id:
+                return False, "Error: product_id is required for each batch item."
+            _validate_positive(qty_received, f"Received qty for {product_id}")
+            _validate_non_negative(unit_cost, f"Unit cost for {product_id}")
+            _validate_non_negative(line_discount_pct, f"Line discount percent for {product_id}")
+            if line_discount_pct > 100:
+                return False, f"Error: Line discount percent cannot exceed 100 for {product_id}."
+
+            cursor.execute("SELECT barcode_id FROM products WHERE barcode_id = ?", (product_id,))
+            if not cursor.fetchone():
+                return False, f"Error: Product not found: {product_id}"
+
+            base = qty_received * unit_cost
+            line_discount = base * (line_discount_pct / 100.0)
+            line_total = round(base - line_discount, 2)
+            total_cost += line_total
+            normalized_items.append(
+                {
+                    "product_id": product_id,
+                    "qty_received": qty_received,
+                    "unit_cost": unit_cost,
+                    "line_discount_pct": line_discount_pct,
+                    "line_total": line_total,
+                }
+            )
+
+        if float(paid_amount) > total_cost:
+            return False, "Error: Paid amount cannot exceed total batch cost."
+
+        balance_due = round(total_cost - float(paid_amount), 2)
+        if balance_due == 0:
+            status = "PAID"
+        elif float(paid_amount) == 0:
+            status = "UNPAID"
+        else:
+            status = "PARTIAL"
+
+        cursor.execute(
+            """
+            INSERT INTO supplier_batches (supplier_id, reference_no, total_cost, paid_amount, balance_due, status)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                int(supplier_id),
+                (reference_no or "").strip() or None,
+                round(total_cost, 2),
+                float(paid_amount),
+                balance_due,
+                status,
+            ),
+        )
+        batch_id = cursor.lastrowid
+
+        for item in normalized_items:
+            cursor.execute(
+                """
+                INSERT INTO supplier_batch_items
+                (batch_id, product_id, qty_received, unit_cost, line_discount_pct, line_total)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    int(batch_id),
+                    item["product_id"],
+                    item["qty_received"],
+                    item["unit_cost"],
+                    item["line_discount_pct"],
+                    item["line_total"],
+                ),
+            )
+            cursor.execute(
+                "UPDATE products SET stock = stock + ? WHERE barcode_id = ?",
+                (item["qty_received"], item["product_id"]),
+            )
+
+        if float(paid_amount) > 0:
+            cursor.execute(
+                """
+                INSERT INTO supplier_payments (supplier_id, batch_id, amount, method, note)
+                VALUES (?, ?, ?, 'CASH', 'Initial payment at receiving')
+                """,
+                (int(supplier_id), int(batch_id), float(paid_amount)),
+            )
+
+        cursor.execute(
+            "UPDATE suppliers SET total_outstanding = total_outstanding + ? WHERE id = ?",
+            (balance_due, int(supplier_id)),
+        )
+        conn.commit()
+        return True, str(batch_id)
+
+
+def list_supplier_batches(supplier_id: int, include_settled: bool = True) -> List[Dict]:
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        query = "SELECT * FROM supplier_batches WHERE supplier_id = ?"
+        params: List = [int(supplier_id)]
+        if not include_settled:
+            query += " AND balance_due > 0"
+        query += " ORDER BY received_at DESC"
+        cursor.execute(query, tuple(params))
+        return [dict(row) for row in cursor.fetchall()]
+
+
+def record_supplier_payment(
+    supplier_id: int,
+    batch_id: int,
+    amount: float,
+    method: str = "CASH",
+    note: str = "",
+) -> Tuple[bool, str]:
+    try:
+        _validate_positive(amount, "Payment amount")
+    except ValueError as err:
+        return False, f"Error: {err}"
+
+    with get_connection() as conn:
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT id FROM suppliers WHERE id = ?", (int(supplier_id),))
+        if not cursor.fetchone():
+            return False, "Error: Supplier not found."
+
+        cursor.execute(
+            "SELECT balance_due, paid_amount, total_cost FROM supplier_batches WHERE id = ? AND supplier_id = ?",
+            (int(batch_id), int(supplier_id)),
+        )
+        batch = cursor.fetchone()
+        if not batch:
+            return False, "Error: Supplier batch not found."
+
+        current_balance = float(batch["balance_due"])
+        if current_balance <= 0:
+            return False, "Error: Selected batch is already settled."
+
+        applied = min(float(amount), current_balance)
+        new_balance = round(current_balance - applied, 2)
+        new_paid = round(float(batch["paid_amount"]) + applied, 2)
+
+        if new_balance == 0:
+            status = "PAID"
+        elif new_paid == 0:
+            status = "UNPAID"
+        else:
+            status = "PARTIAL"
+
+        cursor.execute(
+            """
+            UPDATE supplier_batches
+            SET paid_amount = ?, balance_due = ?, status = ?
+            WHERE id = ?
+            """,
+            (new_paid, new_balance, status, int(batch_id)),
+        )
+
+        cursor.execute(
+            """
+            INSERT INTO supplier_payments (supplier_id, batch_id, amount, method, note)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (int(supplier_id), int(batch_id), applied, (method or "CASH").upper(), (note or "").strip()),
+        )
+
+        cursor.execute(
+            "UPDATE suppliers SET total_outstanding = MAX(total_outstanding - ?, 0) WHERE id = ?",
+            (applied, int(supplier_id)),
+        )
+        conn.commit()
+        return True, f"Payment recorded. Remaining batch balance: {new_balance:.2f}"
+
+
+def get_supplier_ledger(supplier_id: int) -> Dict:
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM suppliers WHERE id = ?", (int(supplier_id),))
+        supplier = cursor.fetchone()
+        if not supplier:
+            return {"supplier": None, "batches": [], "payments": []}
+
+        cursor.execute(
+            "SELECT * FROM supplier_batches WHERE supplier_id = ? ORDER BY received_at DESC",
+            (int(supplier_id),),
+        )
+        batches = [dict(row) for row in cursor.fetchall()]
+
+        cursor.execute(
+            "SELECT * FROM supplier_payments WHERE supplier_id = ? ORDER BY paid_at DESC",
+            (int(supplier_id),),
+        )
+        payments = [dict(row) for row in cursor.fetchall()]
+
+        return {"supplier": dict(supplier), "batches": batches, "payments": payments}
 
 
 # --- Users and RBAC ---
@@ -515,6 +872,7 @@ def process_sale(
     status: str = "COMPLETED",
     paid_amount: Optional[float] = None,
     payment_status: Optional[str] = None,
+    payment_method: str = "CASH",
 ) -> Tuple[bool, str]:
     try:
         normalized_status = (status or "COMPLETED").strip().upper()
@@ -526,6 +884,9 @@ def process_sale(
         _validate_non_negative(total_amount, "Total amount")
 
         normalized_items = _normalize_cart_items(cart_items)
+        resolved_method = (payment_method or "CASH").strip().upper()
+        if resolved_method not in {"CASH", "CARD"}:
+            return False, "Error: Payment method must be CASH or CARD."
 
         with get_connection() as conn:
             cursor = conn.cursor()
@@ -533,13 +894,21 @@ def process_sale(
             if normalized_status == "COMPLETED":
                 _ensure_stock_available(cursor, normalized_items)
 
+            surcharge_total = 0.0
+            for item in normalized_items:
+                surcharge = _resolve_item_surcharge(cursor, item, resolved_method)
+                item["applied_surcharge"] = surcharge
+                surcharge_total += surcharge
+
+            resolved_total_amount = round(float(total_amount) + surcharge_total, 2)
+
             resolved_paid, balance_due, resolved_payment_status = _compute_payment_state(
-                float(total_amount), paid_amount, payment_status
+                resolved_total_amount, paid_amount, payment_status
             )
 
             if normalized_status != "COMPLETED":
                 resolved_paid = 0.0
-                balance_due = float(total_amount)
+                balance_due = resolved_total_amount
                 resolved_payment_status = "UNPAID"
 
             if balance_due > 0 and customer_id is None and normalized_status == "COMPLETED":
@@ -556,20 +925,22 @@ def process_sale(
                     status,
                     paid_amount,
                     balance_due,
-                    payment_status
+                    payment_status,
+                    payment_method
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     int(cashier_id),
                     customer_id,
                     float(subtotal),
                     float(global_discount),
-                    float(total_amount),
+                    resolved_total_amount,
                     normalized_status,
                     float(resolved_paid),
                     float(balance_due),
                     resolved_payment_status,
+                    resolved_method,
                 ),
             )
             sale_id = cursor.lastrowid
@@ -577,8 +948,8 @@ def process_sale(
             for item in normalized_items:
                 cursor.execute(
                     """
-                    INSERT INTO sale_items (sale_id, product_id, qty, sold_at_price, item_discount)
-                    VALUES (?, ?, ?, ?, ?)
+                    INSERT INTO sale_items (sale_id, product_id, qty, sold_at_price, item_discount, applied_surcharge)
+                    VALUES (?, ?, ?, ?, ?, ?)
                     """,
                     (
                         sale_id,
@@ -586,6 +957,7 @@ def process_sale(
                         item["qty"],
                         item["price"],
                         item["discount"],
+                        float(item.get("applied_surcharge", 0.0)),
                     ),
                 )
 
@@ -669,7 +1041,7 @@ def get_sale_items(sale_id: int) -> List[Dict]:
         cursor = conn.cursor()
         cursor.execute(
             """
-            SELECT si.product_id, p.name, si.qty, si.sold_at_price, si.item_discount
+            SELECT si.product_id, p.name, si.qty, si.sold_at_price, si.item_discount, si.applied_surcharge
             FROM sale_items si
             LEFT JOIN products p ON p.barcode_id = si.product_id
             WHERE si.sale_id = ?
@@ -695,6 +1067,7 @@ def get_sale_with_items(sale_id: int) -> Optional[Dict]:
                 s.paid_amount,
                 s.balance_due,
                 s.payment_status,
+                s.payment_method,
                 u.username AS cashier,
                 c.name AS customer_name,
                 c.contact AS customer_contact
@@ -736,6 +1109,7 @@ def complete_held_sale(
     subtotal: Optional[float] = None,
     global_discount: Optional[float] = None,
     total_amount: Optional[float] = None,
+    payment_method: str = "CASH",
 ) -> Tuple[bool, str]:
     try:
         with get_connection() as conn:
@@ -773,6 +1147,18 @@ def complete_held_sale(
 
             _ensure_stock_available(cursor, normalized_items)
 
+            resolved_method = (payment_method or "CASH").strip().upper()
+            if resolved_method not in {"CASH", "CARD"}:
+                return False, "Error: Payment method must be CASH or CARD."
+
+            surcharge_total = 0.0
+            for item in normalized_items:
+                surcharge = _resolve_item_surcharge(cursor, item, resolved_method)
+                item["applied_surcharge"] = surcharge
+                surcharge_total += surcharge
+
+            resolved_total = round(resolved_total + surcharge_total, 2)
+
             resolved_paid, balance_due, resolved_payment_status = _compute_payment_state(
                 resolved_total,
                 paid_amount,
@@ -794,6 +1180,7 @@ def complete_held_sale(
                     paid_amount = ?,
                     balance_due = ?,
                     payment_status = ?,
+                    payment_method = ?,
                     timestamp = CURRENT_TIMESTAMP
                 WHERE id = ?
                 """,
@@ -805,6 +1192,7 @@ def complete_held_sale(
                     resolved_paid,
                     balance_due,
                     resolved_payment_status,
+                    resolved_method,
                     int(sale_id),
                 ),
             )
@@ -814,8 +1202,8 @@ def complete_held_sale(
             for item in normalized_items:
                 cursor.execute(
                     """
-                    INSERT INTO sale_items (sale_id, product_id, qty, sold_at_price, item_discount)
-                    VALUES (?, ?, ?, ?, ?)
+                    INSERT INTO sale_items (sale_id, product_id, qty, sold_at_price, item_discount, applied_surcharge)
+                    VALUES (?, ?, ?, ?, ?, ?)
                     """,
                     (
                         int(sale_id),
@@ -823,6 +1211,7 @@ def complete_held_sale(
                         item["qty"],
                         item["price"],
                         item["discount"],
+                        float(item.get("applied_surcharge", 0.0)),
                     ),
                 )
 
