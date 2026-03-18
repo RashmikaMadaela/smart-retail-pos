@@ -19,6 +19,7 @@ class BillingView(ctk.CTkFrame):
         self.current_subtotal = 0.0
         self.current_line_discount = 0.0
         self.current_global_discount = 0.0
+        self.current_card_surcharge = 0.0
         self.current_total = 0.0
 
         self.setup_ui()
@@ -67,7 +68,7 @@ class BillingView(ctk.CTkFrame):
         ctk.CTkLabel(qty_discount_bar, text="Item Disc").pack(side="left", padx=(0, 4), pady=8)
         self.add_discount_entry = ctk.CTkEntry(qty_discount_bar, width=90)
         self.add_discount_entry.pack(side="left", padx=(0, 8), pady=8)
-        self.add_discount_entry.insert(0, "0")
+        self.add_discount_entry.insert(0, "")
 
         ctk.CTkLabel(
             qty_discount_bar,
@@ -208,17 +209,23 @@ class BillingView(ctk.CTkFrame):
         self.subtotal_var = ctk.StringVar(value="Subtotal: Rs. 0.00")
         self.line_discount_var = ctk.StringVar(value="Line Discounts: Rs. 0.00")
         self.global_discount_var = ctk.StringVar(value="Global Discount: Rs. 0.00")
+        self.card_surcharge_var = ctk.StringVar(value="Card Surcharge: Rs. 0.00")
         self.total_var = ctk.StringVar(value="Total: Rs. 0.00")
+        self.change_due_var = ctk.StringVar(value="Change: Rs. 0.00")
+        self.balance_due_var = ctk.StringVar(value="Balance Due: Rs. 0.00")
 
         ctk.CTkLabel(self.right_frame, textvariable=self.subtotal_var, font=("Arial", 16)).pack(pady=4)
         ctk.CTkLabel(self.right_frame, textvariable=self.line_discount_var, font=("Arial", 14)).pack(pady=2)
         ctk.CTkLabel(self.right_frame, textvariable=self.global_discount_var, font=("Arial", 14)).pack(pady=2)
+        ctk.CTkLabel(self.right_frame, textvariable=self.card_surcharge_var, font=("Arial", 14)).pack(pady=2)
         ctk.CTkLabel(
             self.right_frame,
             textvariable=self.total_var,
             font=("Arial", 24, "bold"),
             text_color="green",
         ).pack(pady=(8, 14))
+        ctk.CTkLabel(self.right_frame, textvariable=self.change_due_var, font=("Arial", 14), text_color="#0A5FC2").pack(pady=2)
+        ctk.CTkLabel(self.right_frame, textvariable=self.balance_due_var, font=("Arial", 14), text_color="#B05A00").pack(pady=(2, 10))
 
         discount_box = ctk.CTkFrame(self.right_frame)
         discount_box.pack(fill="x", padx=12, pady=(0, 8))
@@ -249,20 +256,33 @@ class BillingView(ctk.CTkFrame):
             variable=self.payment_mode,
             values=["PAID", "PARTIAL", "UNPAID"],
             width=140,
+            command=lambda _choice: self._update_payment_preview(),
         )
         pay_mode_menu.grid(row=0, column=1, padx=4, pady=(8, 4), sticky="w")
 
-        ctk.CTkLabel(payment_box, text="Paid Amount").grid(row=1, column=0, padx=8, pady=4, sticky="w")
+        ctk.CTkLabel(payment_box, text="Payment Method").grid(row=1, column=0, padx=8, pady=4, sticky="w")
+        self.payment_method = ctk.StringVar(value="CASH")
+        payment_method_menu = ctk.CTkOptionMenu(
+            payment_box,
+            variable=self.payment_method,
+            values=["CASH", "CARD"],
+            width=140,
+            command=lambda _choice: self.refresh_cart_table(),
+        )
+        payment_method_menu.grid(row=1, column=1, padx=4, pady=4, sticky="w")
+
+        ctk.CTkLabel(payment_box, text="Paid Amount").grid(row=2, column=0, padx=8, pady=4, sticky="w")
         self.paid_amount_entry = ctk.CTkEntry(payment_box, width=140, placeholder_text="Auto for PAID")
-        self.paid_amount_entry.grid(row=1, column=1, padx=4, pady=4, sticky="w")
+        self.paid_amount_entry.grid(row=2, column=1, padx=4, pady=4, sticky="w")
+        self.paid_amount_entry.bind("<KeyRelease>", self._update_payment_preview)
 
-        ctk.CTkLabel(payment_box, text="Customer Name").grid(row=2, column=0, padx=8, pady=4, sticky="w")
+        ctk.CTkLabel(payment_box, text="Customer Name").grid(row=3, column=0, padx=8, pady=4, sticky="w")
         self.customer_name_entry = ctk.CTkEntry(payment_box, width=200, placeholder_text="Required for credit")
-        self.customer_name_entry.grid(row=2, column=1, padx=4, pady=4, sticky="w")
+        self.customer_name_entry.grid(row=3, column=1, padx=4, pady=4, sticky="w")
 
-        ctk.CTkLabel(payment_box, text="Customer Contact").grid(row=3, column=0, padx=8, pady=(4, 8), sticky="w")
+        ctk.CTkLabel(payment_box, text="Customer Contact").grid(row=4, column=0, padx=8, pady=(4, 8), sticky="w")
         self.customer_contact_entry = ctk.CTkEntry(payment_box, width=200, placeholder_text="Phone number")
-        self.customer_contact_entry.grid(row=3, column=1, padx=4, pady=(4, 8), sticky="w")
+        self.customer_contact_entry.grid(row=4, column=1, padx=4, pady=(4, 8), sticky="w")
 
         action_box = ctk.CTkFrame(self.right_frame)
         action_box.pack(fill="x", padx=12, pady=(8, 14))
@@ -334,11 +354,11 @@ class BillingView(ctk.CTkFrame):
 
     def _parse_add_inputs(self):
         qty_text = self.add_qty_entry.get().strip() or "1"
-        discount_text = self.add_discount_entry.get().strip() or "0"
+        discount_text = self.add_discount_entry.get().strip()
 
         try:
             qty = float(qty_text)
-            discount = float(discount_text)
+            discount = None if discount_text == "" else float(discount_text)
         except ValueError:
             messagebox.showerror("Invalid Value", "Add quantity and discount must be numeric.")
             return None, None
@@ -346,13 +366,16 @@ class BillingView(ctk.CTkFrame):
         if qty <= 0:
             messagebox.showerror("Invalid Value", "Add quantity must be greater than zero.")
             return None, None
-        if discount < 0:
+        if discount is not None and discount < 0:
             messagebox.showerror("Invalid Value", "Item discount cannot be negative.")
             return None, None
 
         return qty, discount
 
     def _add_product_to_cart(self, product, qty, discount):
+        if discount is None:
+            discount = float(product.get("sell_price", 0.0)) * (float(product.get("default_discount_pct", 0.0)) / 100.0)
+
         if discount > float(product["sell_price"]):
             messagebox.showerror("Invalid Value", "Item discount cannot exceed unit price.")
             return
@@ -389,8 +412,11 @@ class BillingView(ctk.CTkFrame):
 
         product = queries.get_product(barcode)
         if not product:
-            messagebox.showerror("Not Found", "Item not found in database.")
-            return
+            created_product = self._quick_add_missing_product(initial_barcode=barcode)
+            if not created_product:
+                messagebox.showerror("Not Found", "Item not found in database.")
+                return
+            product = created_product
 
         qty, discount = self._parse_add_inputs()
         if qty is None:
@@ -409,6 +435,16 @@ class BillingView(ctk.CTkFrame):
         if not results:
             self.search_dropdown.configure(values=["No results"])
             self.search_var.set("No results")
+            if messagebox.askyesno("No Product Found", "No products matched. Do you want to quickly create this item?"):
+                created = self._quick_add_missing_product(initial_name=search_text)
+                if created:
+                    label = (
+                        f"{created['barcode_id']} | {created['name']} | "
+                        f"Rs. {float(created['sell_price']):.2f} | Stock {float(created['stock']):.2f}"
+                    )
+                    self.product_search_map = {label: created}
+                    self.search_dropdown.configure(values=[label])
+                    self.search_var.set(label)
             return
 
         labels = []
@@ -616,6 +652,58 @@ class BillingView(ctk.CTkFrame):
 
         return discount_value
 
+    def _calculate_card_surcharge_preview(self, subtotal_after_discounts):
+        if self.payment_method.get().strip().upper() != "CARD":
+            return 0.0
+
+        surcharge_total = 0.0
+        for item in self.cart:
+            product = queries.get_product(item["product_id"])
+            if not product:
+                continue
+
+            if int(product.get("card_surcharge_enabled", 0) or 0) != 1:
+                continue
+
+            surcharge_pct = float(product.get("card_surcharge_pct", 0.0) or 0.0)
+            if surcharge_pct <= 0:
+                continue
+
+            line_base = float(item["qty"]) * max(0.0, float(item["price"]) - float(item["discount"]))
+            surcharge_total += round(line_base * (surcharge_pct / 100.0), 2)
+
+        return round(min(surcharge_total, max(subtotal_after_discounts, 0.0) * 5), 2)
+
+    def _update_payment_preview(self, _event=None):
+        payment_mode = self.payment_mode.get().strip().upper()
+        paid_text = self.paid_amount_entry.get().strip()
+
+        if payment_mode == "PAID":
+            paid_value = self.current_total
+            self.paid_amount_entry.delete(0, "end")
+            self.paid_amount_entry.insert(0, f"{self.current_total:.2f}")
+        elif payment_mode == "UNPAID":
+            paid_value = 0.0
+        else:
+            if not paid_text:
+                self.change_due_var.set("Change: Rs. 0.00")
+                self.balance_due_var.set(f"Balance Due: Rs. {self.current_total:.2f}")
+                return
+            try:
+                paid_value = float(paid_text)
+            except ValueError:
+                self.change_due_var.set("Change: Rs. 0.00")
+                self.balance_due_var.set(f"Balance Due: Rs. {self.current_total:.2f}")
+                return
+
+        diff = round(paid_value - self.current_total, 2)
+        if diff >= 0:
+            self.change_due_var.set(f"Change: Rs. {diff:.2f}")
+            self.balance_due_var.set("Balance Due: Rs. 0.00")
+        else:
+            self.change_due_var.set("Change: Rs. 0.00")
+            self.balance_due_var.set(f"Balance Due: Rs. {abs(diff):.2f}")
+
     def refresh_cart_table(self):
         selected_product_id = self.current_item_id
         for row in self.cart_table.get_children():
@@ -656,24 +744,121 @@ class BillingView(ctk.CTkFrame):
         subtotal_after_line = max(0.0, subtotal - line_discount_total)
         global_discount = self._calculate_global_discount(subtotal_after_line)
         global_discount = min(global_discount, subtotal_after_line)
-        total = max(0.0, subtotal_after_line - global_discount)
+        subtotal_after_discounts = max(0.0, subtotal_after_line - global_discount)
+        card_surcharge = self._calculate_card_surcharge_preview(subtotal_after_discounts)
+        total = max(0.0, subtotal_after_discounts + card_surcharge)
 
         self.current_subtotal = round(subtotal, 2)
         self.current_line_discount = round(line_discount_total, 2)
         self.current_global_discount = round(global_discount, 2)
+        self.current_card_surcharge = round(card_surcharge, 2)
         self.current_total = round(total, 2)
 
         self.subtotal_var.set(f"Subtotal: Rs. {self.current_subtotal:.2f}")
         self.line_discount_var.set(f"Line Discounts: Rs. {self.current_line_discount:.2f}")
         self.global_discount_var.set(f"Global Discount: Rs. {self.current_global_discount:.2f}")
+        self.card_surcharge_var.set(f"Card Surcharge: Rs. {self.current_card_surcharge:.2f}")
         self.total_var.set(f"Total: Rs. {self.current_total:.2f}")
         self._sync_quick_editor()
+        self._update_payment_preview()
 
     def clear_cart(self):
         self.cart = []
         self.active_held_sale_id = None
         self.current_item_id = None
         self.refresh_cart_table()
+
+    def _quick_add_missing_product(self, initial_barcode="", initial_name=""):
+        dialog = ctk.CTkToplevel(self)
+        dialog.title("Quick Add Missing Product")
+        dialog.geometry("460x460")
+        dialog.grab_set()
+
+        role = (self.user_data.get("role") or "").strip().lower()
+        is_admin = role == "admin"
+
+        ctk.CTkLabel(
+            dialog,
+            text="Add Product Without Leaving Billing",
+            font=ctk.CTkFont(size=18, weight="bold"),
+        ).pack(anchor="w", padx=16, pady=(16, 8))
+
+        form = ctk.CTkFrame(dialog)
+        form.pack(fill="both", expand=True, padx=16, pady=8)
+
+        fields = {}
+
+        def add_field(label_text, default_value=""):
+            row = ctk.CTkFrame(form, fg_color="transparent")
+            row.pack(fill="x", pady=4)
+            ctk.CTkLabel(row, text=label_text, width=180, anchor="w").pack(side="left")
+            entry = ctk.CTkEntry(row)
+            entry.pack(side="left", fill="x", expand=True)
+            if default_value != "":
+                entry.insert(0, str(default_value))
+            fields[label_text] = entry
+
+        add_field("Barcode (optional)", initial_barcode)
+        add_field("Name", initial_name)
+        add_field("Sell Price", "0")
+        add_field("Initial Stock", "0")
+        add_field("Min Stock", "0")
+
+        if is_admin:
+            add_field("Buy Price", "0")
+            add_field("Default Discount %", "0")
+            add_field("Card Surcharge Enabled (0/1)", "0")
+            add_field("Card Surcharge %", "0")
+
+        result = {"product": None}
+
+        def on_save():
+            try:
+                barcode = fields["Barcode (optional)"].get().strip()
+                name = fields["Name"].get().strip()
+                sell_price = float(fields["Sell Price"].get().strip() or "0")
+                stock = float(fields["Initial Stock"].get().strip() or "0")
+                min_stock = float(fields["Min Stock"].get().strip() or "0")
+
+                if is_admin:
+                    buy_price = float(fields["Buy Price"].get().strip() or "0")
+                    default_discount_pct = float(fields["Default Discount %"].get().strip() or "0")
+                    card_surcharge_enabled = int(fields["Card Surcharge Enabled (0/1)"].get().strip() or "0") == 1
+                    card_surcharge_pct = float(fields["Card Surcharge %"].get().strip() or "0")
+                else:
+                    buy_price = sell_price
+                    default_discount_pct = 0.0
+                    card_surcharge_enabled = False
+                    card_surcharge_pct = 0.0
+
+                success, payload = queries.add_product(
+                    barcode=barcode,
+                    name=name,
+                    buy_price=buy_price,
+                    sell_price=sell_price,
+                    stock=stock,
+                    min_stock=min_stock,
+                    default_discount_pct=default_discount_pct,
+                    card_surcharge_enabled=card_surcharge_enabled,
+                    card_surcharge_pct=card_surcharge_pct,
+                )
+                if not success:
+                    messagebox.showerror("Add Failed", payload, parent=dialog)
+                    return
+
+                result["product"] = queries.get_product(payload)
+                dialog.destroy()
+            except ValueError:
+                messagebox.showerror("Invalid Value", "Numeric fields must contain valid numbers.", parent=dialog)
+
+        button_bar = ctk.CTkFrame(dialog, fg_color="transparent")
+        button_bar.pack(fill="x", padx=16, pady=(0, 14))
+
+        ctk.CTkButton(button_bar, text="Cancel", command=dialog.destroy, width=100).pack(side="right", padx=4)
+        ctk.CTkButton(button_bar, text="Create & Add", command=on_save, width=130).pack(side="right", padx=4)
+
+        dialog.wait_window()
+        return result["product"]
 
     def _resolve_customer_for_credit(self, payment_mode):
         if payment_mode == "PAID":
@@ -766,6 +951,7 @@ class BillingView(ctk.CTkFrame):
         self.global_discount_entry.delete(0, "end")
         self.global_discount_entry.insert(0, f"{float(payload['sale']['discount']):.2f}")
         self.discount_mode.set("AMOUNT")
+        self.payment_method.set((payload["sale"].get("payment_method") or "CASH").upper())
         self.payment_mode.set("PAID")
         self.paid_amount_entry.delete(0, "end")
         self.refresh_cart_table()
@@ -800,6 +986,7 @@ class BillingView(ctk.CTkFrame):
                 subtotal=self.current_subtotal,
                 global_discount=self.current_global_discount,
                 total_amount=self.current_total,
+                payment_method=self.payment_method.get().strip().upper(),
             )
             if success:
                 receipt_msg = self._generate_receipt_feedback(sale_id)
@@ -819,6 +1006,7 @@ class BillingView(ctk.CTkFrame):
             status="COMPLETED",
             paid_amount=paid_amount,
             payment_status=payment_mode,
+            payment_method=self.payment_method.get().strip().upper(),
         )
 
         if success:
