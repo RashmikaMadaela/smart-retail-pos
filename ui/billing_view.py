@@ -272,7 +272,7 @@ class BillingView(ctk.CTkFrame):
         payment_method_menu.grid(row=1, column=1, padx=4, pady=4, sticky="w")
 
         ctk.CTkLabel(payment_box, text="Paid Amount").grid(row=2, column=0, padx=8, pady=4, sticky="w")
-        self.paid_amount_entry = ctk.CTkEntry(payment_box, width=140, placeholder_text="Auto for PAID")
+        self.paid_amount_entry = ctk.CTkEntry(payment_box, width=140, placeholder_text="Enter paid amount")
         self.paid_amount_entry.grid(row=2, column=1, padx=4, pady=4, sticky="w")
         self.paid_amount_entry.bind("<KeyRelease>", self._update_payment_preview)
 
@@ -678,23 +678,23 @@ class BillingView(ctk.CTkFrame):
         payment_mode = self.payment_mode.get().strip().upper()
         paid_text = self.paid_amount_entry.get().strip()
 
-        if payment_mode == "PAID":
-            paid_value = self.current_total
-            self.paid_amount_entry.delete(0, "end")
-            self.paid_amount_entry.insert(0, f"{self.current_total:.2f}")
-        elif payment_mode == "UNPAID":
+        if payment_mode == "UNPAID":
             paid_value = 0.0
         else:
             if not paid_text:
-                self.change_due_var.set("Change: Rs. 0.00")
-                self.balance_due_var.set(f"Balance Due: Rs. {self.current_total:.2f}")
-                return
-            try:
-                paid_value = float(paid_text)
-            except ValueError:
-                self.change_due_var.set("Change: Rs. 0.00")
-                self.balance_due_var.set(f"Balance Due: Rs. {self.current_total:.2f}")
-                return
+                paid_value = self.current_total if payment_mode == "PAID" else 0.0
+            else:
+                try:
+                    paid_value = float(paid_text)
+                except ValueError:
+                    self.change_due_var.set("Change: Rs. 0.00")
+                    self.balance_due_var.set(f"Balance Due: Rs. {self.current_total:.2f}")
+                    return
+
+        if paid_value < 0:
+            self.change_due_var.set("Change: Rs. 0.00")
+            self.balance_due_var.set(f"Balance Due: Rs. {self.current_total:.2f}")
+            return
 
         diff = round(paid_value - self.current_total, 2)
         if diff >= 0:
@@ -703,6 +703,30 @@ class BillingView(ctk.CTkFrame):
         else:
             self.change_due_var.set("Change: Rs. 0.00")
             self.balance_due_var.set(f"Balance Due: Rs. {abs(diff):.2f}")
+
+    def _resolve_paid_amount(self, payment_mode):
+        paid_text = self.paid_amount_entry.get().strip()
+
+        if payment_mode == "UNPAID":
+            return 0.0
+
+        if not paid_text:
+            if payment_mode == "PAID":
+                return self.current_total
+            messagebox.showwarning("Paid Amount", "Enter paid amount for partial payment.")
+            return None
+
+        try:
+            paid_value = float(paid_text)
+        except ValueError:
+            messagebox.showerror("Invalid Value", "Paid amount must be numeric.")
+            return None
+
+        if paid_value < 0:
+            messagebox.showerror("Invalid Value", "Paid amount cannot be negative.")
+            return None
+
+        return paid_value
 
     def refresh_cart_table(self):
         selected_product_id = self.current_item_id
@@ -877,23 +901,6 @@ class BillingView(ctk.CTkFrame):
             return False, None
 
         return True, data["id"]
-
-    def _resolve_paid_amount(self, payment_mode):
-        if payment_mode == "PAID":
-            return self.current_total
-        if payment_mode == "UNPAID":
-            return 0.0
-
-        paid_text = self.paid_amount_entry.get().strip()
-        if not paid_text:
-            messagebox.showwarning("Paid Amount", "Enter paid amount for partial payment.")
-            return None
-
-        try:
-            return float(paid_text)
-        except ValueError:
-            messagebox.showerror("Invalid Value", "Paid amount must be numeric.")
-            return None
 
     def hold_current_bill(self):
         if not self.cart:
