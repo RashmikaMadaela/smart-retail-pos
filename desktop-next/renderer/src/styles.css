@@ -1,16 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
   color: #eef2f7;
   background: radial-gradient(circle at 20% 20%, #1f2f49 0%, #0d1626 45%, #090f1a 100%);
+  --background: 217 49% 8%;
+  --foreground: 215 33% 95%;
+  --card: 217 43% 12%;
+  --card-foreground: 215 33% 95%;
+  --primary: 152 62% 53%;
+  --primary-foreground: 216 54% 9%;
+  --secondary: 213 45% 42%;
+  --secondary-foreground: 215 40% 96%;
+  --muted: 214 34% 18%;
+  --muted-foreground: 214 24% 70%;
+  --accent: 201 95% 62%;
+  --accent-foreground: 216 54% 9%;
+  --destructive: 0 63% 54%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 214 43% 27%;
+  --input: 214 43% 27%;
+  --ring: 201 95% 62%;
+  --radius: 0.85rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background bg-app-radial text-foreground antialiased;
+    margin: 0;
+    min-height: 100vh;
+  }
 }
 
 * {
   box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  min-height: 100vh;
 }
 
 .login-shell,

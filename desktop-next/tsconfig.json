@@ -11,7 +11,10 @@
     "resolveJsonModule": true,
     "jsx": "react-jsx",
     "types": ["node"],
-    "baseUrl": "."
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["renderer/src/*"]
+    }
   },
   "include": [
     "electron/**/*.ts",
