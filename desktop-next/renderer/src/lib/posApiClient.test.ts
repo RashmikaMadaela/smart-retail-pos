@@ -23,6 +23,8 @@ beforeEach(() => {
     listProducts: vi.fn().mockResolvedValue({ ok: true, data: [] }),
     searchProducts: vi.fn().mockResolvedValue({ ok: true, data: [] }),
     getSummary: vi.fn().mockResolvedValue({ ok: true, data: {} }),
+    listExpenses: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+    createExpense: vi.fn().mockResolvedValue({ ok: true, data: { expense_id: 1 } }),
   };
 
   Object.defineProperty(globalThis, "window", {

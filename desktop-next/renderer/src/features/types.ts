@@ -61,6 +61,14 @@ export type SupplierPayment = {
   paid_at: string;
 };
 
+export type Expense = {
+  id: number;
+  description: string;
+  amount: number;
+  date: string;
+  category: string;
+};
+
 export type CustomerLedger = {
   customer: Customer | null;
   sales: Array<{
@@ -86,4 +94,4 @@ export type BatchLineDraft = {
   line_discount_pct: string;
 };
 
-export type ActiveTab = "billing" | "inventory" | "held" | "customers" | "suppliers";
+export type ActiveTab = "billing" | "inventory" | "held" | "customers" | "suppliers" | "operations";

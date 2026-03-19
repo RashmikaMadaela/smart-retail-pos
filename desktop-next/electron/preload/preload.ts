@@ -28,6 +28,8 @@ const api = {
   recordSupplierPayment: (payload: unknown) => ipcRenderer.invoke("supplier.recordPayment", payload),
   getSupplierLedger: (supplierId: number) =>
     ipcRenderer.invoke("supplier.getLedger", { supplier_id: supplierId }),
+  listExpenses: (limit?: number) => ipcRenderer.invoke("expense.list", { limit }),
+  createExpense: (payload: unknown) => ipcRenderer.invoke("expense.create", payload),
 };
 
 contextBridge.exposeInMainWorld("posApi", api);

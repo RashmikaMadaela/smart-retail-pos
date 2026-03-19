@@ -49,4 +49,9 @@ export const posApiClient = {
     safeCall(() => window.posApi.recordSupplierPayment(payload) as Promise<ApiResult<{ message: string }>>, "Unable to record supplier payment"),
   getSupplierLedger: (supplierId: number) =>
     safeCall(() => window.posApi.getSupplierLedger(supplierId) as Promise<ApiResult<any>>, "Unable to load supplier ledger"),
+
+  listExpenses: (limit = 100) =>
+    safeCall(() => window.posApi.listExpenses(limit) as Promise<ApiResult<any[]>>, "Unable to load expenses"),
+  createExpense: (payload: unknown) =>
+    safeCall(() => window.posApi.createExpense(payload) as Promise<ApiResult<{ expense_id: number }>>, "Unable to create expense"),
 };

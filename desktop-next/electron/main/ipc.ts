@@ -18,6 +18,7 @@ import {
   searchCustomers,
   searchSuppliers,
 } from "../../backend/services/ledgerService";
+import { createExpense, listExpenses } from "../../backend/services/expenseService";
 
 const loginSchema = z.object({
   username: z.string().min(1),
@@ -141,6 +142,16 @@ const supplierPaymentSchema = z.object({
   amount: z.number().positive(),
   method: z.string().optional(),
   note: z.string().optional(),
+});
+
+const expenseListSchema = z.object({
+  limit: z.number().int().positive().max(500).optional(),
+});
+
+const expenseCreateSchema = z.object({
+  description: z.string().min(1),
+  amount: z.number().positive(),
+  category: z.string().optional(),
 });
 
 function ok<T>(data: T) {
@@ -335,5 +346,22 @@ export function registerIpcHandlers() {
       return fail("Invalid supplier ledger payload");
     }
     return ok(getSupplierLedger(parsed.data.supplier_id));
+  });
+
+  ipcMain.handle("expense.list", async (_event, payload) => {
+    const parsed = expenseListSchema.safeParse(payload ?? {});
+    if (!parsed.success) {
+      return fail("Invalid expense list payload");
+    }
+    return ok(listExpenses(parsed.data.limit ?? 100));
+  });
+
+  ipcMain.handle("expense.create", async (_event, payload) => {
+    const parsed = expenseCreateSchema.safeParse(payload);
+    if (!parsed.success) {
+      return fail("Invalid expense create payload");
+    }
+    const result = createExpense(parsed.data.description, parsed.data.amount, parsed.data.category || "General");
+    return result.ok ? ok({ expense_id: result.data }) : fail(result.error);
   });
 }

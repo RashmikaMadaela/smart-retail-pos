@@ -1,7 +1,7 @@
 import { FormEvent, Suspense, lazy, useEffect, useMemo, useState } from "react";
-import { Boxes, HandCoins, LayoutDashboard, LogOut, PauseCircle, RefreshCw, Truck } from "lucide-react";
+import { Boxes, HandCoins, LayoutDashboard, LogOut, PauseCircle, ReceiptText, RefreshCw, Truck } from "lucide-react";
 import { LoginView } from "./features/LoginView";
-import type { ActiveTab, BatchLineDraft, Customer, CustomerLedger, HeldSale, Product, Summary, Supplier, SupplierBatch, SupplierLedger } from "./features/types";
+import type { ActiveTab, BatchLineDraft, Customer, CustomerLedger, Expense, HeldSale, Product, Summary, Supplier, SupplierBatch, SupplierLedger } from "./features/types";
 import { cn } from "./lib/utils";
 import { posApiClient } from "./lib/posApiClient";
 import { useBillingStore } from "./store/useBillingStore";
@@ -38,6 +38,11 @@ const SuppliersTab = lazy(async () => {
   return { default: module.SuppliersTab };
 });
 
+const OperationsTab = lazy(async () => {
+  const module = await import("./features/OperationsTab");
+  return { default: module.OperationsTab };
+});
+
 export default function App() {
   const { user, setUser } = useSessionStore();
   const [username, setUsername] = useState("admin");
@@ -45,6 +50,7 @@ export default function App() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
   const { activeTab, setActiveTab } = useShellStore();
   const {
@@ -97,7 +103,7 @@ export default function App() {
   const [supplierPayMethod, setSupplierPayMethod] = useState("CASH");
   const [supplierPayNote, setSupplierPayNote] = useState("");
 
-  const shortcutHint = "Shortcuts: Ctrl+1 Billing, Ctrl+2 Inventory, Ctrl+3 Held, Ctrl+4 Customers, Ctrl+5 Suppliers, Ctrl+/ Focus scanner, F8 Hold, F9 Checkout";
+  const shortcutHint = "Shortcuts: Ctrl+1 Billing, Ctrl+2 Inventory, Ctrl+3 Held, Ctrl+4 Customers, Ctrl+5 Suppliers, Ctrl+6 Operations, Ctrl+/ Focus scanner, F8 Hold, F9 Checkout";
 
   const netColor = useMemo(() => {
     if (!summary) {
@@ -123,6 +129,7 @@ export default function App() {
     await refreshHeldSales(response.data.id);
     await refreshCustomers();
     await refreshSuppliers();
+    await refreshExpenses();
     setSelectedProductId("");
   }
 
@@ -164,6 +171,24 @@ export default function App() {
     if (response.ok) {
       setSuppliers(response.data);
     }
+  }
+
+  async function refreshExpenses() {
+    const response = await posApiClient.listExpenses(100);
+    if (response.ok) {
+      setExpenses(response.data);
+    }
+  }
+
+  async function createExpenseNow(payload: { description: string; amount: number; category: string }) {
+    const response = await posApiClient.createExpense(payload);
+    if (!response.ok) {
+      pushError(response.error || "Create expense failed.");
+      return;
+    }
+    pushMessage(`Expense recorded. ID: ${response.data.expense_id}`);
+    await refreshExpenses();
+    await refreshSummary();
   }
 
   async function refreshSupplierLedger(supplierId: number) {
@@ -672,6 +697,12 @@ export default function App() {
       description: "Stock and payables",
       icon: Truck,
     },
+    {
+      id: "operations",
+      label: "Operations",
+      description: "Barcode and expenses",
+      icon: ReceiptText,
+    },
   ];
 
   useEffect(() => {
@@ -715,6 +746,11 @@ export default function App() {
       if (event.ctrlKey && event.key === "5") {
         event.preventDefault();
         setActiveTab("suppliers");
+        return;
+      }
+      if (event.ctrlKey && event.key === "6") {
+        event.preventDefault();
+        setActiveTab("operations");
         return;
       }
 
@@ -978,6 +1014,15 @@ export default function App() {
                   onSupplierPayMethodChange={setSupplierPayMethod}
                   onSupplierPayNoteChange={setSupplierPayNote}
                   onApplySupplierPayment={recordSupplierSettlement}
+                />
+              ) : null}
+
+              {activeTab === "operations" ? (
+                <OperationsTab
+                  products={products}
+                  expenses={expenses}
+                  onRefreshExpenses={() => void refreshExpenses()}
+                  onCreateExpense={createExpenseNow}
                 />
               ) : null}
             </Suspense>

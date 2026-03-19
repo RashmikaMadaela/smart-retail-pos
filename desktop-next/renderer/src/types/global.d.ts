@@ -23,6 +23,8 @@ declare global {
       listSupplierBatches: (payload: unknown) => Promise<{ ok: boolean; data?: any; error?: string }>;
       recordSupplierPayment: (payload: unknown) => Promise<{ ok: boolean; data?: any; error?: string }>;
       getSupplierLedger: (supplierId: number) => Promise<{ ok: boolean; data?: any; error?: string }>;
+      listExpenses: (limit?: number) => Promise<{ ok: boolean; data?: any; error?: string }>;
+      createExpense: (payload: unknown) => Promise<{ ok: boolean; data?: any; error?: string }>;
     };
   }
 }
