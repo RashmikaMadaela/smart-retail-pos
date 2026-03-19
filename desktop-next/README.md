@@ -30,6 +30,10 @@ This folder contains the new Electron + React + Node migration app scaffold.
 - Parity test harness checkpoint:
 	- isolated SQLite test DB per run
 	- service-level parity tests for sales and ledger behaviors
+- Stage 6 architecture checkpoint:
+	- renderer split into feature modules (`LoginView`, `SummaryStrip`, tab components)
+	- centralized renderer API wrapper (`posApiClient`) for preload bridge calls
+	- renderer integration tests for API forwarding (`renderer/src/lib/posApiClient.test.ts`)
 
 ## Commands
 
@@ -60,4 +64,5 @@ npm run dev
 ## Notes
 
 - This is a parallel migration workspace. The existing Python app remains unchanged.
-- Next checkpoint: split the large migration shell into feature pages/components and add integration tests around renderer-to-IPC flows.
+- Stage 6 complete: `App.tsx` now coordinates feature components instead of owning all tab markup directly.
+- Next checkpoint: add targeted UI interaction tests for each feature tab and prepare cutover hardening.

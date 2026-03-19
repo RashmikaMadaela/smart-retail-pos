@@ -1,93 +1,13 @@
 import { FormEvent, useMemo, useState } from "react";
+import { BillingTab } from "./features/BillingTab";
+import { CustomersTab } from "./features/CustomersTab";
+import { HeldSalesTab } from "./features/HeldSalesTab";
+import { LoginView } from "./features/LoginView";
+import { SummaryStrip } from "./features/SummaryStrip";
+import { SuppliersTab } from "./features/SuppliersTab";
+import type { ActiveTab, BatchLineDraft, CartItem, Customer, CustomerLedger, HeldSale, Product, Summary, Supplier, SupplierBatch, SupplierLedger } from "./features/types";
+import { posApiClient } from "./lib/posApiClient";
 import { useSessionStore } from "./store/useSessionStore";
-
-type Product = {
-  barcode_id: string;
-  name: string;
-  sell_price: number;
-  stock: number;
-  default_discount_pct?: number;
-};
-
-type Summary = {
-  gross_sales: number;
-  cogs: number;
-  expenses: number;
-  net_profit: number;
-};
-
-type CartItem = {
-  product_id: string;
-  name: string;
-  qty: number;
-  price: number;
-  discount: number;
-};
-
-type HeldSale = {
-  id: number;
-  timestamp: string;
-  total: number;
-  subtotal: number;
-  discount: number;
-  cashier: string | null;
-};
-
-type Customer = {
-  id: number;
-  name: string;
-  contact: string | null;
-  total_outstanding: number;
-};
-
-type Supplier = {
-  id: number;
-  name: string;
-  contact: string | null;
-  total_outstanding: number;
-};
-
-type SupplierBatch = {
-  id: number;
-  reference_no: string | null;
-  total_cost: number;
-  paid_amount: number;
-  balance_due: number;
-  status: string;
-};
-
-type SupplierPayment = {
-  id: number;
-  batch_id: number | null;
-  amount: number;
-  method: string;
-  paid_at: string;
-};
-
-type CustomerLedger = {
-  customer: Customer | null;
-  sales: Array<{
-    id: number;
-    timestamp: string;
-    total: number;
-    paid_amount: number;
-    balance_due: number;
-    payment_status: string;
-  }>;
-};
-
-type SupplierLedger = {
-  supplier: Supplier | null;
-  batches: SupplierBatch[];
-  payments: SupplierPayment[];
-};
-
-type BatchLineDraft = {
-  product_id: string;
-  qty_received: string;
-  unit_cost: string;
-  line_discount_pct: string;
-};
 
 export default function App() {
   const { user, setUser } = useSessionStore();
@@ -98,7 +18,7 @@ export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [searchText, setSearchText] = useState("");
-  const [activeTab, setActiveTab] = useState<"billing" | "held" | "customers" | "suppliers">("billing");
+  const [activeTab, setActiveTab] = useState<ActiveTab>("billing");
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedProductId, setSelectedProductId] = useState("");
@@ -149,7 +69,7 @@ export default function App() {
     setError("");
     setMessage("");
 
-    const response = await window.posApi.login(username, password);
+    const response = await posApiClient.login(username, password);
     if (!response.ok) {
       setError(response.error ?? "Login failed.");
       return;
@@ -166,8 +86,8 @@ export default function App() {
 
   async function refreshProducts() {
     const response = searchText.trim()
-      ? await window.posApi.searchProducts(searchText.trim(), 50)
-      : await window.posApi.listProducts(50);
+      ? await posApiClient.searchProducts(searchText.trim(), 50)
+      : await posApiClient.listProducts(50);
     if (response.ok) {
       setProducts(response.data);
       if (!selectedProductId && response.data.length > 0) {
@@ -177,35 +97,35 @@ export default function App() {
   }
 
   async function refreshHeldSales(cashierId?: number) {
-    const response = await window.posApi.listHeldSales(cashierId);
+    const response = await posApiClient.listHeldSales(cashierId);
     if (response.ok) {
       setHeldSales(response.data);
     }
   }
 
   async function refreshCustomers() {
-    const response = await window.posApi.searchCustomers({ search_text: customerSearchText, limit: 100 });
+    const response = await posApiClient.searchCustomers({ search_text: customerSearchText, limit: 100 });
     if (response.ok) {
       setCustomers(response.data);
     }
   }
 
   async function refreshCustomerLedger(customerId: number) {
-    const response = await window.posApi.getCustomerLedger(customerId);
+    const response = await posApiClient.getCustomerLedger(customerId);
     if (response.ok) {
       setCustomerLedger(response.data);
     }
   }
 
   async function refreshSuppliers() {
-    const response = await window.posApi.listSuppliers({ limit: 100 });
+    const response = await posApiClient.listSuppliers({ limit: 100 });
     if (response.ok) {
       setSuppliers(response.data);
     }
   }
 
   async function refreshSupplierLedger(supplierId: number) {
-    const response = await window.posApi.getSupplierLedger(supplierId);
+    const response = await posApiClient.getSupplierLedger(supplierId);
     if (response.ok) {
       setSupplierLedger(response.data);
       const firstOpen = response.data.batches.find((x: SupplierBatch) => Number(x.balance_due) > 0);
@@ -324,7 +244,7 @@ export default function App() {
         pushError("Customer name is required for PARTIAL/UNPAID.");
         return;
       }
-      const cRes = await window.posApi.createOrGetCustomer({
+      const cRes = await posApiClient.createOrGetCustomer({
         name: customerName.trim(),
         contact: customerContact.trim(),
       });
@@ -359,7 +279,7 @@ export default function App() {
       payment_method: paymentMethod,
     };
 
-    const response = await window.posApi.processSale(payload);
+    const response = await posApiClient.processSale(payload);
     if (!response.ok) {
       pushError(response.error || "Checkout failed.");
       return;
@@ -397,7 +317,7 @@ export default function App() {
       payment_method: paymentMethod,
     };
 
-    const response = await window.posApi.holdSale(payload);
+    const response = await posApiClient.holdSale(payload);
     if (!response.ok) {
       pushError(response.error || "Hold failed.");
       return;
@@ -413,7 +333,7 @@ export default function App() {
       pushError("Select a held sale first.");
       return;
     }
-    const response = await window.posApi.recallHeldSale(selectedHeldId);
+    const response = await posApiClient.recallHeldSale(selectedHeldId);
     if (!response.ok) {
       pushError(response.error || "Recall failed.");
       return;
@@ -444,7 +364,7 @@ export default function App() {
         pushError("Customer name is required for PARTIAL/UNPAID.");
         return;
       }
-      const cRes = await window.posApi.createOrGetCustomer({
+      const cRes = await posApiClient.createOrGetCustomer({
         name: customerName.trim(),
         contact: customerContact.trim(),
       });
@@ -456,7 +376,7 @@ export default function App() {
     }
 
     const paidPayload = paymentMode === "UNPAID" ? 0 : paidAmount.trim() ? Number(paidAmount) : baseTotal;
-    const response = await window.posApi.completeHeldSale({
+    const response = await posApiClient.completeHeldSale({
       sale_id: selectedHeldId,
       customer_id: customerId,
       paid_amount: Number.isNaN(paidPayload) ? 0 : Number(paidPayload.toFixed(2)),
@@ -497,7 +417,7 @@ export default function App() {
       return;
     }
 
-    const response = await window.posApi.recordCustomerPayment({
+    const response = await posApiClient.recordCustomerPayment({
       customer_id: selectedCustomerId,
       amount,
     });
@@ -519,7 +439,7 @@ export default function App() {
       return;
     }
 
-    const response = await window.posApi.createSupplier({
+    const response = await posApiClient.createSupplier({
       name: supplierName.trim(),
       contact: supplierContact.trim(),
       opening_balance: 0,
@@ -570,7 +490,7 @@ export default function App() {
       return;
     }
 
-    const response = await window.posApi.receiveSupplierBatch({
+    const response = await posApiClient.receiveSupplierBatch({
       supplier_id: selectedSupplierId,
       reference_no: batchReference.trim(),
       paid_amount: paid,
@@ -607,7 +527,7 @@ export default function App() {
       return;
     }
 
-    const response = await window.posApi.recordSupplierPayment({
+    const response = await posApiClient.recordSupplierPayment({
       supplier_id: selectedSupplierId,
       batch_id: selectedSupplierBatchId,
       amount,
@@ -627,7 +547,7 @@ export default function App() {
   }
 
   async function refreshSummary() {
-    const response = await window.posApi.getSummary();
+    const response = await posApiClient.getSummary();
     if (response.ok) {
       setSummary(response.data);
     }
@@ -635,28 +555,14 @@ export default function App() {
 
   if (!user) {
     return (
-      <main className="login-shell">
-        <section className="login-card">
-          <h1>Smart Retail POS Next</h1>
-          <p className="muted">Electron + React migration shell</p>
-          <form onSubmit={handleLogin}>
-            <label>
-              Username
-              <input value={username} onChange={(event) => setUsername(event.target.value)} />
-            </label>
-            <label>
-              Password
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
-            </label>
-            {error ? <p className="error">{error}</p> : null}
-            <button type="submit">Login</button>
-          </form>
-        </section>
-      </main>
+      <LoginView
+        username={username}
+        password={password}
+        error={error}
+        onUsernameChange={setUsername}
+        onPasswordChange={setPassword}
+        onSubmit={handleLogin}
+      />
     );
   }
 
@@ -690,27 +596,10 @@ export default function App() {
         <button className={activeTab === "suppliers" ? "active" : ""} onClick={() => setActiveTab("suppliers")}>Suppliers</button>
       </section>
 
-      <section className="summary-grid">
-        <article>
-          <h3>Gross Sales</h3>
-          <p>Rs. {summary ? summary.gross_sales.toFixed(2) : "0.00"}</p>
-        </article>
-        <article>
-          <h3>COGS</h3>
-          <p>Rs. {summary ? summary.cogs.toFixed(2) : "0.00"}</p>
-        </article>
-        <article>
-          <h3>Expenses</h3>
-          <p>Rs. {summary ? summary.expenses.toFixed(2) : "0.00"}</p>
-        </article>
-        <article>
-          <h3>Net Profit</h3>
-          <p style={{ color: netColor }}>Rs. {summary ? summary.net_profit.toFixed(2) : "0.00"}</p>
-        </article>
-      </section>
+      <SummaryStrip summary={summary} netColor={netColor} />
 
       {activeTab === "billing" ? (
-        <section className="products-panel">
+        <>
           <div className="panel-head">
             <h2>Billing Workflow</h2>
             <div className="actions">
@@ -723,424 +612,99 @@ export default function App() {
               <button onClick={() => void refreshSummary()}>Refresh KPI</button>
             </div>
           </div>
-
-          <div className="grid-2">
-            <div className="panel-card">
-              <h3>Add Item</h3>
-              <label>
-                Product
-                <select value={selectedProductId} onChange={(event) => setSelectedProductId(event.target.value)}>
-                  {products.map((product) => (
-                    <option key={product.barcode_id} value={product.barcode_id}>
-                      {product.barcode_id} | {product.name} | Rs. {Number(product.sell_price).toFixed(2)} | Stock {Number(product.stock).toFixed(2)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Qty
-                <input value={addQty} onChange={(event) => setAddQty(event.target.value)} />
-              </label>
-              <button onClick={addSelectedProductToCart}>Add to Cart</button>
-            </div>
-
-            <div className="panel-card">
-              <h3>Checkout</h3>
-              <label>
-                Payment Mode
-                <select value={paymentMode} onChange={(event) => setPaymentMode(event.target.value as any)}>
-                  <option value="PAID">PAID</option>
-                  <option value="PARTIAL">PARTIAL</option>
-                  <option value="UNPAID">UNPAID</option>
-                </select>
-              </label>
-              <label>
-                Payment Method
-                <select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value as any)}>
-                  <option value="CASH">CASH</option>
-                  <option value="CARD">CARD</option>
-                </select>
-              </label>
-              <label>
-                Paid Amount
-                <input value={paidAmount} onChange={(event) => setPaidAmount(event.target.value)} placeholder={paymentMode === "PAID" ? "Blank = full amount" : "Required"} />
-              </label>
-              <label>
-                Customer Name (credit only)
-                <input value={customerName} onChange={(event) => setCustomerName(event.target.value)} />
-              </label>
-              <label>
-                Customer Contact
-                <input value={customerContact} onChange={(event) => setCustomerContact(event.target.value)} />
-              </label>
-              <div className="calc-grid">
-                <p>Subtotal: Rs. {subTotal.toFixed(2)}</p>
-                <p>Line Discount: Rs. {lineDiscountTotal.toFixed(2)}</p>
-                <p>Total: Rs. {baseTotal.toFixed(2)}</p>
-                <p>Change: Rs. {changeDue.toFixed(2)}</p>
-                <p>Balance Due: Rs. {balanceDue.toFixed(2)}</p>
-              </div>
-              <div className="actions">
-                <button onClick={holdCurrentBill}>Hold Bill</button>
-                <button onClick={processCheckout}>Checkout</button>
-              </div>
-            </div>
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Qty</th>
-                <th>Price</th>
-                <th>Disc</th>
-                <th>Total</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cart.map((item) => (
-                <tr key={item.product_id}>
-                  <td>{item.product_id}</td>
-                  <td>{item.name}</td>
-                  <td>{item.qty.toFixed(2)}</td>
-                  <td>{item.price.toFixed(2)}</td>
-                  <td>{item.discount.toFixed(2)}</td>
-                  <td>{(item.qty * Math.max(0, item.price - item.discount)).toFixed(2)}</td>
-                  <td>
-                    <button className="danger" onClick={() => removeFromCart(item.product_id)}>Remove</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
+          <BillingTab
+            products={products}
+            selectedProductId={selectedProductId}
+            addQty={addQty}
+            cart={cart}
+            paymentMode={paymentMode}
+            paymentMethod={paymentMethod}
+            paidAmount={paidAmount}
+            customerName={customerName}
+            customerContact={customerContact}
+            subTotal={subTotal}
+            lineDiscountTotal={lineDiscountTotal}
+            baseTotal={baseTotal}
+            changeDue={changeDue}
+            balanceDue={balanceDue}
+            onSelectedProductChange={setSelectedProductId}
+            onAddQtyChange={setAddQty}
+            onAddToCart={addSelectedProductToCart}
+            onRemoveFromCart={removeFromCart}
+            onPaymentModeChange={setPaymentMode}
+            onPaymentMethodChange={setPaymentMethod}
+            onPaidAmountChange={setPaidAmount}
+            onCustomerNameChange={setCustomerName}
+            onCustomerContactChange={setCustomerContact}
+            onHoldSale={holdCurrentBill}
+            onProcessSale={processCheckout}
+          />
+        </>
       ) : null}
 
       {activeTab === "held" ? (
-        <section className="products-panel">
-          <div className="panel-head">
-            <h2>Held Sales</h2>
-            <div className="actions">
-              <button onClick={() => void refreshHeldSales(user.id)}>Refresh Held</button>
-              <button onClick={recallHeldSaleIntoCart}>Recall to Cart</button>
-              <button onClick={completeHeldSaleNow}>Complete Selected</button>
-            </div>
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th>Select</th>
-                <th>ID</th>
-                <th>Timestamp</th>
-                <th>Total</th>
-                <th>Cashier</th>
-              </tr>
-            </thead>
-            <tbody>
-              {heldSales.map((sale) => (
-                <tr key={sale.id}>
-                  <td>
-                    <input
-                      type="radio"
-                      checked={selectedHeldId === sale.id}
-                      onChange={() => setSelectedHeldId(sale.id)}
-                    />
-                  </td>
-                  <td>{sale.id}</td>
-                  <td>{sale.timestamp}</td>
-                  <td>{Number(sale.total).toFixed(2)}</td>
-                  <td>{sale.cashier || "-"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
+        <HeldSalesTab
+          heldSales={heldSales}
+          selectedHeldId={selectedHeldId}
+          onRefreshHeldSales={() => void refreshHeldSales(user.id)}
+          onSelectHeldSale={setSelectedHeldId}
+          onRecallHeldSale={recallHeldSaleIntoCart}
+          onCompleteHeldSale={completeHeldSaleNow}
+        />
       ) : null}
 
       {activeTab === "customers" ? (
-        <section className="products-panel">
-          <div className="panel-head">
-            <h2>Customer Ledger</h2>
-            <div className="actions">
-              <input
-                placeholder="Search customer"
-                value={customerSearchText}
-                onChange={(event) => setCustomerSearchText(event.target.value)}
-              />
-              <button onClick={() => void refreshCustomers()}>Refresh</button>
-            </div>
-          </div>
-
-          <div className="grid-2">
-            <div className="panel-card">
-              <h3>Customers</h3>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Select</th>
-                    <th>Name</th>
-                    <th>Contact</th>
-                    <th>Outstanding</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {customers.map((customer) => (
-                    <tr key={customer.id}>
-                      <td>
-                        <input
-                          type="radio"
-                          checked={selectedCustomerId === customer.id}
-                          onChange={() => {
-                            setSelectedCustomerId(customer.id);
-                            void refreshCustomerLedger(customer.id);
-                          }}
-                        />
-                      </td>
-                      <td>{customer.name}</td>
-                      <td>{customer.contact || "-"}</td>
-                      <td>{Number(customer.total_outstanding).toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="panel-card">
-              <h3>Settlement</h3>
-              <label>
-                Payment Amount
-                <input value={customerPayment} onChange={(event) => setCustomerPayment(event.target.value)} />
-              </label>
-              <button onClick={recordCustomerSettlement}>Record Payment</button>
-              <h3>Ledger</h3>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Sale</th>
-                    <th>Total</th>
-                    <th>Paid</th>
-                    <th>Balance</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(customerLedger?.sales || []).map((sale) => (
-                    <tr key={sale.id}>
-                      <td>{sale.id}</td>
-                      <td>{Number(sale.total).toFixed(2)}</td>
-                      <td>{Number(sale.paid_amount).toFixed(2)}</td>
-                      <td>{Number(sale.balance_due).toFixed(2)}</td>
-                      <td>{sale.payment_status}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
+        <CustomersTab
+          customers={customers}
+          selectedCustomerId={selectedCustomerId}
+          customerSearchText={customerSearchText}
+          customerPayment={customerPayment}
+          customerLedger={customerLedger}
+          onRefreshCustomers={() => void refreshCustomers()}
+          onCustomerSearchChange={setCustomerSearchText}
+          onSelectCustomer={(id) => {
+            setSelectedCustomerId(id);
+            void refreshCustomerLedger(id);
+          }}
+          onCustomerPaymentChange={setCustomerPayment}
+          onApplyCustomerPayment={recordCustomerSettlement}
+        />
       ) : null}
 
       {activeTab === "suppliers" ? (
-        <section className="products-panel">
-          <div className="panel-head">
-            <h2>Supplier Ledger</h2>
-            <div className="actions">
-              <button onClick={() => void refreshSuppliers()}>Refresh Suppliers</button>
-            </div>
-          </div>
-
-          <div className="grid-2">
-            <div className="panel-card">
-              <h3>Create Supplier</h3>
-              <label>
-                Name
-                <input value={supplierName} onChange={(event) => setSupplierName(event.target.value)} />
-              </label>
-              <label>
-                Contact
-                <input value={supplierContact} onChange={(event) => setSupplierContact(event.target.value)} />
-              </label>
-              <button onClick={createSupplierNow}>Create Supplier</button>
-
-              <h3>Suppliers</h3>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Select</th>
-                    <th>Name</th>
-                    <th>Contact</th>
-                    <th>Outstanding</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {suppliers.map((supplier) => (
-                    <tr key={supplier.id}>
-                      <td>
-                        <input
-                          type="radio"
-                          checked={selectedSupplierId === supplier.id}
-                          onChange={() => {
-                            setSelectedSupplierId(supplier.id);
-                            void refreshSupplierLedger(supplier.id);
-                          }}
-                        />
-                      </td>
-                      <td>{supplier.name}</td>
-                      <td>{supplier.contact || "-"}</td>
-                      <td>{Number(supplier.total_outstanding).toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="panel-card">
-              <h3>Receive Batch</h3>
-              <label>
-                Reference No
-                <input value={batchReference} onChange={(event) => setBatchReference(event.target.value)} />
-              </label>
-              <label>
-                Initial Paid
-                <input value={batchPaid} onChange={(event) => setBatchPaid(event.target.value)} />
-              </label>
-              <div className="batch-line">
-                <input
-                  placeholder="Product ID"
-                  value={batchLineDraft.product_id}
-                  onChange={(event) => setBatchLineDraft((prev) => ({ ...prev, product_id: event.target.value }))}
-                />
-                <input
-                  placeholder="Qty"
-                  value={batchLineDraft.qty_received}
-                  onChange={(event) => setBatchLineDraft((prev) => ({ ...prev, qty_received: event.target.value }))}
-                />
-                <input
-                  placeholder="Unit Cost"
-                  value={batchLineDraft.unit_cost}
-                  onChange={(event) => setBatchLineDraft((prev) => ({ ...prev, unit_cost: event.target.value }))}
-                />
-                <input
-                  placeholder="Disc %"
-                  value={batchLineDraft.line_discount_pct}
-                  onChange={(event) => setBatchLineDraft((prev) => ({ ...prev, line_discount_pct: event.target.value }))}
-                />
-              </div>
-              <div className="actions">
-                <button onClick={addSupplierBatchLine}>Add Line</button>
-                <button onClick={receiveSupplierBatchNow}>Receive Stock</button>
-              </div>
-
-              <h4>Batch Lines</h4>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Product</th>
-                    <th>Qty</th>
-                    <th>Cost</th>
-                    <th>Disc%</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {batchLines.map((line, index) => (
-                    <tr key={`${line.product_id}-${index}`}>
-                      <td>{line.product_id}</td>
-                      <td>{line.qty_received}</td>
-                      <td>{line.unit_cost}</td>
-                      <td>{line.line_discount_pct}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              <h3>Settle Batch</h3>
-              <label>
-                Pay Amount
-                <input value={supplierPayAmount} onChange={(event) => setSupplierPayAmount(event.target.value)} />
-              </label>
-              <label>
-                Method
-                <select value={supplierPayMethod} onChange={(event) => setSupplierPayMethod(event.target.value)}>
-                  <option value="CASH">CASH</option>
-                  <option value="CARD">CARD</option>
-                  <option value="BANK">BANK</option>
-                </select>
-              </label>
-              <label>
-                Note
-                <input value={supplierPayNote} onChange={(event) => setSupplierPayNote(event.target.value)} />
-              </label>
-              <button onClick={recordSupplierSettlement}>Record Supplier Payment</button>
-            </div>
-          </div>
-
-          <div className="grid-2">
-            <div className="panel-card">
-              <h3>Supplier Batches</h3>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Select</th>
-                    <th>ID</th>
-                    <th>Ref</th>
-                    <th>Total</th>
-                    <th>Paid</th>
-                    <th>Balance</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(supplierLedger?.batches || []).map((batch) => (
-                    <tr key={batch.id}>
-                      <td>
-                        <input
-                          type="radio"
-                          checked={selectedSupplierBatchId === Number(batch.id)}
-                          onChange={() => setSelectedSupplierBatchId(Number(batch.id))}
-                        />
-                      </td>
-                      <td>{batch.id}</td>
-                      <td>{batch.reference_no || "-"}</td>
-                      <td>{Number(batch.total_cost).toFixed(2)}</td>
-                      <td>{Number(batch.paid_amount).toFixed(2)}</td>
-                      <td>{Number(batch.balance_due).toFixed(2)}</td>
-                      <td>{batch.status}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="panel-card">
-              <h3>Supplier Payments</h3>
-              <table>
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Batch</th>
-                    <th>Amount</th>
-                    <th>Method</th>
-                    <th>Paid At</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(supplierLedger?.payments || []).map((payment) => (
-                    <tr key={payment.id}>
-                      <td>{payment.id}</td>
-                      <td>{payment.batch_id || "-"}</td>
-                      <td>{Number(payment.amount).toFixed(2)}</td>
-                      <td>{payment.method}</td>
-                      <td>{payment.paid_at}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
+        <SuppliersTab
+          supplierName={supplierName}
+          supplierContact={supplierContact}
+          suppliers={suppliers}
+          selectedSupplierId={selectedSupplierId}
+          batchReference={batchReference}
+          batchPaid={batchPaid}
+          batchLineDraft={batchLineDraft}
+          batchLines={batchLines}
+          selectedSupplierBatchId={selectedSupplierBatchId}
+          supplierPayAmount={supplierPayAmount}
+          supplierPayMethod={supplierPayMethod}
+          supplierPayNote={supplierPayNote}
+          supplierLedger={supplierLedger}
+          onRefreshSuppliers={() => void refreshSuppliers()}
+          onSupplierNameChange={setSupplierName}
+          onSupplierContactChange={setSupplierContact}
+          onCreateSupplier={createSupplierNow}
+          onSelectSupplier={(supplierId) => {
+            setSelectedSupplierId(supplierId);
+            void refreshSupplierLedger(supplierId);
+          }}
+          onBatchReferenceChange={setBatchReference}
+          onBatchPaidChange={setBatchPaid}
+          onBatchLineDraftChange={setBatchLineDraft}
+          onAddBatchLine={addSupplierBatchLine}
+          onReceiveSupplierBatch={receiveSupplierBatchNow}
+          onSelectSupplierBatch={setSelectedSupplierBatchId}
+          onSupplierPayAmountChange={setSupplierPayAmount}
+          onSupplierPayMethodChange={setSupplierPayMethod}
+          onSupplierPayNoteChange={setSupplierPayNote}
+          onApplySupplierPayment={recordSupplierSettlement}
+        />
       ) : null}
     </main>
   );
