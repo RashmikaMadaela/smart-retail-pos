@@ -62,150 +62,183 @@ export function SuppliersTab({
   onApplySupplierPayment,
 }: SuppliersTabProps) {
   return (
-    <section className="products-panel">
-      <div className="panel-head">
-        <h2>Supplier Ledger</h2>
-        <div className="actions">
+    <section className="space-y-4">
+      <div className="flex flex-col gap-3 rounded-2xl border border-border/80 bg-background/45 p-4 md:flex-row md:items-center md:justify-between md:p-5">
+        <div>
+          <h2 className="m-0 text-xl font-semibold text-foreground">Supplier Ledger</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Receive stock, track batches, and settle payables.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
           <button type="button" onClick={onRefreshSuppliers}>
             Refresh Suppliers
           </button>
         </div>
       </div>
 
-      <div className="grid-2">
-        <div className="panel-card">
-          <h3>Create Supplier</h3>
-          <label>
-            Name
-            <input value={supplierName} onChange={(e) => onSupplierNameChange(e.target.value)} />
-          </label>
-          <label>
-            Contact
-            <input value={supplierContact} onChange={(e) => onSupplierContactChange(e.target.value)} />
-          </label>
-          <button type="button" onClick={onCreateSupplier}>
-            Create Supplier
-          </button>
+      <div className="grid gap-4 xl:grid-cols-[1.2fr_minmax(0,1fr)]">
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-border/80 bg-background/45 p-4">
+            <h3 className="m-0 text-lg font-semibold text-foreground">Create Supplier</h3>
+            <label className="mt-3 block text-sm font-medium text-foreground">
+              Name
+              <input value={supplierName} onChange={(e) => onSupplierNameChange(e.target.value)} />
+            </label>
+            <label className="mt-3 block text-sm font-medium text-foreground">
+              Contact
+              <input value={supplierContact} onChange={(e) => onSupplierContactChange(e.target.value)} />
+            </label>
+            <button className="mt-3" type="button" onClick={onCreateSupplier}>
+              Create Supplier
+            </button>
+          </div>
 
-          <h3>Suppliers</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Select</th>
-                <th>Name</th>
-                <th>Contact</th>
-                <th>Outstanding</th>
-              </tr>
-            </thead>
-            <tbody>
-              {suppliers.map((supplier) => (
-                <tr key={supplier.id}>
-                  <td>
-                    <input
-                      type="radio"
-                      checked={selectedSupplierId === supplier.id}
-                      onChange={() => onSelectSupplier(supplier.id)}
-                    />
-                  </td>
-                  <td>{supplier.name}</td>
-                  <td>{supplier.contact || "-"}</td>
-                  <td>{Number(supplier.total_outstanding).toFixed(2)}</td>
+          <div className="overflow-hidden rounded-2xl border border-border/80 bg-background/45">
+            <div className="border-b border-border/80 px-4 py-3">
+              <h3 className="m-0 text-lg font-semibold text-foreground">Suppliers</h3>
+            </div>
+            <table className="m-0">
+              <thead>
+                <tr>
+                  <th>Select</th>
+                  <th>Name</th>
+                  <th>Contact</th>
+                  <th>Outstanding</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {suppliers.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="py-10 text-center text-sm text-muted-foreground">
+                      No suppliers available.
+                    </td>
+                  </tr>
+                ) : (
+                  suppliers.map((supplier) => (
+                    <tr key={supplier.id}>
+                      <td>
+                        <input
+                          type="radio"
+                          checked={selectedSupplierId === supplier.id}
+                          onChange={() => onSelectSupplier(supplier.id)}
+                        />
+                      </td>
+                      <td>{supplier.name}</td>
+                      <td>{supplier.contact || "-"}</td>
+                      <td>{Number(supplier.total_outstanding).toFixed(2)}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <div className="panel-card">
-          <h3>Receive Batch</h3>
-          <label>
-            Reference No
-            <input value={batchReference} onChange={(e) => onBatchReferenceChange(e.target.value)} />
-          </label>
-          <label>
-            Initial Paid
-            <input value={batchPaid} onChange={(e) => onBatchPaidChange(e.target.value)} />
-          </label>
-          <div className="batch-line">
-            <input
-              placeholder="Product ID"
-              value={batchLineDraft.product_id}
-              onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, product_id: e.target.value })}
-            />
-            <input
-              placeholder="Qty"
-              value={batchLineDraft.qty_received}
-              onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, qty_received: e.target.value })}
-            />
-            <input
-              placeholder="Unit Cost"
-              value={batchLineDraft.unit_cost}
-              onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, unit_cost: e.target.value })}
-            />
-            <input
-              placeholder="Disc %"
-              value={batchLineDraft.line_discount_pct}
-              onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, line_discount_pct: e.target.value })}
-            />
-          </div>
-          <div className="actions">
-            <button type="button" onClick={onAddBatchLine}>
-              Add Line
-            </button>
-            <button type="button" onClick={onReceiveSupplierBatch}>
-              Receive Stock
-            </button>
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-border/80 bg-background/45 p-4">
+            <h3 className="m-0 text-lg font-semibold text-foreground">Receive Batch</h3>
+            <label className="mt-3 block text-sm font-medium text-foreground">
+              Reference No
+              <input value={batchReference} onChange={(e) => onBatchReferenceChange(e.target.value)} />
+            </label>
+            <label className="mt-3 block text-sm font-medium text-foreground">
+              Initial Paid
+              <input value={batchPaid} onChange={(e) => onBatchPaidChange(e.target.value)} />
+            </label>
+            <div className="batch-line mt-3">
+              <input
+                placeholder="Product ID"
+                value={batchLineDraft.product_id}
+                onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, product_id: e.target.value })}
+              />
+              <input
+                placeholder="Qty"
+                value={batchLineDraft.qty_received}
+                onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, qty_received: e.target.value })}
+              />
+              <input
+                placeholder="Unit Cost"
+                value={batchLineDraft.unit_cost}
+                onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, unit_cost: e.target.value })}
+              />
+              <input
+                placeholder="Disc %"
+                value={batchLineDraft.line_discount_pct}
+                onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, line_discount_pct: e.target.value })}
+              />
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button type="button" onClick={onAddBatchLine}>
+                Add Line
+              </button>
+              <button type="button" onClick={onReceiveSupplierBatch}>
+                Receive Stock
+              </button>
+            </div>
+
+            <h4 className="mb-0 mt-4 text-base font-semibold text-foreground">Batch Lines</h4>
+            <div className="mt-2 overflow-hidden rounded-xl border border-border/80 bg-card/40">
+              <table className="m-0">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Qty</th>
+                    <th>Cost</th>
+                    <th>Disc%</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {batchLines.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="py-6 text-center text-sm text-muted-foreground">
+                        No batch lines added.
+                      </td>
+                    </tr>
+                  ) : (
+                    batchLines.map((line, index) => (
+                      <tr key={`${line.product_id}-${index}`}>
+                        <td>{line.product_id}</td>
+                        <td>{line.qty_received}</td>
+                        <td>{line.unit_cost}</td>
+                        <td>{line.line_discount_pct}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          <h4>Batch Lines</h4>
-          <table>
-            <thead>
-              <tr>
-                <th>Product</th>
-                <th>Qty</th>
-                <th>Cost</th>
-                <th>Disc%</th>
-              </tr>
-            </thead>
-            <tbody>
-              {batchLines.map((line, index) => (
-                <tr key={`${line.product_id}-${index}`}>
-                  <td>{line.product_id}</td>
-                  <td>{line.qty_received}</td>
-                  <td>{line.unit_cost}</td>
-                  <td>{line.line_discount_pct}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          <h3>Settle Batch</h3>
-          <label>
-            Pay Amount
-            <input value={supplierPayAmount} onChange={(e) => onSupplierPayAmountChange(e.target.value)} />
-          </label>
-          <label>
-            Method
-            <select value={supplierPayMethod} onChange={(e) => onSupplierPayMethodChange(e.target.value)}>
-              <option value="CASH">CASH</option>
-              <option value="CARD">CARD</option>
-              <option value="BANK">BANK</option>
-            </select>
-          </label>
-          <label>
-            Note
-            <input value={supplierPayNote} onChange={(e) => onSupplierPayNoteChange(e.target.value)} />
-          </label>
-          <button type="button" onClick={onApplySupplierPayment}>
-            Record Supplier Payment
-          </button>
+          <div className="rounded-2xl border border-border/80 bg-background/45 p-4">
+            <h3 className="m-0 text-lg font-semibold text-foreground">Settle Batch</h3>
+            <label className="mt-3 block text-sm font-medium text-foreground">
+              Pay Amount
+              <input value={supplierPayAmount} onChange={(e) => onSupplierPayAmountChange(e.target.value)} />
+            </label>
+            <label className="mt-3 block text-sm font-medium text-foreground">
+              Method
+              <select value={supplierPayMethod} onChange={(e) => onSupplierPayMethodChange(e.target.value)}>
+                <option value="CASH">CASH</option>
+                <option value="CARD">CARD</option>
+                <option value="BANK">BANK</option>
+              </select>
+            </label>
+            <label className="mt-3 block text-sm font-medium text-foreground">
+              Note
+              <input value={supplierPayNote} onChange={(e) => onSupplierPayNoteChange(e.target.value)} />
+            </label>
+            <button className="mt-3" type="button" onClick={onApplySupplierPayment}>
+              Record Supplier Payment
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="grid-2">
-        <div className="panel-card">
-          <h3>Supplier Batches</h3>
-          <table>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <div className="overflow-hidden rounded-2xl border border-border/80 bg-background/45">
+          <div className="border-b border-border/80 px-4 py-3">
+            <h3 className="m-0 text-lg font-semibold text-foreground">Supplier Batches</h3>
+          </div>
+          <table className="m-0">
             <thead>
               <tr>
                 <th>Select</th>
@@ -218,30 +251,40 @@ export function SuppliersTab({
               </tr>
             </thead>
             <tbody>
-              {(supplierLedger?.batches || []).map((batch) => (
-                <tr key={batch.id}>
-                  <td>
-                    <input
-                      type="radio"
-                      checked={selectedSupplierBatchId === Number(batch.id)}
-                      onChange={() => onSelectSupplierBatch(Number(batch.id))}
-                    />
+              {(supplierLedger?.batches || []).length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                    No supplier batches.
                   </td>
-                  <td>{batch.id}</td>
-                  <td>{batch.reference_no || "-"}</td>
-                  <td>{Number(batch.total_cost).toFixed(2)}</td>
-                  <td>{Number(batch.paid_amount).toFixed(2)}</td>
-                  <td>{Number(batch.balance_due).toFixed(2)}</td>
-                  <td>{batch.status}</td>
                 </tr>
-              ))}
+              ) : (
+                (supplierLedger?.batches || []).map((batch) => (
+                  <tr key={batch.id}>
+                    <td>
+                      <input
+                        type="radio"
+                        checked={selectedSupplierBatchId === Number(batch.id)}
+                        onChange={() => onSelectSupplierBatch(Number(batch.id))}
+                      />
+                    </td>
+                    <td>{batch.id}</td>
+                    <td>{batch.reference_no || "-"}</td>
+                    <td>{Number(batch.total_cost).toFixed(2)}</td>
+                    <td>{Number(batch.paid_amount).toFixed(2)}</td>
+                    <td>{Number(batch.balance_due).toFixed(2)}</td>
+                    <td>{batch.status}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
-        <div className="panel-card">
-          <h3>Supplier Payments</h3>
-          <table>
+        <div className="overflow-hidden rounded-2xl border border-border/80 bg-background/45">
+          <div className="border-b border-border/80 px-4 py-3">
+            <h3 className="m-0 text-lg font-semibold text-foreground">Supplier Payments</h3>
+          </div>
+          <table className="m-0">
             <thead>
               <tr>
                 <th>ID</th>
@@ -252,15 +295,23 @@ export function SuppliersTab({
               </tr>
             </thead>
             <tbody>
-              {(supplierLedger?.payments || []).map((payment) => (
-                <tr key={payment.id}>
-                  <td>{payment.id}</td>
-                  <td>{payment.batch_id || "-"}</td>
-                  <td>{Number(payment.amount).toFixed(2)}</td>
-                  <td>{payment.method}</td>
-                  <td>{payment.paid_at}</td>
+              {(supplierLedger?.payments || []).length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                    No supplier payments.
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                (supplierLedger?.payments || []).map((payment) => (
+                  <tr key={payment.id}>
+                    <td>{payment.id}</td>
+                    <td>{payment.batch_id || "-"}</td>
+                    <td>{Number(payment.amount).toFixed(2)}</td>
+                    <td>{payment.method}</td>
+                    <td>{payment.paid_at}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
