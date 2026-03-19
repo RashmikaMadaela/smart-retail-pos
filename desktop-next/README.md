@@ -27,6 +27,9 @@ This folder contains the new Electron + React + Node migration app scaffold.
 	- hold/recall/complete-held controls wired
 	- customer ledger and settlement actions wired
 	- supplier create/receive/settlement actions wired
+- Parity test harness checkpoint:
+	- isolated SQLite test DB per run
+	- service-level parity tests for sales and ledger behaviors
 
 ## Commands
 
@@ -42,6 +45,12 @@ Type check:
 npm run check
 ```
 
+Run migration parity tests:
+
+```bash
+npm run test
+```
+
 Run app in development mode:
 
 ```bash
@@ -51,4 +60,4 @@ npm run dev
 ## Notes
 
 - This is a parallel migration workspace. The existing Python app remains unchanged.
-- Next checkpoint: split the large migration shell into feature pages/components and add parity tests around the new IPC write paths.
+- Next checkpoint: split the large migration shell into feature pages/components and add integration tests around renderer-to-IPC flows.

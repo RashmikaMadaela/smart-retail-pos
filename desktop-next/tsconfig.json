@@ -16,6 +16,7 @@
   "include": [
     "electron/**/*.ts",
     "backend/**/*.ts",
+    "tests/**/*.ts",
     "renderer/**/*.ts",
     "renderer/**/*.tsx",
     "vite.config.ts"
