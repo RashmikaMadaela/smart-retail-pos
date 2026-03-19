@@ -14,7 +14,7 @@ function resolveDbPath() {
 
 function resolvePreloadPath() {
   if (process.env.VITE_DEV_SERVER_URL) {
-    return path.resolve(process.cwd(), "electron", "preload", "preload.ts");
+    return path.resolve(process.cwd(), "dist-electron", "preload.cjs");
   }
   if (app.isPackaged) {
     return path.join(app.getAppPath(), "dist-electron", "preload.cjs");
