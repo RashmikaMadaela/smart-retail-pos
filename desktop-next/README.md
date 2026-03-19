@@ -34,6 +34,10 @@ This folder contains the new Electron + React + Node migration app scaffold.
 	- renderer split into feature modules (`LoginView`, `SummaryStrip`, tab components)
 	- centralized renderer API wrapper (`posApiClient`) for preload bridge calls
 	- renderer integration tests for API forwarding (`renderer/src/lib/posApiClient.test.ts`)
+- Stage 7 quality and hardening checkpoint:
+	- jsdom UI interaction tests for Billing, Held Sales, Customers, and Suppliers tabs
+	- renderer crash containment via `ErrorBoundary`
+	- safer renderer API wrapper with standardized fallback errors on bridge/runtime failures
 
 ## Commands
 
@@ -55,6 +59,12 @@ Run migration parity tests:
 npm run test
 ```
 
+Test coverage now includes:
+
+- service parity tests (`tests/parity-services.test.ts`)
+- renderer API forwarding tests (`renderer/src/lib/posApiClient.test.ts`)
+- tab-level UI interaction tests (`renderer/src/features/*.test.tsx`)
+
 Run app in development mode:
 
 ```bash
@@ -65,4 +75,5 @@ npm run dev
 
 - This is a parallel migration workspace. The existing Python app remains unchanged.
 - Stage 6 complete: `App.tsx` now coordinates feature components instead of owning all tab markup directly.
-- Next checkpoint: add targeted UI interaction tests for each feature tab and prepare cutover hardening.
+- Stage 7 complete: feature tabs have interaction coverage and renderer-side crash/error hardening.
+- Next checkpoint: desktop packaging (installer build), production smoke tests, and cutover checklist finalization.
