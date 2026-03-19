@@ -1,13 +1,21 @@
 import path from "node:path";
 import Database from "better-sqlite3";
 
-const defaultDbPath = path.resolve(process.cwd(), "../database/pos.db");
-let activeDbPath = process.env.POS_DB_PATH || defaultDbPath;
+function resolveDefaultDbPath() {
+  return path.resolve(process.cwd(), "../database/pos.db");
+}
+
+let activeDbPathOverride: string | null = null;
 let db: Database.Database | null = null;
 
 function getOrCreateDb() {
   if (!db) {
-    db = new Database(activeDbPath, { fileMustExist: true });
+    const resolvedPath = activeDbPathOverride || process.env.POS_DB_PATH || resolveDefaultDbPath();
+    if (!resolvedPath) {
+      throw new Error("POS database path is not configured.");
+    }
+
+    db = new Database(resolvedPath, { fileMustExist: true });
     db.pragma("foreign_keys = ON");
   }
   return db;
@@ -25,6 +33,6 @@ export function resetDbConnection() {
 }
 
 export function setDbPathForTests(dbPath: string) {
-  activeDbPath = dbPath;
+  activeDbPathOverride = dbPath;
   resetDbConnection();
 }
