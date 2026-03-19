@@ -2,11 +2,11 @@
 
 ## 1. Build and Package
 
-- [ ] Run `npm run check`
-- [ ] Run `npm run test`
-- [ ] Run `npm run build`
-- [ ] Run `npm run dist`
-- [ ] Verify installer and portable artifacts in `release/`
+- [x] Run `npm run check`
+- [x] Run `npm run test`
+- [x] Run `npm run build`
+- [x] Run `npm run dist`
+- [x] Verify installer and portable artifacts in `release/`
 
 ## 2. Environment and Data
 
