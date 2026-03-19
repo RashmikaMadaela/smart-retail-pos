@@ -1,15 +1,31 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { HandCoins, LayoutDashboard, LogOut, PauseCircle, RefreshCw, Truck } from "lucide-react";
-import { BillingTab } from "./features/BillingTab";
-import { CustomersTab } from "./features/CustomersTab";
-import { HeldSalesTab } from "./features/HeldSalesTab";
 import { LoginView } from "./features/LoginView";
 import { SummaryStrip } from "./features/SummaryStrip";
-import { SuppliersTab } from "./features/SuppliersTab";
 import type { ActiveTab, BatchLineDraft, CartItem, Customer, CustomerLedger, HeldSale, Product, Summary, Supplier, SupplierBatch, SupplierLedger } from "./features/types";
 import { cn } from "./lib/utils";
 import { posApiClient } from "./lib/posApiClient";
 import { useSessionStore } from "./store/useSessionStore";
+
+const BillingTab = lazy(async () => {
+  const module = await import("./features/BillingTab");
+  return { default: module.BillingTab };
+});
+
+const HeldSalesTab = lazy(async () => {
+  const module = await import("./features/HeldSalesTab");
+  return { default: module.HeldSalesTab };
+});
+
+const CustomersTab = lazy(async () => {
+  const module = await import("./features/CustomersTab");
+  return { default: module.CustomersTab };
+});
+
+const SuppliersTab = lazy(async () => {
+  const module = await import("./features/SuppliersTab");
+  return { default: module.SuppliersTab };
+});
 
 export default function App() {
   const { user, setUser } = useSessionStore();
@@ -794,118 +810,120 @@ export default function App() {
           <SummaryStrip summary={summary} netColor={netColor} />
 
           <section className="rounded-3xl border border-border/80 bg-card/65 p-4 shadow-panel backdrop-blur md:p-5">
-            {activeTab === "billing" ? (
-              <>
-                <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <h3 className="text-lg font-semibold">Billing Workflow</h3>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <input
-                      className="w-64 max-w-full"
-                      placeholder="Search products"
-                      value={searchText}
-                      onChange={(event) => setSearchText(event.target.value)}
-                    />
-                    <button type="button" onClick={() => void refreshProducts()}>
-                      Refresh Products
-                    </button>
+            <Suspense fallback={<div className="rounded-xl border border-border/80 bg-background/45 p-6 text-sm text-muted-foreground">Loading tab...</div>}>
+              {activeTab === "billing" ? (
+                <>
+                  <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <h3 className="text-lg font-semibold">Billing Workflow</h3>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <input
+                        className="w-64 max-w-full"
+                        placeholder="Search products"
+                        value={searchText}
+                        onChange={(event) => setSearchText(event.target.value)}
+                      />
+                      <button type="button" onClick={() => void refreshProducts()}>
+                        Refresh Products
+                      </button>
+                    </div>
                   </div>
-                </div>
-                <BillingTab
-                  products={products}
-                  selectedProductId={selectedProductId}
-                  addQty={addQty}
-                  cart={cart}
-                  paymentMode={paymentMode}
-                  paymentMethod={paymentMethod}
-                  paidAmount={paidAmount}
-                  customerName={customerName}
-                  customerContact={customerContact}
-                  subTotal={subTotal}
-                  lineDiscountTotal={lineDiscountTotal}
-                  baseTotal={baseTotal}
-                  changeDue={changeDue}
-                  balanceDue={balanceDue}
-                  onSelectedProductChange={setSelectedProductId}
-                  onAddQtyChange={setAddQty}
-                  onAddToCart={addSelectedProductToCart}
-                  onQuickAddProduct={addProductToCartById}
-                  onAdjustCartQty={adjustCartQty}
-                  onRemoveFromCart={removeFromCart}
-                  onPaymentModeChange={setPaymentMode}
-                  onPaymentMethodChange={setPaymentMethod}
-                  onPaidAmountChange={setPaidAmount}
-                  onCustomerNameChange={setCustomerName}
-                  onCustomerContactChange={setCustomerContact}
-                  onHoldSale={holdCurrentBill}
-                  onProcessSale={processCheckout}
+                  <BillingTab
+                    products={products}
+                    selectedProductId={selectedProductId}
+                    addQty={addQty}
+                    cart={cart}
+                    paymentMode={paymentMode}
+                    paymentMethod={paymentMethod}
+                    paidAmount={paidAmount}
+                    customerName={customerName}
+                    customerContact={customerContact}
+                    subTotal={subTotal}
+                    lineDiscountTotal={lineDiscountTotal}
+                    baseTotal={baseTotal}
+                    changeDue={changeDue}
+                    balanceDue={balanceDue}
+                    onSelectedProductChange={setSelectedProductId}
+                    onAddQtyChange={setAddQty}
+                    onAddToCart={addSelectedProductToCart}
+                    onQuickAddProduct={addProductToCartById}
+                    onAdjustCartQty={adjustCartQty}
+                    onRemoveFromCart={removeFromCart}
+                    onPaymentModeChange={setPaymentMode}
+                    onPaymentMethodChange={setPaymentMethod}
+                    onPaidAmountChange={setPaidAmount}
+                    onCustomerNameChange={setCustomerName}
+                    onCustomerContactChange={setCustomerContact}
+                    onHoldSale={holdCurrentBill}
+                    onProcessSale={processCheckout}
+                  />
+                </>
+              ) : null}
+
+              {activeTab === "held" ? (
+                <HeldSalesTab
+                  heldSales={heldSales}
+                  selectedHeldId={selectedHeldId}
+                  onRefreshHeldSales={() => void refreshHeldSales(user.id)}
+                  onSelectHeldSale={setSelectedHeldId}
+                  onRecallHeldSale={recallHeldSaleIntoCart}
+                  onCompleteHeldSale={completeHeldSaleNow}
                 />
-              </>
-            ) : null}
+              ) : null}
 
-            {activeTab === "held" ? (
-              <HeldSalesTab
-                heldSales={heldSales}
-                selectedHeldId={selectedHeldId}
-                onRefreshHeldSales={() => void refreshHeldSales(user.id)}
-                onSelectHeldSale={setSelectedHeldId}
-                onRecallHeldSale={recallHeldSaleIntoCart}
-                onCompleteHeldSale={completeHeldSaleNow}
-              />
-            ) : null}
+              {activeTab === "customers" ? (
+                <CustomersTab
+                  customers={customers}
+                  selectedCustomerId={selectedCustomerId}
+                  customerSearchText={customerSearchText}
+                  customerPayment={customerPayment}
+                  customerLedger={customerLedger}
+                  onRefreshCustomers={() => void refreshCustomers()}
+                  onCustomerSearchChange={setCustomerSearchText}
+                  onSelectCustomer={(id) => {
+                    setSelectedCustomerId(id);
+                    void refreshCustomerLedger(id);
+                  }}
+                  onCustomerPaymentChange={setCustomerPayment}
+                  onApplyCustomerPayment={recordCustomerSettlement}
+                />
+              ) : null}
 
-            {activeTab === "customers" ? (
-              <CustomersTab
-                customers={customers}
-                selectedCustomerId={selectedCustomerId}
-                customerSearchText={customerSearchText}
-                customerPayment={customerPayment}
-                customerLedger={customerLedger}
-                onRefreshCustomers={() => void refreshCustomers()}
-                onCustomerSearchChange={setCustomerSearchText}
-                onSelectCustomer={(id) => {
-                  setSelectedCustomerId(id);
-                  void refreshCustomerLedger(id);
-                }}
-                onCustomerPaymentChange={setCustomerPayment}
-                onApplyCustomerPayment={recordCustomerSettlement}
-              />
-            ) : null}
-
-            {activeTab === "suppliers" ? (
-              <SuppliersTab
-                supplierName={supplierName}
-                supplierContact={supplierContact}
-                suppliers={suppliers}
-                selectedSupplierId={selectedSupplierId}
-                batchReference={batchReference}
-                batchPaid={batchPaid}
-                batchLineDraft={batchLineDraft}
-                batchLines={batchLines}
-                selectedSupplierBatchId={selectedSupplierBatchId}
-                supplierPayAmount={supplierPayAmount}
-                supplierPayMethod={supplierPayMethod}
-                supplierPayNote={supplierPayNote}
-                supplierLedger={supplierLedger}
-                onRefreshSuppliers={() => void refreshSuppliers()}
-                onSupplierNameChange={setSupplierName}
-                onSupplierContactChange={setSupplierContact}
-                onCreateSupplier={createSupplierNow}
-                onSelectSupplier={(supplierId) => {
-                  setSelectedSupplierId(supplierId);
-                  void refreshSupplierLedger(supplierId);
-                }}
-                onBatchReferenceChange={setBatchReference}
-                onBatchPaidChange={setBatchPaid}
-                onBatchLineDraftChange={setBatchLineDraft}
-                onAddBatchLine={addSupplierBatchLine}
-                onReceiveSupplierBatch={receiveSupplierBatchNow}
-                onSelectSupplierBatch={setSelectedSupplierBatchId}
-                onSupplierPayAmountChange={setSupplierPayAmount}
-                onSupplierPayMethodChange={setSupplierPayMethod}
-                onSupplierPayNoteChange={setSupplierPayNote}
-                onApplySupplierPayment={recordSupplierSettlement}
-              />
-            ) : null}
+              {activeTab === "suppliers" ? (
+                <SuppliersTab
+                  supplierName={supplierName}
+                  supplierContact={supplierContact}
+                  suppliers={suppliers}
+                  selectedSupplierId={selectedSupplierId}
+                  batchReference={batchReference}
+                  batchPaid={batchPaid}
+                  batchLineDraft={batchLineDraft}
+                  batchLines={batchLines}
+                  selectedSupplierBatchId={selectedSupplierBatchId}
+                  supplierPayAmount={supplierPayAmount}
+                  supplierPayMethod={supplierPayMethod}
+                  supplierPayNote={supplierPayNote}
+                  supplierLedger={supplierLedger}
+                  onRefreshSuppliers={() => void refreshSuppliers()}
+                  onSupplierNameChange={setSupplierName}
+                  onSupplierContactChange={setSupplierContact}
+                  onCreateSupplier={createSupplierNow}
+                  onSelectSupplier={(supplierId) => {
+                    setSelectedSupplierId(supplierId);
+                    void refreshSupplierLedger(supplierId);
+                  }}
+                  onBatchReferenceChange={setBatchReference}
+                  onBatchPaidChange={setBatchPaid}
+                  onBatchLineDraftChange={setBatchLineDraft}
+                  onAddBatchLine={addSupplierBatchLine}
+                  onReceiveSupplierBatch={receiveSupplierBatchNow}
+                  onSelectSupplierBatch={setSelectedSupplierBatchId}
+                  onSupplierPayAmountChange={setSupplierPayAmount}
+                  onSupplierPayMethodChange={setSupplierPayMethod}
+                  onSupplierPayNoteChange={setSupplierPayNote}
+                  onApplySupplierPayment={recordSupplierSettlement}
+                />
+              ) : null}
+            </Suspense>
           </section>
         </section>
       </div>
