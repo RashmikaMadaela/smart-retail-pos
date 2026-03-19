@@ -775,7 +775,7 @@ export default function App() {
       pushError(response.error || "Clear inventory failed.");
       return;
     }
-    pushMessage(`Inventory stock cleared for ${response.data.rows_affected} products.`);
+    pushMessage(`Inventory records fully cleared. Deleted products: ${response.data.rows_affected}.`);
     await refreshProducts();
   }
 

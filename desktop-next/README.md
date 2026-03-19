@@ -124,10 +124,21 @@ npm run dist:portable
 - Temporary virtual printing outputs:
 	- development: `printouts/bills` and `printouts/barcodes`
 	- packaged app: `%USERPROFILE%/Documents/SmartRetailPOSNext/printouts/...`
+- Bill PDF format now uses thermal-style 78mm receipt width.
+- Default bill logo is loaded from `renderer/public/logo.jpeg` (also supports `.jpg`, `.png`, `.webp`).
+- In packaged builds, the same logo is loaded from `dist/logo.*`.
+- Optional bill branding/config via environment variables:
+	- `POS_BILL_LOGO_PATH` (absolute path override used only when no default logo file is found)
+	- `POS_BILL_STORE_NAME`
+	- `POS_BILL_STORE_LOCATION`
+	- `POS_BILL_STORE_PHONE`
+	- `POS_BILL_STORE_EMAIL`
+	- `POS_BILL_RETURN_POLICY`
+	- `POS_BILL_FOOTER`
 - SuperAdmin account is auto-seeded at startup if missing:
 	- username: `superadmin`
 	- password: `superadmin123`
-	- privileges: clear inventory stock, export inventory JSON, import inventory JSON
+	- privileges: clear all inventory product records, export inventory JSON, import inventory JSON
 - Inventory export location:
 	- development: `inventory_exports/`
 	- packaged app: `%USERPROFILE%/Documents/SmartRetailPOSNext/inventory_exports/`

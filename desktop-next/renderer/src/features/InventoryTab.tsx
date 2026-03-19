@@ -68,7 +68,7 @@ export function InventoryTab({
       />
 
       {isSuperAdmin ? (
-        <SurfaceCard title="SuperAdmin Inventory Tools" subtitle="Clear stock and export/import inventory backups.">
+        <SurfaceCard title="SuperAdmin Inventory Tools" subtitle="Clear all product records and export/import inventory backups.">
           <div className="grid gap-3 md:grid-cols-[1fr_auto_auto_auto]">
             <input
               placeholder="Path to exported inventory JSON"
@@ -98,7 +98,7 @@ export function InventoryTab({
               Open Export Folder
             </button>
             <button type="button" className="danger" onClick={onClearInventory}>
-              Clear Inventory Stock
+              Clear All Inventory Records
             </button>
           </div>
         </SurfaceCard>

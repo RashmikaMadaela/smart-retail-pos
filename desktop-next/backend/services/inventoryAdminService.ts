@@ -21,7 +21,7 @@ function nowStamp() {
 export function clearInventoryStock(): ServiceResult<{ rows_affected: number }> {
   try {
     const db = getDb();
-    const result = db.prepare("UPDATE products SET stock = 0").run();
+    const result = db.prepare("DELETE FROM products").run();
     return { ok: true, data: { rows_affected: Number(result.changes || 0) } };
   } catch (error) {
     return { ok: false, error: `Error: ${String((error as Error).message || error)}` };
