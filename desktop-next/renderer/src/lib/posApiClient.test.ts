@@ -30,6 +30,8 @@ beforeEach(() => {
     clearInventoryStock: vi.fn().mockResolvedValue({ ok: true, data: { rows_affected: 2 } }),
     exportInventoryData: vi.fn().mockResolvedValue({ ok: true, data: { file_path: "E:/tmp/inventory.json", product_count: 2 } }),
     importInventoryData: vi.fn().mockResolvedValue({ ok: true, data: { upserted_count: 2 } }),
+    pickInventoryImportFile: vi.fn().mockResolvedValue({ ok: true, data: { file_path: "E:/tmp/inventory.json" } }),
+    openInventoryExportFolder: vi.fn().mockResolvedValue({ ok: true, data: { path: "E:/tmp" } }),
   };
 
   Object.defineProperty(globalThis, "window", {

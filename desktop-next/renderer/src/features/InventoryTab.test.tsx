@@ -18,6 +18,8 @@ describe("InventoryTab", () => {
         onClearInventory={vi.fn()}
         onExportInventory={vi.fn()}
         onImportInventory={vi.fn()}
+        onPickImportFile={vi.fn().mockResolvedValue(null)}
+        onOpenExportFolder={vi.fn()}
       />,
     );
 

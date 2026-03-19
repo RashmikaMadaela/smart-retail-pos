@@ -35,6 +35,8 @@ const api = {
   clearInventoryStock: (role: "SuperAdmin") => ipcRenderer.invoke("inventory.clearStock", { role }),
   exportInventoryData: (role: "SuperAdmin") => ipcRenderer.invoke("inventory.exportData", { role }),
   importInventoryData: (payload: { role: "SuperAdmin"; file_path: string }) => ipcRenderer.invoke("inventory.importData", payload),
+  pickInventoryImportFile: (role: "SuperAdmin") => ipcRenderer.invoke("inventory.pickImportFile", { role }),
+  openInventoryExportFolder: (role: "SuperAdmin") => ipcRenderer.invoke("inventory.openExportFolder", { role }),
 };
 
 contextBridge.exposeInMainWorld("posApi", api);

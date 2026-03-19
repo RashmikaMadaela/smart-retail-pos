@@ -811,6 +811,31 @@ export default function App() {
     await refreshProducts();
   }
 
+  async function pickInventoryImportFileNow(): Promise<string | null> {
+    if (!isSuperAdmin) {
+      pushError("SuperAdmin access required.");
+      return null;
+    }
+    const response = await posApiClient.pickInventoryImportFile("SuperAdmin");
+    if (!response.ok) {
+      return null;
+    }
+    return response.data.file_path;
+  }
+
+  async function openInventoryExportFolderNow() {
+    if (!isSuperAdmin) {
+      pushError("SuperAdmin access required.");
+      return;
+    }
+    const response = await posApiClient.openInventoryExportFolder("SuperAdmin");
+    if (!response.ok) {
+      pushError(response.error || "Unable to open export folder.");
+      return;
+    }
+    pushMessage(`Opened inventory export folder: ${response.data.path}`);
+  }
+
   const tabItems: Array<{
     id: ActiveTab;
     label: string;
@@ -1127,6 +1152,8 @@ export default function App() {
                   onClearInventory={() => void clearInventoryStockNow()}
                   onExportInventory={() => void exportInventoryNow()}
                   onImportInventory={(filePath) => void importInventoryNow(filePath)}
+                  onPickImportFile={pickInventoryImportFileNow}
+                  onOpenExportFolder={() => void openInventoryExportFolderNow()}
                 />
               ) : null}
 

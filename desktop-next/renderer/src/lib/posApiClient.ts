@@ -73,4 +73,14 @@ export const posApiClient = {
       () => window.posApi.importInventoryData(payload) as Promise<ApiResult<{ upserted_count: number }>>,
       "Unable to import inventory",
     ),
+  pickInventoryImportFile: (role: "SuperAdmin") =>
+    safeCall(
+      () => window.posApi.pickInventoryImportFile(role) as Promise<ApiResult<{ file_path: string }>>,
+      "Unable to pick inventory import file",
+    ),
+  openInventoryExportFolder: (role: "SuperAdmin") =>
+    safeCall(
+      () => window.posApi.openInventoryExportFolder(role) as Promise<ApiResult<{ path: string }>>,
+      "Unable to open inventory export folder",
+    ),
 };

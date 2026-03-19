@@ -10,6 +10,8 @@ type InventoryTabProps = {
   onClearInventory: () => void;
   onExportInventory: () => void;
   onImportInventory: (filePath: string) => void;
+  onPickImportFile: () => Promise<string | null>;
+  onOpenExportFolder: () => void;
 };
 
 export function InventoryTab({
@@ -19,6 +21,8 @@ export function InventoryTab({
   onClearInventory,
   onExportInventory,
   onImportInventory,
+  onPickImportFile,
+  onOpenExportFolder,
 }: InventoryTabProps) {
   const [inventorySearch, setInventorySearch] = useState("");
   const [lowStockOnly, setLowStockOnly] = useState(false);
@@ -65,12 +69,23 @@ export function InventoryTab({
 
       {isSuperAdmin ? (
         <SurfaceCard title="SuperAdmin Inventory Tools" subtitle="Clear stock and export/import inventory backups.">
-          <div className="grid gap-3 md:grid-cols-[1fr_auto_auto]">
+          <div className="grid gap-3 md:grid-cols-[1fr_auto_auto_auto]">
             <input
               placeholder="Path to exported inventory JSON"
               value={importFilePath}
               onChange={(event) => setImportFilePath(event.target.value)}
             />
+            <button
+              type="button"
+              onClick={async () => {
+                const picked = await onPickImportFile();
+                if (picked) {
+                  setImportFilePath(picked);
+                }
+              }}
+            >
+              Browse File
+            </button>
             <button type="button" onClick={() => onImportInventory(importFilePath)}>
               Import Inventory
             </button>
@@ -78,7 +93,10 @@ export function InventoryTab({
               Export Inventory
             </button>
           </div>
-          <div className="mt-3">
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button type="button" onClick={onOpenExportFolder}>
+              Open Export Folder
+            </button>
             <button type="button" className="danger" onClick={onClearInventory}>
               Clear Inventory Stock
             </button>

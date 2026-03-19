@@ -1,4 +1,5 @@
-import { ipcMain } from "electron";
+import { BrowserWindow, dialog, ipcMain, shell } from "electron";
+import type { OpenDialogOptions } from "electron";
 import { z } from "zod";
 import { login } from "../../backend/services/authService";
 import { listProducts, searchProducts } from "../../backend/services/catalogService";
@@ -447,5 +448,45 @@ export function registerIpcHandlers() {
     }
     const result = await importInventoryFromJson(parsed.data.file_path);
     return result.ok ? ok(result.data) : fail(result.error);
+  });
+
+  ipcMain.handle("inventory.pickImportFile", async (_event, payload) => {
+    const parsed = superAdminRoleSchema.safeParse(payload);
+    if (!parsed.success) {
+      return fail("SuperAdmin role required.");
+    }
+
+    const win = BrowserWindow.getFocusedWindow();
+    const options: OpenDialogOptions = {
+      title: "Select inventory export JSON",
+      properties: ["openFile"],
+      filters: [{ name: "JSON Files", extensions: ["json"] }],
+    };
+    const picked = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options);
+
+    if (picked.canceled || picked.filePaths.length === 0) {
+      return fail("Import selection cancelled.");
+    }
+
+    return ok({ file_path: picked.filePaths[0] });
+  });
+
+  ipcMain.handle("inventory.openExportFolder", async (_event, payload) => {
+    const parsed = superAdminRoleSchema.safeParse(payload);
+    if (!parsed.success) {
+      return fail("SuperAdmin role required.");
+    }
+
+    const folderPath = process.env.POS_INVENTORY_EXPORT_DIR;
+    if (!folderPath) {
+      return fail("Inventory export directory is not configured.");
+    }
+
+    const openResult = await shell.openPath(folderPath);
+    if (openResult) {
+      return fail(openResult);
+    }
+
+    return ok({ path: folderPath });
   });
 }

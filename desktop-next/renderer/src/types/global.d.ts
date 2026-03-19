@@ -30,6 +30,8 @@ declare global {
       clearInventoryStock: (role: "SuperAdmin") => Promise<{ ok: boolean; data?: any; error?: string }>;
       exportInventoryData: (role: "SuperAdmin") => Promise<{ ok: boolean; data?: any; error?: string }>;
       importInventoryData: (payload: { role: "SuperAdmin"; file_path: string }) => Promise<{ ok: boolean; data?: any; error?: string }>;
+      pickInventoryImportFile: (role: "SuperAdmin") => Promise<{ ok: boolean; data?: any; error?: string }>;
+      openInventoryExportFolder: (role: "SuperAdmin") => Promise<{ ok: boolean; data?: any; error?: string }>;
     };
   }
 }
