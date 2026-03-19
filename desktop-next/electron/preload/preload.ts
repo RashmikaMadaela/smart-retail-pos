@@ -1,0 +1,13 @@
+import { contextBridge, ipcRenderer } from "electron";
+
+const api = {
+  login: (username: string, password: string) =>
+    ipcRenderer.invoke("auth.login", { username, password }),
+  listProducts: (limit?: number) =>
+    ipcRenderer.invoke("catalog.listProducts", { limit }),
+  searchProducts: (searchText: string, limit?: number) =>
+    ipcRenderer.invoke("catalog.searchProducts", { searchText, limit }),
+  getSummary: () => ipcRenderer.invoke("report.summary"),
+};
+
+contextBridge.exposeInMainWorld("posApi", api);

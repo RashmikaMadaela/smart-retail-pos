@@ -1,0 +1,130 @@
+:root {
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  color: #eef2f7;
+  background: radial-gradient(circle at 20% 20%, #1f2f49 0%, #0d1626 45%, #090f1a 100%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+.login-shell,
+.app-shell {
+  min-height: 100vh;
+  padding: 28px;
+}
+
+.login-shell {
+  display: grid;
+  place-items: center;
+}
+
+.login-card {
+  width: min(440px, 96vw);
+  background: linear-gradient(165deg, #111e32 0%, #12253d 100%);
+  border: 1px solid #2a3f63;
+  border-radius: 16px;
+  padding: 26px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+
+.muted {
+  color: #99aac2;
+}
+
+label {
+  display: block;
+  margin: 14px 0;
+  color: #d9e4f5;
+}
+
+input {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  border-radius: 10px;
+  border: 1px solid #35517d;
+  background: #0b1424;
+  color: #edf4ff;
+  padding: 10px 12px;
+}
+
+button {
+  border: 0;
+  border-radius: 10px;
+  color: #0b1424;
+  background: linear-gradient(135deg, #7ce6b3 0%, #49c78f 100%);
+  padding: 10px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.error {
+  color: #ff9090;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.summary-grid article,
+.products-panel {
+  background: rgba(11, 22, 36, 0.9);
+  border: 1px solid #294267;
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.products-panel {
+  margin-top: 14px;
+}
+
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.actions input {
+  width: 220px;
+  margin: 0;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 10px 8px;
+  border-bottom: 1px solid #223956;
+}
+
+thead th {
+  color: #7ec6ff;
+}
