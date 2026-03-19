@@ -72,3 +72,62 @@ export type SaleWithItems = {
   items: SaleItemRow[];
 };
 
+export type Customer = {
+  id: number;
+  name: string;
+  contact: string | null;
+  total_outstanding: number;
+};
+
+export type CustomerLedger = {
+  customer: Customer | null;
+  sales: Array<{
+    id: number;
+    timestamp: string;
+    total: number;
+    paid_amount: number;
+    balance_due: number;
+    payment_status: string;
+    status: string;
+  }>;
+};
+
+export type Supplier = {
+  id: number;
+  name: string;
+  contact: string | null;
+  opening_balance: number;
+  total_outstanding: number;
+  notes: string | null;
+};
+
+export type SupplierLedger = {
+  supplier: Supplier | null;
+  batches: Array<{
+    id: number;
+    supplier_id: number;
+    reference_no: string | null;
+    received_at: string;
+    total_cost: number;
+    paid_amount: number;
+    balance_due: number;
+    status: string;
+  }>;
+  payments: Array<{
+    id: number;
+    supplier_id: number;
+    batch_id: number | null;
+    amount: number;
+    paid_at: string;
+    method: string;
+    note: string | null;
+  }>;
+};
+
+export type SupplierBatchInput = {
+  product_id: string;
+  qty_received: number;
+  unit_cost: number;
+  line_discount_pct: number;
+};
+

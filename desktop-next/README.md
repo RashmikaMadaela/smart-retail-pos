@@ -14,6 +14,14 @@ This folder contains the new Electron + React + Node migration app scaffold.
 	- list held sales
 	- recall held sale
 	- complete held sale
+- Ledger write-path migration checkpoint:
+	- create/search customer
+	- customer ledger read
+	- customer payment settlement
+	- create/list/search supplier
+	- receive supplier batch
+	- supplier batch payment settlement
+	- supplier ledger read
 
 ## Commands
 
@@ -38,4 +46,4 @@ npm run dev
 ## Notes
 
 - This is a parallel migration workspace. The existing Python app remains unchanged.
-- Supplier/customer ledger transaction writes are the next migration checkpoint.
+- React workflow integration for billing and supplier/customer screens is the next migration checkpoint.

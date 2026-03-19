@@ -4,6 +4,20 @@ import { login } from "../../backend/services/authService";
 import { listProducts, searchProducts } from "../../backend/services/catalogService";
 import { getFinancialSummary } from "../../backend/services/reportService";
 import { completeHeldSale, holdSale, listHeldSales, processSale, recallHeldSale } from "../../backend/services/salesService";
+import {
+  createOrGetCustomer,
+  createSupplier,
+  getCustomer,
+  getCustomerLedger,
+  getSupplierLedger,
+  listSupplierBatches,
+  listSuppliers,
+  receiveSupplierBatch,
+  recordCustomerPayment,
+  recordSupplierPayment,
+  searchCustomers,
+  searchSuppliers,
+} from "../../backend/services/ledgerService";
 
 const loginSchema = z.object({
   username: z.string().min(1),
@@ -67,6 +81,66 @@ const completeHeldSchema = z.object({
   global_discount: z.number().nonnegative().optional(),
   total_amount: z.number().nonnegative().optional(),
   payment_method: z.enum(["CASH", "CARD"]).optional(),
+});
+
+const createCustomerSchema = z.object({
+  name: z.string().min(1),
+  contact: z.string().optional(),
+});
+
+const searchCustomerSchema = z.object({
+  search_text: z.string().optional(),
+  limit: z.number().int().positive().max(500).optional(),
+});
+
+const customerIdSchema = z.object({
+  customer_id: z.number().int().positive(),
+});
+
+const customerPaymentSchema = z.object({
+  customer_id: z.number().int().positive(),
+  amount: z.number().positive(),
+});
+
+const supplierCreateSchema = z.object({
+  name: z.string().min(1),
+  contact: z.string().optional(),
+  opening_balance: z.number().nonnegative().optional(),
+  notes: z.string().optional(),
+});
+
+const supplierSearchSchema = z.object({
+  search_text: z.string().optional(),
+  limit: z.number().int().positive().max(500).optional(),
+});
+
+const receiveBatchSchema = z.object({
+  supplier_id: z.number().int().positive(),
+  reference_no: z.string().optional(),
+  items: z
+    .array(
+      z.object({
+        product_id: z.string().min(1),
+        qty_received: z.number().positive(),
+        unit_cost: z.number().nonnegative(),
+        line_discount_pct: z.number().nonnegative().max(100),
+      }),
+    )
+    .min(1),
+  paid_amount: z.number().nonnegative().optional(),
+});
+
+const supplierBatchSchema = z.object({
+  supplier_id: z.number().int().positive(),
+  include_settled: z.boolean().optional(),
+});
+
+const supplierPaymentSchema = z.object({
+  supplier_id: z.number().int().positive(),
+  batch_id: z.number().int().positive(),
+  amount: z.number().positive(),
+  method: z.string().optional(),
+  note: z.string().optional(),
 });
 
 function ok<T>(data: T) {
@@ -149,5 +223,117 @@ export function registerIpcHandlers() {
     }
     const result = completeHeldSale(parsed.data);
     return result.ok ? ok({ message: result.data }) : fail(result.error);
+  });
+
+  ipcMain.handle("customer.createOrGet", async (_event, payload) => {
+    const parsed = createCustomerSchema.safeParse(payload);
+    if (!parsed.success) {
+      return fail("Invalid createOrGet customer payload");
+    }
+    const result = createOrGetCustomer(parsed.data.name, parsed.data.contact || "");
+    return result.ok ? ok(result.data) : fail(result.error);
+  });
+
+  ipcMain.handle("customer.search", async (_event, payload) => {
+    const parsed = searchCustomerSchema.safeParse(payload ?? {});
+    if (!parsed.success) {
+      return fail("Invalid customer search payload");
+    }
+    return ok(searchCustomers(parsed.data.search_text || "", parsed.data.limit ?? 200));
+  });
+
+  ipcMain.handle("customer.get", async (_event, payload) => {
+    const parsed = customerIdSchema.safeParse(payload);
+    if (!parsed.success) {
+      return fail("Invalid customer get payload");
+    }
+    return ok(getCustomer(parsed.data.customer_id));
+  });
+
+  ipcMain.handle("customer.getLedger", async (_event, payload) => {
+    const parsed = customerIdSchema.safeParse(payload);
+    if (!parsed.success) {
+      return fail("Invalid customer ledger payload");
+    }
+    return ok(getCustomerLedger(parsed.data.customer_id));
+  });
+
+  ipcMain.handle("customer.recordPayment", async (_event, payload) => {
+    const parsed = customerPaymentSchema.safeParse(payload);
+    if (!parsed.success) {
+      return fail("Invalid customer payment payload");
+    }
+    const result = recordCustomerPayment(parsed.data.customer_id, parsed.data.amount);
+    return result.ok ? ok({ message: result.data }) : fail(result.error);
+  });
+
+  ipcMain.handle("supplier.create", async (_event, payload) => {
+    const parsed = supplierCreateSchema.safeParse(payload);
+    if (!parsed.success) {
+      return fail("Invalid supplier create payload");
+    }
+    const result = createSupplier(
+      parsed.data.name,
+      parsed.data.contact || "",
+      parsed.data.opening_balance ?? 0,
+      parsed.data.notes || "",
+    );
+    return result.ok ? ok({ message: result.data }) : fail(result.error);
+  });
+
+  ipcMain.handle("supplier.list", async (_event, payload) => {
+    const parsed = supplierSearchSchema.safeParse(payload ?? {});
+    if (!parsed.success) {
+      return fail("Invalid supplier list payload");
+    }
+    if ((parsed.data.search_text || "").trim()) {
+      return ok(searchSuppliers(parsed.data.search_text || "", parsed.data.limit ?? 200));
+    }
+    return ok(listSuppliers(parsed.data.limit ?? 200));
+  });
+
+  ipcMain.handle("supplier.receiveBatch", async (_event, payload) => {
+    const parsed = receiveBatchSchema.safeParse(payload);
+    if (!parsed.success) {
+      return fail("Invalid supplier receiveBatch payload");
+    }
+    const result = receiveSupplierBatch(
+      parsed.data.supplier_id,
+      parsed.data.reference_no || "",
+      parsed.data.items,
+      parsed.data.paid_amount ?? 0,
+    );
+    return result.ok ? ok({ batch_id: result.data }) : fail(result.error);
+  });
+
+  ipcMain.handle("supplier.listBatches", async (_event, payload) => {
+    const parsed = supplierBatchSchema.safeParse(payload);
+    if (!parsed.success) {
+      return fail("Invalid supplier listBatches payload");
+    }
+    return ok(listSupplierBatches(parsed.data.supplier_id, parsed.data.include_settled ?? true));
+  });
+
+  ipcMain.handle("supplier.recordPayment", async (_event, payload) => {
+    const parsed = supplierPaymentSchema.safeParse(payload);
+    if (!parsed.success) {
+      return fail("Invalid supplier payment payload");
+    }
+    const result = recordSupplierPayment(
+      parsed.data.supplier_id,
+      parsed.data.batch_id,
+      parsed.data.amount,
+      parsed.data.method || "CASH",
+      parsed.data.note || "",
+    );
+    return result.ok ? ok({ message: result.data }) : fail(result.error);
+  });
+
+  ipcMain.handle("supplier.getLedger", async (_event, payload) => {
+    const parsed = z.object({ supplier_id: z.number().int().positive() }).safeParse(payload);
+    if (!parsed.success) {
+      return fail("Invalid supplier ledger payload");
+    }
+    return ok(getSupplierLedger(parsed.data.supplier_id));
   });
 }
