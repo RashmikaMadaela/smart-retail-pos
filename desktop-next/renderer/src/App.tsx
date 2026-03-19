@@ -1,5 +1,5 @@
 import { FormEvent, Suspense, lazy, useEffect, useMemo, useState } from "react";
-import { HandCoins, LayoutDashboard, LogOut, PauseCircle, RefreshCw, Truck } from "lucide-react";
+import { Boxes, HandCoins, LayoutDashboard, LogOut, PauseCircle, RefreshCw, Truck } from "lucide-react";
 import { LoginView } from "./features/LoginView";
 import type { ActiveTab, BatchLineDraft, Customer, CustomerLedger, HeldSale, Product, Summary, Supplier, SupplierBatch, SupplierLedger } from "./features/types";
 import { cn } from "./lib/utils";
@@ -21,6 +21,11 @@ const BillingTab = lazy(async () => {
 const HeldSalesTab = lazy(async () => {
   const module = await import("./features/HeldSalesTab");
   return { default: module.HeldSalesTab };
+});
+
+const InventoryTab = lazy(async () => {
+  const module = await import("./features/InventoryTab");
+  return { default: module.InventoryTab };
 });
 
 const CustomersTab = lazy(async () => {
@@ -92,7 +97,7 @@ export default function App() {
   const [supplierPayMethod, setSupplierPayMethod] = useState("CASH");
   const [supplierPayNote, setSupplierPayNote] = useState("");
 
-  const shortcutHint = "Shortcuts: Ctrl+1 Billing, Ctrl+2 Held, Ctrl+3 Customers, Ctrl+4 Suppliers, Ctrl+/ Focus scanner, F8 Hold, F9 Checkout";
+  const shortcutHint = "Shortcuts: Ctrl+1 Billing, Ctrl+2 Inventory, Ctrl+3 Held, Ctrl+4 Customers, Ctrl+5 Suppliers, Ctrl+/ Focus scanner, F8 Hold, F9 Checkout";
 
   const netColor = useMemo(() => {
     if (!summary) {
@@ -644,6 +649,12 @@ export default function App() {
       icon: LayoutDashboard,
     },
     {
+      id: "inventory",
+      label: "Inventory",
+      description: "Stock visibility",
+      icon: Boxes,
+    },
+    {
       id: "held",
       label: "Held Sales",
       description: "Pending sale drafts",
@@ -688,15 +699,20 @@ export default function App() {
       }
       if (event.ctrlKey && event.key === "2") {
         event.preventDefault();
-        setActiveTab("held");
+        setActiveTab("inventory");
         return;
       }
       if (event.ctrlKey && event.key === "3") {
         event.preventDefault();
-        setActiveTab("customers");
+        setActiveTab("held");
         return;
       }
       if (event.ctrlKey && event.key === "4") {
+        event.preventDefault();
+        setActiveTab("customers");
+        return;
+      }
+      if (event.ctrlKey && event.key === "5") {
         event.preventDefault();
         setActiveTab("suppliers");
         return;
@@ -901,6 +917,13 @@ export default function App() {
                   onSelectHeldSale={setSelectedHeldId}
                   onRecallHeldSale={recallHeldSaleIntoCart}
                   onCompleteHeldSale={completeHeldSaleNow}
+                />
+              ) : null}
+
+              {activeTab === "inventory" ? (
+                <InventoryTab
+                  products={products}
+                  onRefreshProducts={() => void refreshProducts()}
                 />
               ) : null}
 
