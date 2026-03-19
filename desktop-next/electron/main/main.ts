@@ -54,7 +54,9 @@ function createMainWindow() {
   const devServer = process.env.VITE_DEV_SERVER_URL;
   if (devServer) {
     win.loadURL(devServer);
-    win.webContents.openDevTools({ mode: "detach" });
+    if (process.env.POS_OPEN_DEVTOOLS === "1") {
+      win.webContents.openDevTools({ mode: "detach" });
+    }
     return;
   }
 
