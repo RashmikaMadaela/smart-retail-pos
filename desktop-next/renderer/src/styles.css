@@ -68,11 +68,46 @@ button {
   color: #ff9090;
 }
 
+.notice {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+}
+
+.notice.success {
+  color: #b8f5d7;
+  border-color: #2c6b4d;
+  background: rgba(33, 92, 62, 0.45);
+}
+
+.notice.error {
+  color: #ffd3d3;
+  border-color: #7a3737;
+  background: rgba(126, 42, 42, 0.4);
+}
+
 header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
+}
+
+.tab-switch {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.tab-switch button {
+  background: linear-gradient(145deg, #5882b8 0%, #3f6ea8 100%);
+  color: #eef4ff;
+}
+
+.tab-switch button.active {
+  background: linear-gradient(145deg, #8fdcb8 0%, #59b68d 100%);
+  color: #0d1728;
 }
 
 .summary-grid {
@@ -94,6 +129,20 @@ header {
   margin-top: 14px;
 }
 
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.panel-card {
+  background: rgba(8, 16, 29, 0.65);
+  border: 1px solid #274463;
+  border-radius: 12px;
+  padding: 12px;
+}
+
 .panel-head {
   display: flex;
   justify-content: space-between;
@@ -105,6 +154,7 @@ header {
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .actions input {
@@ -116,6 +166,55 @@ table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 12px;
+}
+
+select {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  border-radius: 10px;
+  border: 1px solid #35517d;
+  background: #0b1424;
+  color: #edf4ff;
+  padding: 10px 12px;
+}
+
+.calc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 8px 0;
+  color: #d9e4f5;
+}
+
+.danger {
+  background: linear-gradient(145deg, #d16464 0%, #a74242 100%);
+  color: #fff;
+}
+
+.batch-line {
+  display: grid;
+  grid-template-columns: 1.3fr 0.9fr 1fr 0.8fr;
+  gap: 8px;
+}
+
+@media (max-width: 1080px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .actions input {
+    width: 100%;
+  }
+
+  .batch-line {
+    grid-template-columns: 1fr;
+  }
 }
 
 th,

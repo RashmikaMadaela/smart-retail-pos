@@ -22,6 +22,11 @@ This folder contains the new Electron + React + Node migration app scaffold.
 	- receive supplier batch
 	- supplier batch payment settlement
 	- supplier ledger read
+- React workflow integration checkpoint:
+	- billing cart + checkout wired to sales.processSale
+	- hold/recall/complete-held controls wired
+	- customer ledger and settlement actions wired
+	- supplier create/receive/settlement actions wired
 
 ## Commands
 
@@ -46,4 +51,4 @@ npm run dev
 ## Notes
 
 - This is a parallel migration workspace. The existing Python app remains unchanged.
-- React workflow integration for billing and supplier/customer screens is the next migration checkpoint.
+- Next checkpoint: split the large migration shell into feature pages/components and add parity tests around the new IPC write paths.
