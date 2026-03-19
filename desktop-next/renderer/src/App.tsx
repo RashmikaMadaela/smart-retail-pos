@@ -1,11 +1,15 @@
 import { FormEvent, Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { HandCoins, LayoutDashboard, LogOut, PauseCircle, RefreshCw, Truck } from "lucide-react";
 import { LoginView } from "./features/LoginView";
-import { SummaryStrip } from "./features/SummaryStrip";
 import type { ActiveTab, BatchLineDraft, CartItem, Customer, CustomerLedger, HeldSale, Product, Summary, Supplier, SupplierBatch, SupplierLedger } from "./features/types";
 import { cn } from "./lib/utils";
 import { posApiClient } from "./lib/posApiClient";
 import { useSessionStore } from "./store/useSessionStore";
+
+const SummaryStrip = lazy(async () => {
+  const module = await import("./features/SummaryStrip");
+  return { default: module.SummaryStrip };
+});
 
 const BillingTab = lazy(async () => {
   const module = await import("./features/BillingTab");
@@ -807,7 +811,24 @@ export default function App() {
             {error ? <p className="mt-2 rounded-xl border border-rose-500/45 bg-rose-500/15 px-3 py-2 text-sm text-rose-100">{error}</p> : null}
           </header>
 
-          <SummaryStrip summary={summary} netColor={netColor} />
+          <Suspense
+            fallback={
+              <section className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <article className="h-24 rounded-xl border border-border/80 bg-background/45 p-4" />
+                  <article className="h-24 rounded-xl border border-border/80 bg-background/45 p-4" />
+                  <article className="h-24 rounded-xl border border-border/80 bg-background/45 p-4" />
+                  <article className="h-24 rounded-xl border border-border/80 bg-background/45 p-4" />
+                </div>
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-1">
+                  <article className="h-44 rounded-xl border border-border/80 bg-background/45 p-4" />
+                  <article className="h-44 rounded-xl border border-border/80 bg-background/45 p-4" />
+                </div>
+              </section>
+            }
+          >
+            <SummaryStrip summary={summary} netColor={netColor} />
+          </Suspense>
 
           <section className="rounded-3xl border border-border/80 bg-card/65 p-4 shadow-panel backdrop-blur md:p-5">
             <Suspense fallback={<div className="rounded-xl border border-border/80 bg-background/45 p-6 text-sm text-muted-foreground">Loading tab...</div>}>
