@@ -1,4 +1,5 @@
 import { FormEvent, useMemo, useState } from "react";
+import { HandCoins, LayoutDashboard, LogOut, PauseCircle, RefreshCw, Truck } from "lucide-react";
 import { BillingTab } from "./features/BillingTab";
 import { CustomersTab } from "./features/CustomersTab";
 import { HeldSalesTab } from "./features/HeldSalesTab";
@@ -6,6 +7,7 @@ import { LoginView } from "./features/LoginView";
 import { SummaryStrip } from "./features/SummaryStrip";
 import { SuppliersTab } from "./features/SuppliersTab";
 import type { ActiveTab, BatchLineDraft, CartItem, Customer, CustomerLedger, HeldSale, Product, Summary, Supplier, SupplierBatch, SupplierLedger } from "./features/types";
+import { cn } from "./lib/utils";
 import { posApiClient } from "./lib/posApiClient";
 import { useSessionStore } from "./store/useSessionStore";
 
@@ -553,6 +555,38 @@ export default function App() {
     }
   }
 
+  const tabItems: Array<{
+    id: ActiveTab;
+    label: string;
+    description: string;
+    icon: typeof LayoutDashboard;
+  }> = [
+    {
+      id: "billing",
+      label: "Billing",
+      description: "Fast POS checkout",
+      icon: LayoutDashboard,
+    },
+    {
+      id: "held",
+      label: "Held Sales",
+      description: "Pending sale drafts",
+      icon: PauseCircle,
+    },
+    {
+      id: "customers",
+      label: "Customers",
+      description: "Credit and settlements",
+      icon: HandCoins,
+    },
+    {
+      id: "suppliers",
+      label: "Suppliers",
+      description: "Stock and payables",
+      icon: Truck,
+    },
+  ];
+
   if (!user) {
     return (
       <LoginView
@@ -567,145 +601,201 @@ export default function App() {
   }
 
   return (
-    <main className="app-shell">
-      <header>
-        <div>
-          <h1>Smart Retail POS Next</h1>
-          <p>
-            Logged in as <strong>{user.username}</strong> ({user.role})
-          </p>
-        </div>
-        <button
-          onClick={() => {
-            setUser(null);
-            setProducts([]);
-            setSummary(null);
-          }}
-        >
-          Logout
-        </button>
-      </header>
-
-      {message ? <p className="notice success">{message}</p> : null}
-      {error ? <p className="notice error">{error}</p> : null}
-
-      <section className="tab-switch">
-        <button className={activeTab === "billing" ? "active" : ""} onClick={() => setActiveTab("billing")}>Billing</button>
-        <button className={activeTab === "held" ? "active" : ""} onClick={() => setActiveTab("held")}>Held Sales</button>
-        <button className={activeTab === "customers" ? "active" : ""} onClick={() => setActiveTab("customers")}>Customers</button>
-        <button className={activeTab === "suppliers" ? "active" : ""} onClick={() => setActiveTab("suppliers")}>Suppliers</button>
-      </section>
-
-      <SummaryStrip summary={summary} netColor={netColor} />
-
-      {activeTab === "billing" ? (
-        <>
-          <div className="panel-head">
-            <h2>Billing Workflow</h2>
-            <div className="actions">
-              <input
-                placeholder="Search products"
-                value={searchText}
-                onChange={(event) => setSearchText(event.target.value)}
-              />
-              <button onClick={() => void refreshProducts()}>Refresh Products</button>
-              <button onClick={() => void refreshSummary()}>Refresh KPI</button>
-            </div>
+    <main className="app-shell px-4 py-5 md:px-6 md:py-6">
+      <div className="mx-auto grid max-w-[1600px] gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <aside className="rounded-3xl border border-border/80 bg-card/80 p-4 shadow-panel backdrop-blur">
+          <div className="space-y-1 border-b border-border/80 pb-4">
+            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Smart Retail</p>
+            <h1 className="text-2xl font-semibold">POS Next</h1>
+            <p className="text-sm text-muted-foreground">Store Control Center</p>
           </div>
-          <BillingTab
-            products={products}
-            selectedProductId={selectedProductId}
-            addQty={addQty}
-            cart={cart}
-            paymentMode={paymentMode}
-            paymentMethod={paymentMethod}
-            paidAmount={paidAmount}
-            customerName={customerName}
-            customerContact={customerContact}
-            subTotal={subTotal}
-            lineDiscountTotal={lineDiscountTotal}
-            baseTotal={baseTotal}
-            changeDue={changeDue}
-            balanceDue={balanceDue}
-            onSelectedProductChange={setSelectedProductId}
-            onAddQtyChange={setAddQty}
-            onAddToCart={addSelectedProductToCart}
-            onRemoveFromCart={removeFromCart}
-            onPaymentModeChange={setPaymentMode}
-            onPaymentMethodChange={setPaymentMethod}
-            onPaidAmountChange={setPaidAmount}
-            onCustomerNameChange={setCustomerName}
-            onCustomerContactChange={setCustomerContact}
-            onHoldSale={holdCurrentBill}
-            onProcessSale={processCheckout}
-          />
-        </>
-      ) : null}
 
-      {activeTab === "held" ? (
-        <HeldSalesTab
-          heldSales={heldSales}
-          selectedHeldId={selectedHeldId}
-          onRefreshHeldSales={() => void refreshHeldSales(user.id)}
-          onSelectHeldSale={setSelectedHeldId}
-          onRecallHeldSale={recallHeldSaleIntoCart}
-          onCompleteHeldSale={completeHeldSaleNow}
-        />
-      ) : null}
+          <div className="mt-4 rounded-xl border border-border/80 bg-background/40 p-3 text-sm">
+            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Session</p>
+            <p className="mt-1 font-semibold text-foreground">{user.username}</p>
+            <p className="text-muted-foreground">Role: {user.role}</p>
+          </div>
 
-      {activeTab === "customers" ? (
-        <CustomersTab
-          customers={customers}
-          selectedCustomerId={selectedCustomerId}
-          customerSearchText={customerSearchText}
-          customerPayment={customerPayment}
-          customerLedger={customerLedger}
-          onRefreshCustomers={() => void refreshCustomers()}
-          onCustomerSearchChange={setCustomerSearchText}
-          onSelectCustomer={(id) => {
-            setSelectedCustomerId(id);
-            void refreshCustomerLedger(id);
-          }}
-          onCustomerPaymentChange={setCustomerPayment}
-          onApplyCustomerPayment={recordCustomerSettlement}
-        />
-      ) : null}
+          <nav className="mt-4 space-y-2" aria-label="Primary navigation">
+            {tabItems.map((item) => {
+              const Icon = item.icon;
+              const selected = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={cn(
+                    "w-full rounded-xl border px-3 py-3 text-left transition-colors",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    selected
+                      ? "border-accent/70 bg-accent/20 text-foreground"
+                      : "border-border/80 bg-background/35 text-muted-foreground hover:border-accent/45 hover:text-foreground",
+                  )}
+                  onClick={() => setActiveTab(item.id)}
+                >
+                  <span className="flex items-center gap-2 text-sm font-semibold">
+                    <Icon size={16} aria-hidden="true" />
+                    {item.label}
+                  </span>
+                  <span className="mt-1 block text-xs">{item.description}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </aside>
 
-      {activeTab === "suppliers" ? (
-        <SuppliersTab
-          supplierName={supplierName}
-          supplierContact={supplierContact}
-          suppliers={suppliers}
-          selectedSupplierId={selectedSupplierId}
-          batchReference={batchReference}
-          batchPaid={batchPaid}
-          batchLineDraft={batchLineDraft}
-          batchLines={batchLines}
-          selectedSupplierBatchId={selectedSupplierBatchId}
-          supplierPayAmount={supplierPayAmount}
-          supplierPayMethod={supplierPayMethod}
-          supplierPayNote={supplierPayNote}
-          supplierLedger={supplierLedger}
-          onRefreshSuppliers={() => void refreshSuppliers()}
-          onSupplierNameChange={setSupplierName}
-          onSupplierContactChange={setSupplierContact}
-          onCreateSupplier={createSupplierNow}
-          onSelectSupplier={(supplierId) => {
-            setSelectedSupplierId(supplierId);
-            void refreshSupplierLedger(supplierId);
-          }}
-          onBatchReferenceChange={setBatchReference}
-          onBatchPaidChange={setBatchPaid}
-          onBatchLineDraftChange={setBatchLineDraft}
-          onAddBatchLine={addSupplierBatchLine}
-          onReceiveSupplierBatch={receiveSupplierBatchNow}
-          onSelectSupplierBatch={setSelectedSupplierBatchId}
-          onSupplierPayAmountChange={setSupplierPayAmount}
-          onSupplierPayMethodChange={setSupplierPayMethod}
-          onSupplierPayNoteChange={setSupplierPayNote}
-          onApplySupplierPayment={recordSupplierSettlement}
-        />
-      ) : null}
+        <section className="space-y-4">
+          <header className="rounded-3xl border border-border/80 bg-card/80 p-4 shadow-panel backdrop-blur md:p-5">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Operations</p>
+                <h2 className="mt-1 text-2xl font-semibold">Smart Retail POS Next</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Billing, credits, held sales, and supplier ledgers from one workspace.</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-xl border border-border/80 bg-background/45 px-3 py-2 text-sm font-semibold text-foreground hover:border-accent/60"
+                  onClick={() => void refreshSummary()}
+                >
+                  <RefreshCw size={16} aria-hidden="true" />
+                  Refresh KPI
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-xl border border-destructive/70 bg-destructive/20 px-3 py-2 text-sm font-semibold text-destructive-foreground hover:bg-destructive/30"
+                  onClick={() => {
+                    setUser(null);
+                    setProducts([]);
+                    setSummary(null);
+                  }}
+                >
+                  <LogOut size={16} aria-hidden="true" />
+                  Logout
+                </button>
+              </div>
+            </div>
+
+            {message ? <p className="mt-4 rounded-xl border border-emerald-500/45 bg-emerald-500/15 px-3 py-2 text-sm text-emerald-100">{message}</p> : null}
+            {error ? <p className="mt-2 rounded-xl border border-rose-500/45 bg-rose-500/15 px-3 py-2 text-sm text-rose-100">{error}</p> : null}
+          </header>
+
+          <SummaryStrip summary={summary} netColor={netColor} />
+
+          <section className="rounded-3xl border border-border/80 bg-card/65 p-4 shadow-panel backdrop-blur md:p-5">
+            {activeTab === "billing" ? (
+              <>
+                <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <h3 className="text-lg font-semibold">Billing Workflow</h3>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      className="w-64 max-w-full"
+                      placeholder="Search products"
+                      value={searchText}
+                      onChange={(event) => setSearchText(event.target.value)}
+                    />
+                    <button type="button" onClick={() => void refreshProducts()}>
+                      Refresh Products
+                    </button>
+                  </div>
+                </div>
+                <BillingTab
+                  products={products}
+                  selectedProductId={selectedProductId}
+                  addQty={addQty}
+                  cart={cart}
+                  paymentMode={paymentMode}
+                  paymentMethod={paymentMethod}
+                  paidAmount={paidAmount}
+                  customerName={customerName}
+                  customerContact={customerContact}
+                  subTotal={subTotal}
+                  lineDiscountTotal={lineDiscountTotal}
+                  baseTotal={baseTotal}
+                  changeDue={changeDue}
+                  balanceDue={balanceDue}
+                  onSelectedProductChange={setSelectedProductId}
+                  onAddQtyChange={setAddQty}
+                  onAddToCart={addSelectedProductToCart}
+                  onRemoveFromCart={removeFromCart}
+                  onPaymentModeChange={setPaymentMode}
+                  onPaymentMethodChange={setPaymentMethod}
+                  onPaidAmountChange={setPaidAmount}
+                  onCustomerNameChange={setCustomerName}
+                  onCustomerContactChange={setCustomerContact}
+                  onHoldSale={holdCurrentBill}
+                  onProcessSale={processCheckout}
+                />
+              </>
+            ) : null}
+
+            {activeTab === "held" ? (
+              <HeldSalesTab
+                heldSales={heldSales}
+                selectedHeldId={selectedHeldId}
+                onRefreshHeldSales={() => void refreshHeldSales(user.id)}
+                onSelectHeldSale={setSelectedHeldId}
+                onRecallHeldSale={recallHeldSaleIntoCart}
+                onCompleteHeldSale={completeHeldSaleNow}
+              />
+            ) : null}
+
+            {activeTab === "customers" ? (
+              <CustomersTab
+                customers={customers}
+                selectedCustomerId={selectedCustomerId}
+                customerSearchText={customerSearchText}
+                customerPayment={customerPayment}
+                customerLedger={customerLedger}
+                onRefreshCustomers={() => void refreshCustomers()}
+                onCustomerSearchChange={setCustomerSearchText}
+                onSelectCustomer={(id) => {
+                  setSelectedCustomerId(id);
+                  void refreshCustomerLedger(id);
+                }}
+                onCustomerPaymentChange={setCustomerPayment}
+                onApplyCustomerPayment={recordCustomerSettlement}
+              />
+            ) : null}
+
+            {activeTab === "suppliers" ? (
+              <SuppliersTab
+                supplierName={supplierName}
+                supplierContact={supplierContact}
+                suppliers={suppliers}
+                selectedSupplierId={selectedSupplierId}
+                batchReference={batchReference}
+                batchPaid={batchPaid}
+                batchLineDraft={batchLineDraft}
+                batchLines={batchLines}
+                selectedSupplierBatchId={selectedSupplierBatchId}
+                supplierPayAmount={supplierPayAmount}
+                supplierPayMethod={supplierPayMethod}
+                supplierPayNote={supplierPayNote}
+                supplierLedger={supplierLedger}
+                onRefreshSuppliers={() => void refreshSuppliers()}
+                onSupplierNameChange={setSupplierName}
+                onSupplierContactChange={setSupplierContact}
+                onCreateSupplier={createSupplierNow}
+                onSelectSupplier={(supplierId) => {
+                  setSelectedSupplierId(supplierId);
+                  void refreshSupplierLedger(supplierId);
+                }}
+                onBatchReferenceChange={setBatchReference}
+                onBatchPaidChange={setBatchPaid}
+                onBatchLineDraftChange={setBatchLineDraft}
+                onAddBatchLine={addSupplierBatchLine}
+                onReceiveSupplierBatch={receiveSupplierBatchNow}
+                onSelectSupplierBatch={setSelectedSupplierBatchId}
+                onSupplierPayAmountChange={setSupplierPayAmount}
+                onSupplierPayMethodChange={setSupplierPayMethod}
+                onSupplierPayNoteChange={setSupplierPayNote}
+                onApplySupplierPayment={recordSupplierSettlement}
+              />
+            ) : null}
+          </section>
+        </section>
+      </div>
     </main>
   );
 }
