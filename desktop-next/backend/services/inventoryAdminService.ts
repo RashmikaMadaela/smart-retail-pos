@@ -21,8 +21,24 @@ function nowStamp() {
 export function clearInventoryStock(): ServiceResult<{ rows_affected: number }> {
   try {
     const db = getDb();
-    const result = db.prepare("DELETE FROM products").run();
-    return { ok: true, data: { rows_affected: Number(result.changes || 0) } };
+    try {
+      const result = db.prepare("DELETE FROM products").run();
+      return { ok: true, data: { rows_affected: Number(result.changes || 0) } };
+    } catch (error) {
+      const message = String((error as Error).message || error);
+      if (!message.toLowerCase().includes("foreign key constraint failed")) {
+        throw error;
+      }
+
+      // SuperAdmin hard reset: remove product master records even when history tables reference product IDs.
+      db.pragma("foreign_keys = OFF");
+      try {
+        const forced = db.prepare("DELETE FROM products").run();
+        return { ok: true, data: { rows_affected: Number(forced.changes || 0) } };
+      } finally {
+        db.pragma("foreign_keys = ON");
+      }
+    }
   } catch (error) {
     return { ok: false, error: `Error: ${String((error as Error).message || error)}` };
   }
