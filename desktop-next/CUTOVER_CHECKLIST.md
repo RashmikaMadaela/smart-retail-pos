@@ -10,8 +10,8 @@
 
 ## 2. Environment and Data
 
-- [ ] Confirm source database exists at `database/pos.db`
-- [ ] Validate packaged app can read bundled DB from `resources/database/pos.db`
+- [x] Confirm source database exists at `database/pos.db`
+- [x] Validate packaged app can read bundled DB from `resources/database/pos.db`
 - [ ] Set explicit `POS_DB_PATH` for production if custom DB location is required
 
 ## 3. Critical Workflow UAT
