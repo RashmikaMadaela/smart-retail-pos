@@ -30,6 +30,8 @@ const api = {
     ipcRenderer.invoke("supplier.getLedger", { supplier_id: supplierId }),
   listExpenses: (limit?: number) => ipcRenderer.invoke("expense.list", { limit }),
   createExpense: (payload: unknown) => ipcRenderer.invoke("expense.create", payload),
+  exportSaleBillPdf: (saleId: number) => ipcRenderer.invoke("print.salePdf", { sale_id: saleId }),
+  exportBarcodePdf: (payload: unknown) => ipcRenderer.invoke("print.barcodePdf", payload),
 };
 
 contextBridge.exposeInMainWorld("posApi", api);

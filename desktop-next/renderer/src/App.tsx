@@ -1,6 +1,7 @@
 import { FormEvent, Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { BarChart3, Boxes, HandCoins, LayoutDashboard, LogOut, PauseCircle, ReceiptText, RefreshCw, Truck } from "lucide-react";
 import { LoginView } from "./features/LoginView";
+import type { BarcodePrintItem } from "./features/OperationsTab";
 import type { ActiveTab, BatchLineDraft, Customer, CustomerLedger, Expense, HeldSale, Product, Summary, Supplier, SupplierBatch, SupplierLedger } from "./features/types";
 import { cn } from "./lib/utils";
 import { posApiClient } from "./lib/posApiClient";
@@ -189,6 +190,21 @@ export default function App() {
     pushMessage(`Expense recorded. ID: ${response.data.expense_id}`);
     await refreshExpenses();
     await refreshSummary();
+  }
+
+  async function printBarcodePdfNow(items: BarcodePrintItem[]) {
+    const response = await posApiClient.exportBarcodePdf({
+      items: items.map((item) => ({
+        product_id: item.product_id,
+        name: item.name,
+        qty: Number(item.qty),
+      })),
+    });
+    if (!response.ok) {
+      pushError(response.error || "Barcode PDF export failed.");
+      return;
+    }
+    pushMessage(`Barcode PDF saved: ${response.data.file_path}`);
   }
 
   async function refreshSupplierLedger(supplierId: number) {
@@ -394,6 +410,10 @@ export default function App() {
     }
 
     pushMessage(`Checkout successful. Sale ID: ${response.data.sale_id}`);
+    const printResult = await posApiClient.exportSaleBillPdf(response.data.sale_id);
+    if (printResult.ok) {
+      pushMessage(`Checkout successful. Sale ID: ${response.data.sale_id}. Bill PDF: ${printResult.data.file_path}`);
+    }
     clearCart();
     setPaidAmount("");
     await refreshProducts();
@@ -506,7 +526,12 @@ export default function App() {
       return;
     }
 
-    pushMessage(`Held sale ${selectedHeldId} completed.`);
+    const finalSaleId = Number(selectedHeldId);
+    pushMessage(`Held sale ${finalSaleId} completed.`);
+    const printResult = await posApiClient.exportSaleBillPdf(finalSaleId);
+    if (printResult.ok) {
+      pushMessage(`Held sale ${finalSaleId} completed. Bill PDF: ${printResult.data.file_path}`);
+    }
     clearCart();
     setSelectedHeldId(null);
     await refreshHeldSales(user?.id);
@@ -1036,6 +1061,7 @@ export default function App() {
                   expenses={expenses}
                   onRefreshExpenses={() => void refreshExpenses()}
                   onCreateExpense={createExpenseNow}
+                  onPrintBarcodes={printBarcodePdfNow}
                 />
               ) : null}
             </Suspense>

@@ -12,6 +12,16 @@ function resolveDbPath() {
   return path.resolve(process.cwd(), "../database/pos.db");
 }
 
+function resolvePrintRootPath() {
+  if (process.env.POS_PRINT_DIR) {
+    return process.env.POS_PRINT_DIR;
+  }
+  if (app.isPackaged) {
+    return path.join(app.getPath("documents"), "SmartRetailPOSNext", "printouts");
+  }
+  return path.resolve(process.cwd(), "../printouts");
+}
+
 function resolvePreloadPath() {
   if (process.env.VITE_DEV_SERVER_URL) {
     return path.resolve(process.cwd(), "dist-electron", "preload.cjs");
@@ -66,6 +76,7 @@ function createMainWindow() {
 
 app.whenReady().then(() => {
   process.env.POS_DB_PATH = resolveDbPath();
+  process.env.POS_PRINT_DIR = resolvePrintRootPath();
   registerIpcHandlers();
   createMainWindow();
 

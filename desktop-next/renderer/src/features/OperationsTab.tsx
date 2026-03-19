@@ -9,17 +9,21 @@ type BarcodeQueueItem = {
   qty: number;
 };
 
+export type BarcodePrintItem = BarcodeQueueItem;
+
 type OperationsTabProps = {
   products: Product[];
   expenses: Expense[];
   onRefreshExpenses: () => void;
   onCreateExpense: (payload: { description: string; amount: number; category: string }) => void;
+  onPrintBarcodes: (items: BarcodePrintItem[]) => Promise<void>;
 };
 
-export function OperationsTab({ products, expenses, onRefreshExpenses, onCreateExpense }: OperationsTabProps) {
+export function OperationsTab({ products, expenses, onRefreshExpenses, onCreateExpense, onPrintBarcodes }: OperationsTabProps) {
   const [barcodeInput, setBarcodeInput] = useState("");
   const [barcodeQty, setBarcodeQty] = useState("1");
   const [queue, setQueue] = useState<BarcodeQueueItem[]>([]);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   const [expenseDescription, setExpenseDescription] = useState("");
   const [expenseAmount, setExpenseAmount] = useState("");
@@ -60,6 +64,19 @@ export function OperationsTab({ products, expenses, onRefreshExpenses, onCreateE
     onCreateExpense({ description: expenseDescription, amount, category: expenseCategory });
     setExpenseDescription("");
     setExpenseAmount("");
+  }
+
+  async function printQueueAsPdf() {
+    if (queue.length === 0 || isPrinting) {
+      return;
+    }
+    setIsPrinting(true);
+    try {
+      await onPrintBarcodes(queue);
+      setQueue([]);
+    } finally {
+      setIsPrinting(false);
+    }
   }
 
   return (
@@ -120,14 +137,8 @@ export function OperationsTab({ products, expenses, onRefreshExpenses, onCreateE
           </div>
 
           <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                // Placeholder until print pipeline is migrated.
-                setQueue([]);
-              }}
-            >
-              Mark Queue Printed
+            <button type="button" onClick={() => void printQueueAsPdf()} disabled={queue.length === 0 || isPrinting}>
+              {isPrinting ? "Saving PDF..." : "Save Barcode PDF"}
             </button>
           </div>
         </SurfaceCard>

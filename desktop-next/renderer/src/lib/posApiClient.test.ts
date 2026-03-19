@@ -25,6 +25,8 @@ beforeEach(() => {
     getSummary: vi.fn().mockResolvedValue({ ok: true, data: {} }),
     listExpenses: vi.fn().mockResolvedValue({ ok: true, data: [] }),
     createExpense: vi.fn().mockResolvedValue({ ok: true, data: { expense_id: 1 } }),
+    exportSaleBillPdf: vi.fn().mockResolvedValue({ ok: true, data: { file_path: "E:/tmp/bill.pdf" } }),
+    exportBarcodePdf: vi.fn().mockResolvedValue({ ok: true, data: { file_path: "E:/tmp/barcodes.pdf", labels: 2 } }),
   };
 
   Object.defineProperty(globalThis, "window", {

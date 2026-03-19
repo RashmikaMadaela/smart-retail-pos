@@ -19,6 +19,7 @@ import {
   searchSuppliers,
 } from "../../backend/services/ledgerService";
 import { createExpense, listExpenses } from "../../backend/services/expenseService";
+import { exportBarcodePdf, exportSaleBillPdf } from "../../backend/services/printService";
 
 const loginSchema = z.object({
   username: z.string().min(1),
@@ -152,6 +153,22 @@ const expenseCreateSchema = z.object({
   description: z.string().min(1),
   amount: z.number().positive(),
   category: z.string().optional(),
+});
+
+const salePrintSchema = z.object({
+  sale_id: z.number().int().positive(),
+});
+
+const barcodePrintSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        product_id: z.string().min(1),
+        name: z.string().optional(),
+        qty: z.number().positive(),
+      }),
+    )
+    .min(1),
 });
 
 function ok<T>(data: T) {
@@ -363,5 +380,23 @@ export function registerIpcHandlers() {
     }
     const result = createExpense(parsed.data.description, parsed.data.amount, parsed.data.category || "General");
     return result.ok ? ok({ expense_id: result.data }) : fail(result.error);
+  });
+
+  ipcMain.handle("print.salePdf", async (_event, payload) => {
+    const parsed = salePrintSchema.safeParse(payload);
+    if (!parsed.success) {
+      return fail("Invalid sale print payload");
+    }
+    const result = await exportSaleBillPdf(parsed.data.sale_id);
+    return result.ok ? ok(result.data) : fail(result.error);
+  });
+
+  ipcMain.handle("print.barcodePdf", async (_event, payload) => {
+    const parsed = barcodePrintSchema.safeParse(payload);
+    if (!parsed.success) {
+      return fail("Invalid barcode print payload");
+    }
+    const result = await exportBarcodePdf({ items: parsed.data.items });
+    return result.ok ? ok(result.data) : fail(result.error);
   });
 }

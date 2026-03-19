@@ -43,6 +43,9 @@ This folder contains the new Electron + React + Node migration app scaffold.
 	- desktop packaging pipeline (`dist` via electron-builder)
 	- app-level smoke pipeline (`smoke`) and cutover checklist (`CUTOVER_CHECKLIST.md`)
 	- branded app icon configured for runtime and installer (`build/icon.png`, `build/icon.ico`)
+	- temporary virtual printing pipeline:
+		- bill receipts saved as PDF (checkout and held-sale completion)
+		- barcode label queue saved as PDF from Operations tab
 
 ## Commands
 
@@ -118,4 +121,7 @@ npm run dist:portable
 - Stage 6 complete: `App.tsx` now coordinates feature components instead of owning all tab markup directly.
 - Stage 7 complete: feature tabs have interaction coverage and renderer-side crash/error hardening.
 - Stage 8 complete: desktop packaging scripts, smoke pipeline, and cutover checklist are now in place.
+- Temporary virtual printing outputs:
+	- development: `printouts/bills` and `printouts/barcodes`
+	- packaged app: `%USERPROFILE%/Documents/SmartRetailPOSNext/printouts/...`
 - Next checkpoint: execute UAT checklist with business users and produce final release signoff.

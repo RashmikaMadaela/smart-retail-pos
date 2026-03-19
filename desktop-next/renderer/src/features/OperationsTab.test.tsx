@@ -13,6 +13,7 @@ describe("OperationsTab", () => {
         expenses={[]}
         onRefreshExpenses={vi.fn()}
         onCreateExpense={onCreateExpense}
+        onPrintBarcodes={vi.fn().mockResolvedValue(undefined)}
       />,
     );
 

@@ -25,6 +25,8 @@ declare global {
       getSupplierLedger: (supplierId: number) => Promise<{ ok: boolean; data?: any; error?: string }>;
       listExpenses: (limit?: number) => Promise<{ ok: boolean; data?: any; error?: string }>;
       createExpense: (payload: unknown) => Promise<{ ok: boolean; data?: any; error?: string }>;
+      exportSaleBillPdf: (saleId: number) => Promise<{ ok: boolean; data?: any; error?: string }>;
+      exportBarcodePdf: (payload: unknown) => Promise<{ ok: boolean; data?: any; error?: string }>;
     };
   }
 }

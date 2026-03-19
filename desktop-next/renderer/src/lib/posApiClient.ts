@@ -54,4 +54,11 @@ export const posApiClient = {
     safeCall(() => window.posApi.listExpenses(limit) as Promise<ApiResult<any[]>>, "Unable to load expenses"),
   createExpense: (payload: unknown) =>
     safeCall(() => window.posApi.createExpense(payload) as Promise<ApiResult<{ expense_id: number }>>, "Unable to create expense"),
+  exportSaleBillPdf: (saleId: number) =>
+    safeCall(() => window.posApi.exportSaleBillPdf(saleId) as Promise<ApiResult<{ file_path: string }>>, "Unable to export sale PDF"),
+  exportBarcodePdf: (payload: unknown) =>
+    safeCall(
+      () => window.posApi.exportBarcodePdf(payload) as Promise<ApiResult<{ file_path: string; labels: number }>>,
+      "Unable to export barcode PDF",
+    ),
 };
