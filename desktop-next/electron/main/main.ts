@@ -1,6 +1,7 @@
 import { app, BrowserWindow } from "electron";
 import path from "node:path";
 import { registerIpcHandlers } from "./ipc";
+import { ensureSuperAdminUser } from "../../backend/services/authService";
 
 function resolveDbPath() {
   if (process.env.POS_DB_PATH) {
@@ -20,6 +21,16 @@ function resolvePrintRootPath() {
     return path.join(app.getPath("documents"), "SmartRetailPOSNext", "printouts");
   }
   return path.resolve(process.cwd(), "../printouts");
+}
+
+function resolveInventoryExportRootPath() {
+  if (process.env.POS_INVENTORY_EXPORT_DIR) {
+    return process.env.POS_INVENTORY_EXPORT_DIR;
+  }
+  if (app.isPackaged) {
+    return path.join(app.getPath("documents"), "SmartRetailPOSNext", "inventory_exports");
+  }
+  return path.resolve(process.cwd(), "../inventory_exports");
 }
 
 function resolvePreloadPath() {
@@ -77,6 +88,8 @@ function createMainWindow() {
 app.whenReady().then(() => {
   process.env.POS_DB_PATH = resolveDbPath();
   process.env.POS_PRINT_DIR = resolvePrintRootPath();
+  process.env.POS_INVENTORY_EXPORT_DIR = resolveInventoryExportRootPath();
+  ensureSuperAdminUser();
   registerIpcHandlers();
   createMainWindow();
 

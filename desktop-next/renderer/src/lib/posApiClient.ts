@@ -11,7 +11,7 @@ async function safeCall<T>(fn: () => Promise<ApiResult<T>>, fallback: string): P
 export const posApiClient = {
   login: (username: string, password: string) =>
     safeCall(
-      () => window.posApi.login(username, password) as Promise<ApiResult<{ id: number; username: string; role: "Admin" | "Cashier" }>>,
+      () => window.posApi.login(username, password) as Promise<ApiResult<{ id: number; username: string; role: "Admin" | "Cashier" | "SuperAdmin" }>>,
       "Unable to contact auth service",
     ),
   listProducts: (limit = 50) => safeCall(() => window.posApi.listProducts(limit) as Promise<ApiResult<any[]>>, "Unable to load products"),
@@ -60,5 +60,17 @@ export const posApiClient = {
     safeCall(
       () => window.posApi.exportBarcodePdf(payload) as Promise<ApiResult<{ file_path: string; labels: number }>>,
       "Unable to export barcode PDF",
+    ),
+  clearInventoryStock: (role: "SuperAdmin") =>
+    safeCall(() => window.posApi.clearInventoryStock(role) as Promise<ApiResult<{ rows_affected: number }>>, "Unable to clear inventory stock"),
+  exportInventoryData: (role: "SuperAdmin") =>
+    safeCall(
+      () => window.posApi.exportInventoryData(role) as Promise<ApiResult<{ file_path: string; product_count: number }>>,
+      "Unable to export inventory",
+    ),
+  importInventoryData: (payload: { role: "SuperAdmin"; file_path: string }) =>
+    safeCall(
+      () => window.posApi.importInventoryData(payload) as Promise<ApiResult<{ upserted_count: number }>>,
+      "Unable to import inventory",
     ),
 };

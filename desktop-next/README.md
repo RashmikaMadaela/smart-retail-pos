@@ -124,4 +124,11 @@ npm run dist:portable
 - Temporary virtual printing outputs:
 	- development: `printouts/bills` and `printouts/barcodes`
 	- packaged app: `%USERPROFILE%/Documents/SmartRetailPOSNext/printouts/...`
+- SuperAdmin account is auto-seeded at startup if missing:
+	- username: `superadmin`
+	- password: `superadmin123`
+	- privileges: clear inventory stock, export inventory JSON, import inventory JSON
+- Inventory export location:
+	- development: `inventory_exports/`
+	- packaged app: `%USERPROFILE%/Documents/SmartRetailPOSNext/inventory_exports/`
 - Next checkpoint: execute UAT checklist with business users and produce final release signoff.

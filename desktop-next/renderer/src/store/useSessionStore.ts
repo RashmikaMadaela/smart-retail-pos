@@ -3,7 +3,7 @@ import { create } from "zustand";
 type SessionUser = {
   id: number;
   username: string;
-  role: "Admin" | "Cashier";
+  role: "Admin" | "Cashier" | "SuperAdmin";
 };
 
 type SessionState = {

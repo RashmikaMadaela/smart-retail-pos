@@ -32,6 +32,9 @@ const api = {
   createExpense: (payload: unknown) => ipcRenderer.invoke("expense.create", payload),
   exportSaleBillPdf: (saleId: number) => ipcRenderer.invoke("print.salePdf", { sale_id: saleId }),
   exportBarcodePdf: (payload: unknown) => ipcRenderer.invoke("print.barcodePdf", payload),
+  clearInventoryStock: (role: "SuperAdmin") => ipcRenderer.invoke("inventory.clearStock", { role }),
+  exportInventoryData: (role: "SuperAdmin") => ipcRenderer.invoke("inventory.exportData", { role }),
+  importInventoryData: (payload: { role: "SuperAdmin"; file_path: string }) => ipcRenderer.invoke("inventory.importData", payload),
 };
 
 contextBridge.exposeInMainWorld("posApi", api);

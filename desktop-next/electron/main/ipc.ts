@@ -20,6 +20,7 @@ import {
 } from "../../backend/services/ledgerService";
 import { createExpense, listExpenses } from "../../backend/services/expenseService";
 import { exportBarcodePdf, exportSaleBillPdf } from "../../backend/services/printService";
+import { clearInventoryStock, exportInventoryToJson, importInventoryFromJson } from "../../backend/services/inventoryAdminService";
 
 const loginSchema = z.object({
   username: z.string().min(1),
@@ -181,6 +182,15 @@ const barcodePrintSchema = z.object({
       }),
     )
     .min(1),
+});
+
+const superAdminRoleSchema = z.object({
+  role: z.literal("SuperAdmin"),
+});
+
+const inventoryImportSchema = z.object({
+  role: z.literal("SuperAdmin"),
+  file_path: z.string().min(1),
 });
 
 function ok<T>(data: T) {
@@ -409,6 +419,33 @@ export function registerIpcHandlers() {
       return fail("Invalid barcode print payload");
     }
     const result = await exportBarcodePdf({ items: parsed.data.items });
+    return result.ok ? ok(result.data) : fail(result.error);
+  });
+
+  ipcMain.handle("inventory.clearStock", async (_event, payload) => {
+    const parsed = superAdminRoleSchema.safeParse(payload);
+    if (!parsed.success) {
+      return fail("SuperAdmin role required.");
+    }
+    const result = clearInventoryStock();
+    return result.ok ? ok(result.data) : fail(result.error);
+  });
+
+  ipcMain.handle("inventory.exportData", async (_event, payload) => {
+    const parsed = superAdminRoleSchema.safeParse(payload);
+    if (!parsed.success) {
+      return fail("SuperAdmin role required.");
+    }
+    const result = await exportInventoryToJson();
+    return result.ok ? ok(result.data) : fail(result.error);
+  });
+
+  ipcMain.handle("inventory.importData", async (_event, payload) => {
+    const parsed = inventoryImportSchema.safeParse(payload);
+    if (!parsed.success) {
+      return fail("Invalid inventory import payload.");
+    }
+    const result = await importInventoryFromJson(parsed.data.file_path);
     return result.ok ? ok(result.data) : fail(result.error);
   });
 }

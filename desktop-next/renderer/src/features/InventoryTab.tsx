@@ -6,11 +6,23 @@ import { ToolbarCard } from "@/components/ui/ToolbarCard";
 type InventoryTabProps = {
   products: Product[];
   onRefreshProducts: () => void;
+  isSuperAdmin: boolean;
+  onClearInventory: () => void;
+  onExportInventory: () => void;
+  onImportInventory: (filePath: string) => void;
 };
 
-export function InventoryTab({ products, onRefreshProducts }: InventoryTabProps) {
+export function InventoryTab({
+  products,
+  onRefreshProducts,
+  isSuperAdmin,
+  onClearInventory,
+  onExportInventory,
+  onImportInventory,
+}: InventoryTabProps) {
   const [inventorySearch, setInventorySearch] = useState("");
   const [lowStockOnly, setLowStockOnly] = useState(false);
+  const [importFilePath, setImportFilePath] = useState("");
 
   const filtered = useMemo(() => {
     const keyword = inventorySearch.trim().toLowerCase();
@@ -50,6 +62,29 @@ export function InventoryTab({ products, onRefreshProducts }: InventoryTabProps)
           </>
         }
       />
+
+      {isSuperAdmin ? (
+        <SurfaceCard title="SuperAdmin Inventory Tools" subtitle="Clear stock and export/import inventory backups.">
+          <div className="grid gap-3 md:grid-cols-[1fr_auto_auto]">
+            <input
+              placeholder="Path to exported inventory JSON"
+              value={importFilePath}
+              onChange={(event) => setImportFilePath(event.target.value)}
+            />
+            <button type="button" onClick={() => onImportInventory(importFilePath)}>
+              Import Inventory
+            </button>
+            <button type="button" onClick={onExportInventory}>
+              Export Inventory
+            </button>
+          </div>
+          <div className="mt-3">
+            <button type="button" className="danger" onClick={onClearInventory}>
+              Clear Inventory Stock
+            </button>
+          </div>
+        </SurfaceCard>
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-3">
         <SurfaceCard title="Total Products" contentClassName="pt-3">

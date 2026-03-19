@@ -1,7 +1,7 @@
 export type AuthUser = {
   id: number;
   username: string;
-  role: "Admin" | "Cashier";
+  role: "Admin" | "Cashier" | "SuperAdmin";
 };
 
 export type Product = {

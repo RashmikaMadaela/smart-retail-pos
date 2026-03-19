@@ -120,6 +120,8 @@ export default function App() {
     return summary.net_profit >= 0 ? "#0ea95f" : "#d43636";
   }, [summary]);
 
+  const isSuperAdmin = user?.role === "SuperAdmin";
+
   async function handleLogin(event: FormEvent) {
     event.preventDefault();
     setError("");
@@ -763,6 +765,52 @@ export default function App() {
     }
   }
 
+  async function clearInventoryStockNow() {
+    if (!isSuperAdmin) {
+      pushError("SuperAdmin access required.");
+      return;
+    }
+    const response = await posApiClient.clearInventoryStock("SuperAdmin");
+    if (!response.ok) {
+      pushError(response.error || "Clear inventory failed.");
+      return;
+    }
+    pushMessage(`Inventory stock cleared for ${response.data.rows_affected} products.`);
+    await refreshProducts();
+  }
+
+  async function exportInventoryNow() {
+    if (!isSuperAdmin) {
+      pushError("SuperAdmin access required.");
+      return;
+    }
+    const response = await posApiClient.exportInventoryData("SuperAdmin");
+    if (!response.ok) {
+      pushError(response.error || "Export inventory failed.");
+      return;
+    }
+    pushMessage(`Inventory exported (${response.data.product_count} products): ${response.data.file_path}`);
+  }
+
+  async function importInventoryNow(filePath: string) {
+    if (!isSuperAdmin) {
+      pushError("SuperAdmin access required.");
+      return;
+    }
+    const normalized = filePath.trim();
+    if (!normalized) {
+      pushError("Import file path is required.");
+      return;
+    }
+    const response = await posApiClient.importInventoryData({ role: "SuperAdmin", file_path: normalized });
+    if (!response.ok) {
+      pushError(response.error || "Import inventory failed.");
+      return;
+    }
+    pushMessage(`Inventory imported. Upserted products: ${response.data.upserted_count}`);
+    await refreshProducts();
+  }
+
   const tabItems: Array<{
     id: ActiveTab;
     label: string;
@@ -1075,6 +1123,10 @@ export default function App() {
                 <InventoryTab
                   products={products}
                   onRefreshProducts={() => void refreshProducts()}
+                  isSuperAdmin={isSuperAdmin}
+                  onClearInventory={() => void clearInventoryStockNow()}
+                  onExportInventory={() => void exportInventoryNow()}
+                  onImportInventory={(filePath) => void importInventoryNow(filePath)}
                 />
               ) : null}
 
