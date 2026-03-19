@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { BatchLineDraft, Supplier, SupplierLedger } from "./types";
 import { SurfaceCard } from "@/components/ui/SurfaceCard";
 import { ToolbarCard } from "@/components/ui/ToolbarCard";
@@ -63,6 +64,8 @@ export function SuppliersTab({
   onSupplierPayNoteChange,
   onApplySupplierPayment,
 }: SuppliersTabProps) {
+  const [receiveMode, setReceiveMode] = useState<"quick" | "bulk">("quick");
+
   return (
     <section className="space-y-4">
       <ToolbarCard
@@ -130,7 +133,24 @@ export function SuppliersTab({
         </div>
 
         <div className="space-y-4">
-          <SurfaceCard title="Receive Batch">
+          <SurfaceCard title="Receive Batch" subtitle="Choose quick single-line stock receive or bulk invoice mode.">
+            <div className="mb-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                className={receiveMode === "quick" ? "!bg-cyan-400 !text-slate-900" : "!bg-slate-600 !text-slate-100"}
+                onClick={() => setReceiveMode("quick")}
+              >
+                Quick Receive
+              </button>
+              <button
+                type="button"
+                className={receiveMode === "bulk" ? "!bg-cyan-400 !text-slate-900" : "!bg-slate-600 !text-slate-100"}
+                onClick={() => setReceiveMode("bulk")}
+              >
+                Bulk Invoice
+              </button>
+            </div>
+
             <label className="mt-3 block text-sm font-medium text-foreground">
               Reference No
               <input value={batchReference} onChange={(e) => onBatchReferenceChange(e.target.value)} />
@@ -139,28 +159,67 @@ export function SuppliersTab({
               Initial Paid
               <input value={batchPaid} onChange={(e) => onBatchPaidChange(e.target.value)} />
             </label>
-            <div className="batch-line mt-3">
-              <input
-                placeholder="Product ID"
-                value={batchLineDraft.product_id}
-                onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, product_id: e.target.value })}
-              />
-              <input
-                placeholder="Qty"
-                value={batchLineDraft.qty_received}
-                onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, qty_received: e.target.value })}
-              />
-              <input
-                placeholder="Unit Cost"
-                value={batchLineDraft.unit_cost}
-                onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, unit_cost: e.target.value })}
-              />
-              <input
-                placeholder="Disc %"
-                value={batchLineDraft.line_discount_pct}
-                onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, line_discount_pct: e.target.value })}
-              />
-            </div>
+
+            {receiveMode === "quick" ? (
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <label className="block text-sm font-medium text-foreground">
+                  Product ID
+                  <input
+                    placeholder="e.g. P001"
+                    value={batchLineDraft.product_id}
+                    onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, product_id: e.target.value })}
+                  />
+                </label>
+                <label className="block text-sm font-medium text-foreground">
+                  Quantity
+                  <input
+                    placeholder="Qty"
+                    value={batchLineDraft.qty_received}
+                    onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, qty_received: e.target.value })}
+                  />
+                </label>
+                <label className="block text-sm font-medium text-foreground">
+                  Unit Cost
+                  <input
+                    placeholder="Unit Cost"
+                    value={batchLineDraft.unit_cost}
+                    onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, unit_cost: e.target.value })}
+                  />
+                </label>
+                <label className="block text-sm font-medium text-foreground">
+                  Discount %
+                  <input
+                    placeholder="Disc %"
+                    value={batchLineDraft.line_discount_pct}
+                    onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, line_discount_pct: e.target.value })}
+                  />
+                </label>
+              </div>
+            ) : (
+              <div className="batch-line mt-3">
+                <input
+                  placeholder="Product ID"
+                  value={batchLineDraft.product_id}
+                  onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, product_id: e.target.value })}
+                />
+                <input
+                  placeholder="Qty"
+                  value={batchLineDraft.qty_received}
+                  onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, qty_received: e.target.value })}
+                />
+                <input
+                  placeholder="Unit Cost"
+                  value={batchLineDraft.unit_cost}
+                  onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, unit_cost: e.target.value })}
+                />
+                <input
+                  placeholder="Disc %"
+                  value={batchLineDraft.line_discount_pct}
+                  onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, line_discount_pct: e.target.value })}
+                />
+              </div>
+            )}
+
             <div className="mt-3 flex flex-wrap gap-2">
               <button type="button" onClick={onAddBatchLine}>
                 Add Line
