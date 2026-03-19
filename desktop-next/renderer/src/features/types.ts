@@ -94,4 +94,4 @@ export type BatchLineDraft = {
   line_discount_pct: string;
 };
 
-export type ActiveTab = "billing" | "inventory" | "held" | "customers" | "suppliers" | "operations";
+export type ActiveTab = "dashboard" | "billing" | "inventory" | "held" | "customers" | "suppliers" | "operations";

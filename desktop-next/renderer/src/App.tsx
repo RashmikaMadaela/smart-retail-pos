@@ -1,5 +1,5 @@
 import { FormEvent, Suspense, lazy, useEffect, useMemo, useState } from "react";
-import { Boxes, HandCoins, LayoutDashboard, LogOut, PauseCircle, ReceiptText, RefreshCw, Truck } from "lucide-react";
+import { BarChart3, Boxes, HandCoins, LayoutDashboard, LogOut, PauseCircle, ReceiptText, RefreshCw, Truck } from "lucide-react";
 import { LoginView } from "./features/LoginView";
 import type { ActiveTab, BatchLineDraft, Customer, CustomerLedger, Expense, HeldSale, Product, Summary, Supplier, SupplierBatch, SupplierLedger } from "./features/types";
 import { cn } from "./lib/utils";
@@ -103,7 +103,7 @@ export default function App() {
   const [supplierPayMethod, setSupplierPayMethod] = useState("CASH");
   const [supplierPayNote, setSupplierPayNote] = useState("");
 
-  const shortcutHint = "Shortcuts: Ctrl+1 Billing, Ctrl+2 Inventory, Ctrl+3 Held, Ctrl+4 Customers, Ctrl+5 Suppliers, Ctrl+6 Operations, Ctrl+/ Focus scanner, F8 Hold, F9 Checkout";
+  const shortcutHint = "Shortcuts: Ctrl+1 Dashboard, Ctrl+2 Billing, Ctrl+3 Inventory, Ctrl+4 Held, Ctrl+5 Customers, Ctrl+6 Suppliers, Ctrl+7 Operations, Ctrl+/ Focus scanner, F8 Hold, F9 Checkout";
 
   const netColor = useMemo(() => {
     if (!summary) {
@@ -668,6 +668,12 @@ export default function App() {
     icon: typeof LayoutDashboard;
   }> = [
     {
+      id: "dashboard",
+      label: "Dashboard",
+      description: "Financial reports",
+      icon: BarChart3,
+    },
+    {
       id: "billing",
       label: "Billing",
       description: "Fast POS checkout",
@@ -725,30 +731,35 @@ export default function App() {
 
       if (event.ctrlKey && event.key === "1") {
         event.preventDefault();
-        setActiveTab("billing");
+        setActiveTab("dashboard");
         return;
       }
       if (event.ctrlKey && event.key === "2") {
         event.preventDefault();
-        setActiveTab("inventory");
+        setActiveTab("billing");
         return;
       }
       if (event.ctrlKey && event.key === "3") {
         event.preventDefault();
-        setActiveTab("held");
+        setActiveTab("inventory");
         return;
       }
       if (event.ctrlKey && event.key === "4") {
         event.preventDefault();
-        setActiveTab("customers");
+        setActiveTab("held");
         return;
       }
       if (event.ctrlKey && event.key === "5") {
         event.preventDefault();
-        setActiveTab("suppliers");
+        setActiveTab("customers");
         return;
       }
       if (event.ctrlKey && event.key === "6") {
+        event.preventDefault();
+        setActiveTab("suppliers");
+        return;
+      }
+      if (event.ctrlKey && event.key === "7") {
         event.preventDefault();
         setActiveTab("operations");
         return;
@@ -823,8 +834,8 @@ export default function App() {
                     "w-full rounded-xl border px-3 py-3 text-left transition-colors",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     selected
-                      ? "border-accent/70 bg-accent/20 text-foreground"
-                      : "border-border/80 bg-background/35 text-muted-foreground hover:border-accent/45 hover:text-foreground",
+                      ? "border-accent/80 bg-accent/35 text-foreground"
+                      : "border-border/80 bg-background/65 text-foreground/90 hover:border-accent/50 hover:bg-background/90 hover:text-foreground",
                   )}
                   onClick={() => setActiveTab(item.id)}
                 >
@@ -832,7 +843,7 @@ export default function App() {
                     <Icon size={16} aria-hidden="true" />
                     {item.label}
                   </span>
-                  <span className="mt-1 block text-xs">{item.description}</span>
+                  <span className={cn("mt-1 block text-xs", selected ? "text-foreground/90" : "text-foreground/80")}>{item.description}</span>
                 </button>
               );
             })}
@@ -876,27 +887,29 @@ export default function App() {
             {error ? <p className="mt-2 rounded-xl border border-rose-500/45 bg-rose-500/15 px-3 py-2 text-sm text-rose-100">{error}</p> : null}
           </header>
 
-          <Suspense
-            fallback={
-              <section className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <article className="h-24 rounded-xl border border-border/80 bg-background/45 p-4" />
-                  <article className="h-24 rounded-xl border border-border/80 bg-background/45 p-4" />
-                  <article className="h-24 rounded-xl border border-border/80 bg-background/45 p-4" />
-                  <article className="h-24 rounded-xl border border-border/80 bg-background/45 p-4" />
-                </div>
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-1">
-                  <article className="h-44 rounded-xl border border-border/80 bg-background/45 p-4" />
-                  <article className="h-44 rounded-xl border border-border/80 bg-background/45 p-4" />
-                </div>
-              </section>
-            }
-          >
-            <SummaryStrip summary={summary} netColor={netColor} />
-          </Suspense>
-
           <section className="rounded-3xl border border-border/80 bg-card/65 p-4 shadow-panel backdrop-blur md:p-5">
             <Suspense fallback={<div className="rounded-xl border border-border/80 bg-background/45 p-6 text-sm text-muted-foreground">Loading tab...</div>}>
+              {activeTab === "dashboard" ? (
+                <Suspense
+                  fallback={
+                    <section className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <article className="h-24 rounded-xl border border-border/80 bg-background/45 p-4" />
+                        <article className="h-24 rounded-xl border border-border/80 bg-background/45 p-4" />
+                        <article className="h-24 rounded-xl border border-border/80 bg-background/45 p-4" />
+                        <article className="h-24 rounded-xl border border-border/80 bg-background/45 p-4" />
+                      </div>
+                      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-1">
+                        <article className="h-44 rounded-xl border border-border/80 bg-background/45 p-4" />
+                        <article className="h-44 rounded-xl border border-border/80 bg-background/45 p-4" />
+                      </div>
+                    </section>
+                  }
+                >
+                  <SummaryStrip summary={summary} netColor={netColor} />
+                </Suspense>
+              ) : null}
+
               {activeTab === "billing" ? (
                 <>
                   <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">

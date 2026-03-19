@@ -7,6 +7,6 @@ type ShellState = {
 };
 
 export const useShellStore = create<ShellState>((set) => ({
-  activeTab: "billing",
+  activeTab: "dashboard",
   setActiveTab: (activeTab) => set({ activeTab }),
 }));
