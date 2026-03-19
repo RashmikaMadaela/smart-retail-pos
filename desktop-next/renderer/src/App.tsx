@@ -149,19 +149,7 @@ export default function App() {
     return products.find((product) => product.barcode_id === selectedProductId) || null;
   }
 
-  function addSelectedProductToCart() {
-    const product = getSelectedProduct();
-    if (!product) {
-      pushError("Select a product first.");
-      return;
-    }
-
-    const qtyValue = Number(addQty || "0");
-    if (!Number.isFinite(qtyValue) || qtyValue <= 0) {
-      pushError("Add quantity must be a positive number.");
-      return;
-    }
-
+  function appendProductToCart(product: Product, qtyValue: number) {
     const defaultDiscount = Number(product.default_discount_pct || 0);
     const unitDiscount = Number((Number(product.sell_price) * (defaultDiscount / 100)).toFixed(2));
 
@@ -189,8 +177,61 @@ export default function App() {
           : row,
       );
     });
+  }
+
+  function addSelectedProductToCart() {
+    const product = getSelectedProduct();
+    if (!product) {
+      pushError("Select a product first.");
+      return;
+    }
+
+    const qtyValue = Number(addQty || "0");
+    if (!Number.isFinite(qtyValue) || qtyValue <= 0) {
+      pushError("Add quantity must be a positive number.");
+      return;
+    }
+
+    appendProductToCart(product, qtyValue);
 
     pushMessage(`${product.name} added to cart.`);
+  }
+
+  function addProductToCartById(productId: string, qtyValue: number) {
+    const normalizedId = productId.trim();
+    if (!normalizedId) {
+      pushError("Enter a product barcode.");
+      return;
+    }
+    if (!Number.isFinite(qtyValue) || qtyValue <= 0) {
+      pushError("Add quantity must be a positive number.");
+      return;
+    }
+
+    const product = products.find((x) => x.barcode_id.toLowerCase() === normalizedId.toLowerCase());
+    if (!product) {
+      pushError(`Product ${normalizedId} is not in the current list.`);
+      return;
+    }
+
+    appendProductToCart(product, qtyValue);
+    setSelectedProductId(product.barcode_id);
+    pushMessage(`${product.name} added to cart.`);
+  }
+
+  function adjustCartQty(productId: string, delta: number) {
+    setCart((prev) =>
+      prev.flatMap((row) => {
+        if (row.product_id !== productId) {
+          return [row];
+        }
+        const nextQty = Number((row.qty + delta).toFixed(2));
+        if (nextQty <= 0) {
+          return [];
+        }
+        return [{ ...row, qty: nextQty }];
+      }),
+    );
   }
 
   function removeFromCart(productId: string) {
@@ -717,6 +758,8 @@ export default function App() {
                   onSelectedProductChange={setSelectedProductId}
                   onAddQtyChange={setAddQty}
                   onAddToCart={addSelectedProductToCart}
+                  onQuickAddProduct={addProductToCartById}
+                  onAdjustCartQty={adjustCartQty}
                   onRemoveFromCart={removeFromCart}
                   onPaymentModeChange={setPaymentMode}
                   onPaymentMethodChange={setPaymentMethod}

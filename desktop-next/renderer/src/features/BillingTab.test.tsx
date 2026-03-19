@@ -7,6 +7,7 @@ describe("BillingTab", () => {
   test("fires add/remove and checkout actions", () => {
     const onAddToCart = vi.fn();
     const onRemoveFromCart = vi.fn();
+    const onAdjustCartQty = vi.fn();
     const onProcessSale = vi.fn();
 
     render(
@@ -28,6 +29,8 @@ describe("BillingTab", () => {
         onSelectedProductChange={vi.fn()}
         onAddQtyChange={vi.fn()}
         onAddToCart={onAddToCart}
+        onQuickAddProduct={vi.fn()}
+        onAdjustCartQty={onAdjustCartQty}
         onRemoveFromCart={onRemoveFromCart}
         onPaymentModeChange={vi.fn()}
         onPaymentMethodChange={vi.fn()}
@@ -42,9 +45,11 @@ describe("BillingTab", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add to Cart" }));
     fireEvent.click(screen.getByRole("button", { name: "Remove" }));
     fireEvent.click(screen.getByRole("button", { name: "Checkout" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm Checkout" }));
 
     expect(onAddToCart).toHaveBeenCalledTimes(1);
     expect(onRemoveFromCart).toHaveBeenCalledWith("P001");
+    expect(onAdjustCartQty).not.toHaveBeenCalled();
     expect(onProcessSale).toHaveBeenCalledTimes(1);
   });
 });

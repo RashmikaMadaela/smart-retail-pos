@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import type { CartItem, Product } from "./types";
 
 type BillingTabProps = {
@@ -18,6 +19,8 @@ type BillingTabProps = {
   onSelectedProductChange: (value: string) => void;
   onAddQtyChange: (value: string) => void;
   onAddToCart: () => void;
+  onQuickAddProduct: (productId: string, qty: number) => void;
+  onAdjustCartQty: (productId: string, delta: number) => void;
   onRemoveFromCart: (productId: string) => void;
   onPaymentModeChange: (value: "PAID" | "PARTIAL" | "UNPAID") => void;
   onPaymentMethodChange: (value: "CASH" | "CARD") => void;
@@ -46,6 +49,8 @@ export function BillingTab({
   onSelectedProductChange,
   onAddQtyChange,
   onAddToCart,
+  onQuickAddProduct,
+  onAdjustCartQty,
   onRemoveFromCart,
   onPaymentModeChange,
   onPaymentMethodChange,
@@ -55,11 +60,71 @@ export function BillingTab({
   onHoldSale,
   onProcessSale,
 }: BillingTabProps) {
+  const [scannerInput, setScannerInput] = useState("");
+  const [quickQty, setQuickQty] = useState("1");
+  const [isCheckoutConfirmOpen, setIsCheckoutConfirmOpen] = useState(false);
+
+  const itemCount = useMemo(
+    () => cart.reduce((acc, item) => acc + Number(item.qty), 0),
+    [cart],
+  );
+
+  function handleQuickAdd() {
+    const qty = Number(quickQty || "0");
+    onQuickAddProduct(scannerInput, qty);
+    setScannerInput("");
+    setQuickQty("1");
+  }
+
+  function openCheckoutConfirm() {
+    setIsCheckoutConfirmOpen(true);
+  }
+
+  function confirmCheckout() {
+    setIsCheckoutConfirmOpen(false);
+    onProcessSale();
+  }
+
   return (
     <section className="space-y-4">
       <div className="grid gap-4 xl:grid-cols-[1.65fr_minmax(320px,1fr)]">
         <section className="space-y-4">
           <div className="rounded-2xl border border-border/80 bg-background/45 p-4 md:p-5">
+            <div className="mb-4 grid gap-3 rounded-xl border border-border/70 bg-card/55 p-3 md:grid-cols-[1fr_120px_auto]">
+              <label className="m-0 text-sm font-medium text-foreground">
+                Scan/Barcode
+                <input
+                  value={scannerInput}
+                  placeholder="Scan barcode and press Enter"
+                  onChange={(e) => setScannerInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleQuickAdd();
+                    }
+                  }}
+                />
+              </label>
+
+              <label className="m-0 text-sm font-medium text-foreground">
+                Qty
+                <input
+                  value={quickQty}
+                  onChange={(e) => setQuickQty(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleQuickAdd();
+                    }
+                  }}
+                />
+              </label>
+
+              <button type="button" className="self-end md:min-w-32" onClick={handleQuickAdd}>
+                Quick Add
+              </button>
+            </div>
+
             <div className="flex flex-col gap-3 md:flex-row md:items-end">
               <label className="m-0 flex-1 text-sm font-medium text-foreground">
                 Product
@@ -108,7 +173,17 @@ export function BillingTab({
                     <tr key={item.product_id}>
                       <td>{item.product_id}</td>
                       <td>{item.name}</td>
-                      <td>{item.qty.toFixed(2)}</td>
+                      <td>
+                        <div className="flex items-center gap-1">
+                          <button type="button" className="!px-2 !py-1" onClick={() => onAdjustCartQty(item.product_id, -1)}>
+                            -
+                          </button>
+                          <span className="inline-block min-w-12 text-center">{item.qty.toFixed(2)}</span>
+                          <button type="button" className="!px-2 !py-1" onClick={() => onAdjustCartQty(item.product_id, 1)}>
+                            +
+                          </button>
+                        </div>
+                      </td>
                       <td>{item.price.toFixed(2)}</td>
                       <td>{item.discount.toFixed(2)}</td>
                       <td>{(item.qty * Math.max(0, item.price - item.discount)).toFixed(2)}</td>
@@ -127,6 +202,7 @@ export function BillingTab({
 
         <aside className="rounded-2xl border border-border/80 bg-background/45 p-4 md:p-5">
           <h3 className="m-0 text-lg font-semibold text-foreground">Checkout</h3>
+          <p className="mt-1 text-sm text-muted-foreground">{itemCount.toFixed(2)} items in cart</p>
 
           <div className="mt-4 space-y-3">
             <label className="m-0 text-sm font-medium text-foreground">
@@ -183,12 +259,37 @@ export function BillingTab({
             <button type="button" className="!bg-gradient-to-r !from-slate-500 !to-slate-600 !text-white" onClick={onHoldSale}>
               Hold Bill
             </button>
-            <button type="button" className="!bg-gradient-to-r !from-emerald-400 !to-emerald-500 !text-slate-900" onClick={onProcessSale}>
+            <button type="button" className="!bg-gradient-to-r !from-emerald-400 !to-emerald-500 !text-slate-900" onClick={openCheckoutConfirm}>
               Checkout
             </button>
           </div>
         </aside>
       </div>
+
+      {isCheckoutConfirmOpen ? (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/70 p-4" role="dialog" aria-modal="true" aria-label="Checkout confirmation">
+          <div className="w-full max-w-md rounded-2xl border border-border/80 bg-card p-5 shadow-panel">
+            <h4 className="m-0 text-lg font-semibold text-foreground">Confirm Checkout</h4>
+            <p className="mt-2 text-sm text-muted-foreground">Review totals before finalizing the sale.</p>
+            <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl border border-border/80 bg-background/50 p-3 text-sm">
+              <p className="m-0 text-muted-foreground">Total</p>
+              <p className="m-0 text-right font-semibold text-foreground">Rs. {baseTotal.toFixed(2)}</p>
+              <p className="m-0 text-muted-foreground">Paid</p>
+              <p className="m-0 text-right font-semibold text-foreground">{paidAmount.trim() || "Auto"}</p>
+              <p className="m-0 text-muted-foreground">Mode</p>
+              <p className="m-0 text-right font-semibold text-foreground">{paymentMode}</p>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" className="!bg-slate-600 !text-white" onClick={() => setIsCheckoutConfirmOpen(false)}>
+                Cancel
+              </button>
+              <button type="button" className="!bg-emerald-500 !text-slate-900" onClick={confirmCheckout}>
+                Confirm Checkout
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
