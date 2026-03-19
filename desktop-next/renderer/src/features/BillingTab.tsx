@@ -56,110 +56,139 @@ export function BillingTab({
   onProcessSale,
 }: BillingTabProps) {
   return (
-    <section className="products-panel">
-      <div className="grid-2">
-        <div className="panel-card">
-          <h3>Add Item</h3>
-          <label>
-            Product
-            <select value={selectedProductId} onChange={(e) => onSelectedProductChange(e.target.value)}>
-              {products.map((product) => (
-                <option key={product.barcode_id} value={product.barcode_id}>
-                  {product.barcode_id} | {product.name} | Rs. {Number(product.sell_price).toFixed(2)} | Stock {Number(product.stock).toFixed(2)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Qty
-            <input value={addQty} onChange={(e) => onAddQtyChange(e.target.value)} />
-          </label>
-          <button type="button" onClick={onAddToCart}>
-            Add to Cart
-          </button>
-        </div>
+    <section className="space-y-4">
+      <div className="grid gap-4 xl:grid-cols-[1.65fr_minmax(320px,1fr)]">
+        <section className="space-y-4">
+          <div className="rounded-2xl border border-border/80 bg-background/45 p-4 md:p-5">
+            <div className="flex flex-col gap-3 md:flex-row md:items-end">
+              <label className="m-0 flex-1 text-sm font-medium text-foreground">
+                Product
+                <select value={selectedProductId} onChange={(e) => onSelectedProductChange(e.target.value)}>
+                  {products.map((product) => (
+                    <option key={product.barcode_id} value={product.barcode_id}>
+                      {product.barcode_id} | {product.name} | Rs. {Number(product.sell_price).toFixed(2)} | Stock {Number(product.stock).toFixed(2)}
+                    </option>
+                  ))}
+                </select>
+              </label>
 
-        <div className="panel-card">
-          <h3>Checkout</h3>
-          <label>
-            Payment Mode
-            <select value={paymentMode} onChange={(e) => onPaymentModeChange(e.target.value as "PAID" | "PARTIAL" | "UNPAID")}>
-              <option value="PAID">PAID</option>
-              <option value="PARTIAL">PARTIAL</option>
-              <option value="UNPAID">UNPAID</option>
-            </select>
-          </label>
-          <label>
-            Payment Method
-            <select value={paymentMethod} onChange={(e) => onPaymentMethodChange(e.target.value as "CASH" | "CARD")}>
-              <option value="CASH">CASH</option>
-              <option value="CARD">CARD</option>
-            </select>
-          </label>
-          <label>
-            Paid Amount
-            <input
-              value={paidAmount}
-              onChange={(e) => onPaidAmountChange(e.target.value)}
-              placeholder={paymentMode === "PAID" ? "Blank = full amount" : "Required"}
-            />
-          </label>
-          <label>
-            Customer Name (credit only)
-            <input value={customerName} onChange={(e) => onCustomerNameChange(e.target.value)} />
-          </label>
-          <label>
-            Customer Contact
-            <input value={customerContact} onChange={(e) => onCustomerContactChange(e.target.value)} />
-          </label>
-          <div className="calc-grid">
-            <p>Subtotal: Rs. {subTotal.toFixed(2)}</p>
-            <p>Line Discount: Rs. {lineDiscountTotal.toFixed(2)}</p>
-            <p>Total: Rs. {baseTotal.toFixed(2)}</p>
-            <p>Change: Rs. {changeDue.toFixed(2)}</p>
-            <p>Balance Due: Rs. {balanceDue.toFixed(2)}</p>
+              <label className="m-0 w-full text-sm font-medium text-foreground md:w-36">
+                Qty
+                <input value={addQty} onChange={(e) => onAddQtyChange(e.target.value)} />
+              </label>
+
+              <button type="button" className="md:min-w-36" onClick={onAddToCart}>
+                Add to Cart
+              </button>
+            </div>
           </div>
-          <div className="actions">
-            <button type="button" onClick={onHoldSale}>
+
+          <div className="overflow-hidden rounded-2xl border border-border/80 bg-background/45">
+            <table className="m-0">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Qty</th>
+                  <th>Price</th>
+                  <th>Disc</th>
+                  <th>Total</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cart.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                      Cart is empty. Add a product to start billing.
+                    </td>
+                  </tr>
+                ) : (
+                  cart.map((item) => (
+                    <tr key={item.product_id}>
+                      <td>{item.product_id}</td>
+                      <td>{item.name}</td>
+                      <td>{item.qty.toFixed(2)}</td>
+                      <td>{item.price.toFixed(2)}</td>
+                      <td>{item.discount.toFixed(2)}</td>
+                      <td>{(item.qty * Math.max(0, item.price - item.discount)).toFixed(2)}</td>
+                      <td>
+                        <button type="button" className="danger" onClick={() => onRemoveFromCart(item.product_id)}>
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <aside className="rounded-2xl border border-border/80 bg-background/45 p-4 md:p-5">
+          <h3 className="m-0 text-lg font-semibold text-foreground">Checkout</h3>
+
+          <div className="mt-4 space-y-3">
+            <label className="m-0 text-sm font-medium text-foreground">
+              Payment Mode
+              <select value={paymentMode} onChange={(e) => onPaymentModeChange(e.target.value as "PAID" | "PARTIAL" | "UNPAID")}>
+                <option value="PAID">PAID</option>
+                <option value="PARTIAL">PARTIAL</option>
+                <option value="UNPAID">UNPAID</option>
+              </select>
+            </label>
+
+            <label className="m-0 text-sm font-medium text-foreground">
+              Payment Method
+              <select value={paymentMethod} onChange={(e) => onPaymentMethodChange(e.target.value as "CASH" | "CARD") }>
+                <option value="CASH">CASH</option>
+                <option value="CARD">CARD</option>
+              </select>
+            </label>
+
+            <label className="m-0 text-sm font-medium text-foreground">
+              Paid Amount
+              <input
+                value={paidAmount}
+                onChange={(e) => onPaidAmountChange(e.target.value)}
+                placeholder={paymentMode === "PAID" ? "Blank = full amount" : "Required"}
+              />
+            </label>
+
+            <label className="m-0 text-sm font-medium text-foreground">
+              Customer Name (credit only)
+              <input value={customerName} onChange={(e) => onCustomerNameChange(e.target.value)} />
+            </label>
+
+            <label className="m-0 text-sm font-medium text-foreground">
+              Customer Contact
+              <input value={customerContact} onChange={(e) => onCustomerContactChange(e.target.value)} />
+            </label>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl border border-border/80 bg-card/55 p-3 text-sm">
+            <p className="m-0 text-muted-foreground">Subtotal</p>
+            <p className="m-0 text-right font-semibold text-foreground">Rs. {subTotal.toFixed(2)}</p>
+            <p className="m-0 text-muted-foreground">Line Discount</p>
+            <p className="m-0 text-right font-semibold text-foreground">Rs. {lineDiscountTotal.toFixed(2)}</p>
+            <p className="m-0 text-muted-foreground">Total</p>
+            <p className="m-0 text-right font-semibold text-foreground">Rs. {baseTotal.toFixed(2)}</p>
+            <p className="m-0 text-muted-foreground">Change</p>
+            <p className="m-0 text-right font-semibold text-foreground">Rs. {changeDue.toFixed(2)}</p>
+            <p className="m-0 text-muted-foreground">Balance Due</p>
+            <p className="m-0 text-right font-semibold text-foreground">Rs. {balanceDue.toFixed(2)}</p>
+          </div>
+
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <button type="button" className="!bg-gradient-to-r !from-slate-500 !to-slate-600 !text-white" onClick={onHoldSale}>
               Hold Bill
             </button>
-            <button type="button" onClick={onProcessSale}>
+            <button type="button" className="!bg-gradient-to-r !from-emerald-400 !to-emerald-500 !text-slate-900" onClick={onProcessSale}>
               Checkout
             </button>
           </div>
-        </div>
+        </aside>
       </div>
-
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Name</th>
-            <th>Qty</th>
-            <th>Price</th>
-            <th>Disc</th>
-            <th>Total</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {cart.map((item) => (
-            <tr key={item.product_id}>
-              <td>{item.product_id}</td>
-              <td>{item.name}</td>
-              <td>{item.qty.toFixed(2)}</td>
-              <td>{item.price.toFixed(2)}</td>
-              <td>{item.discount.toFixed(2)}</td>
-              <td>{(item.qty * Math.max(0, item.price - item.discount)).toFixed(2)}</td>
-              <td>
-                <button type="button" className="danger" onClick={() => onRemoveFromCart(item.product_id)}>
-                  Remove
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </section>
   );
 }
