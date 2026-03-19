@@ -19,7 +19,7 @@ type BillingTabProps = {
   onSelectedProductChange: (value: string) => void;
   onAddQtyChange: (value: string) => void;
   onAddToCart: () => void;
-  onQuickAddProduct: (productId: string, qty: number) => void;
+  onQuickAddProduct: (productId: string, qty: number) => void | Promise<void>;
   onAdjustCartQty: (productId: string, delta: number) => void;
   onRemoveFromCart: (productId: string) => void;
   onPaymentModeChange: (value: "PAID" | "PARTIAL" | "UNPAID") => void;
@@ -72,7 +72,7 @@ export function BillingTab({
 
   function handleQuickAdd() {
     const qty = Number(quickQty || "0");
-    onQuickAddProduct(scannerInput, qty);
+    void onQuickAddProduct(scannerInput, qty);
     setScannerInput("");
     setQuickQty("1");
   }

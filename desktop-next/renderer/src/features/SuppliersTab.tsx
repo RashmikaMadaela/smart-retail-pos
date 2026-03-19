@@ -163,9 +163,9 @@ export function SuppliersTab({
             {receiveMode === "quick" ? (
               <div className="mt-3 grid gap-3 md:grid-cols-2">
                 <label className="block text-sm font-medium text-foreground">
-                  Product ID
+                  Product ID / Barcode
                   <input
-                    placeholder="e.g. P001"
+                    placeholder="e.g. P001 or leave blank for SYS-*"
                     value={batchLineDraft.product_id}
                     onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, product_id: e.target.value })}
                   />
@@ -198,7 +198,7 @@ export function SuppliersTab({
             ) : (
               <div className="batch-line mt-3">
                 <input
-                  placeholder="Product ID"
+                  placeholder="Product ID / Barcode"
                   value={batchLineDraft.product_id}
                   onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, product_id: e.target.value })}
                 />
@@ -219,6 +219,70 @@ export function SuppliersTab({
                 />
               </div>
             )}
+
+            <label className="mt-3 flex items-center gap-2 text-sm font-medium text-foreground">
+              <input
+                type="checkbox"
+                checked={Boolean(batchLineDraft.create_new_item)}
+                onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, create_new_item: e.target.checked })}
+              />
+              Create as new inventory item (if not existing)
+            </label>
+
+            {batchLineDraft.create_new_item ? (
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <label className="block text-sm font-medium text-foreground">
+                  Name
+                  <input
+                    placeholder="e.g. Samba Rice 1kg"
+                    value={batchLineDraft.new_item_name || ""}
+                    onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, new_item_name: e.target.value })}
+                  />
+                </label>
+                <label className="block text-sm font-medium text-foreground">
+                  Selling Price
+                  <input
+                    placeholder="e.g. 240"
+                    value={batchLineDraft.new_item_sell_price || ""}
+                    onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, new_item_sell_price: e.target.value })}
+                  />
+                </label>
+                <label className="block text-sm font-medium text-foreground">
+                  Buying Price
+                  <input
+                    placeholder="e.g. 200"
+                    value={batchLineDraft.new_item_buy_price || ""}
+                    onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, new_item_buy_price: e.target.value })}
+                  />
+                </label>
+                <label className="block text-sm font-medium text-foreground">
+                  Default Discount %
+                  <input
+                    placeholder="e.g. 5"
+                    value={batchLineDraft.new_item_default_discount_pct || "0"}
+                    onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, new_item_default_discount_pct: e.target.value })}
+                  />
+                </label>
+                <label className="block text-sm font-medium text-foreground">
+                  Card Surcharge %
+                  <input
+                    placeholder="e.g. 2.5"
+                    value={batchLineDraft.new_item_card_surcharge_pct || "0"}
+                    onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, new_item_card_surcharge_pct: e.target.value })}
+                  />
+                </label>
+                <label className="mt-7 flex items-center gap-2 text-sm font-medium text-foreground">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(batchLineDraft.new_item_card_surcharge_enabled)}
+                    onChange={(e) =>
+                      onBatchLineDraftChange({ ...batchLineDraft, new_item_card_surcharge_enabled: e.target.checked })
+                    }
+                  />
+                  Card surcharge enabled
+                </label>
+              </div>
+            ) : null}
 
             <div className="mt-3 flex flex-wrap gap-2">
               <button type="button" onClick={onAddBatchLine}>
@@ -250,7 +314,7 @@ export function SuppliersTab({
                   ) : (
                     batchLines.map((line, index) => (
                       <tr key={`${line.product_id}-${index}`}>
-                        <td>{line.product_id}</td>
+                        <td>{line.product_id || "(auto SYS-*)"}</td>
                         <td>{line.qty_received}</td>
                         <td>{line.unit_cost}</td>
                         <td>{line.line_discount_pct}</td>

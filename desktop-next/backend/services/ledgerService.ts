@@ -20,6 +20,12 @@ function positive(value: number, label: string) {
   }
 }
 
+function generateSystemProductId() {
+  const stamp = new Date().toISOString().replace(/[-:TZ.]/g, "").slice(0, 14);
+  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `SYS-${stamp}-${rand}`;
+}
+
 export function createOrGetCustomer(name: string, contact = ""): ServiceResult<Customer> {
   const customerName = (name || "").trim();
   const customerContact = (contact || "").trim();
@@ -241,17 +247,23 @@ export function receiveSupplierBatch(
         throw new Error("Supplier not found.");
       }
 
-      const normalizedItems: Array<SupplierBatchInput & { line_total: number }> = [];
+      const normalizedItems: Array<SupplierBatchInput & { product_id: string; line_total: number }> = [];
       let totalCost = 0;
+
       for (const item of items) {
-        const productId = (item.product_id || "").trim();
+        let productId = (item.product_id || "").trim();
         const qty = Number(item.qty_received || 0);
         const unitCost = Number(item.unit_cost || 0);
         const lineDiscountPct = Number(item.line_discount_pct || 0);
+        const newProduct = item.new_product;
 
-        if (!productId) {
-          throw new Error("product_id is required for each batch item.");
+        if (!productId && newProduct) {
+          productId = (newProduct.barcode_id || "").trim() || generateSystemProductId();
         }
+        if (!productId) {
+          throw new Error("Product id/barcode is required unless creating a new item.");
+        }
+
         positive(qty, `Received qty for ${productId}`);
         nonNegative(unitCost, `Unit cost for ${productId}`);
         nonNegative(lineDiscountPct, `Line discount percent for ${productId}`);
@@ -262,8 +274,53 @@ export function receiveSupplierBatch(
         const productExists = db
           .prepare("SELECT barcode_id FROM products WHERE barcode_id = ?")
           .get(productId);
+
         if (!productExists) {
-          throw new Error(`Product not found: ${productId}`);
+          if (!newProduct) {
+            throw new Error(`Product not found: ${productId}`);
+          }
+
+          const productName = (newProduct.name || "").trim();
+          if (!productName) {
+            throw new Error(`New product name is required for ${productId}.`);
+          }
+
+          const buyPrice = Number(newProduct.buy_price ?? unitCost);
+          const sellPrice = Number(newProduct.sell_price ?? 0);
+          const defaultDiscountPct = Number(newProduct.default_discount_pct ?? 0);
+          const minStock = Number(newProduct.min_stock ?? 0);
+          const surchargeEnabled = newProduct.card_surcharge_enabled ? 1 : 0;
+          const surchargePct = Number(newProduct.card_surcharge_pct ?? 0);
+
+          positive(buyPrice, `Buy price for ${productId}`);
+          positive(sellPrice, `Sell price for ${productId}`);
+          nonNegative(defaultDiscountPct, `Default discount percent for ${productId}`);
+          if (defaultDiscountPct > 100) {
+            throw new Error(`Default discount percent cannot exceed 100 for ${productId}.`);
+          }
+          nonNegative(minStock, `Minimum stock for ${productId}`);
+          nonNegative(surchargePct, `Card surcharge percent for ${productId}`);
+          if (surchargePct > 100) {
+            throw new Error(`Card surcharge percent cannot exceed 100 for ${productId}.`);
+          }
+
+          db.prepare(
+            `
+            INSERT INTO products (
+              barcode_id, name, buy_price, sell_price, stock, min_stock,
+              default_discount_pct, card_surcharge_enabled, card_surcharge_pct
+            ) VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?)
+            `,
+          ).run(
+            productId,
+            productName,
+            buyPrice,
+            sellPrice,
+            minStock,
+            defaultDiscountPct,
+            surchargeEnabled,
+            surchargePct,
+          );
         }
 
         const base = qty * unitCost;
@@ -276,6 +333,7 @@ export function receiveSupplierBatch(
           qty_received: qty,
           unit_cost: unitCost,
           line_discount_pct: lineDiscountPct,
+          new_product: newProduct,
           line_total: lineTotal,
         });
       }

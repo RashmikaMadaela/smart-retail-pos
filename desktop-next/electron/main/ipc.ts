@@ -122,10 +122,22 @@ const receiveBatchSchema = z.object({
   items: z
     .array(
       z.object({
-        product_id: z.string().min(1),
+        product_id: z.string().optional(),
         qty_received: z.number().positive(),
         unit_cost: z.number().nonnegative(),
         line_discount_pct: z.number().nonnegative().max(100),
+        new_product: z
+          .object({
+            barcode_id: z.string().optional(),
+            name: z.string().min(1),
+            buy_price: z.number().positive(),
+            sell_price: z.number().positive(),
+            default_discount_pct: z.number().nonnegative().max(100).optional(),
+            card_surcharge_enabled: z.boolean().optional(),
+            card_surcharge_pct: z.number().nonnegative().max(100).optional(),
+            min_stock: z.number().nonnegative().optional(),
+          })
+          .optional(),
       }),
     )
     .min(1),

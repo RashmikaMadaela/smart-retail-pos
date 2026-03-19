@@ -92,6 +92,13 @@ export type BatchLineDraft = {
   qty_received: string;
   unit_cost: string;
   line_discount_pct: string;
+  create_new_item?: boolean;
+  new_item_name?: string;
+  new_item_sell_price?: string;
+  new_item_buy_price?: string;
+  new_item_default_discount_pct?: string;
+  new_item_card_surcharge_enabled?: boolean;
+  new_item_card_surcharge_pct?: string;
 };
 
 export type ActiveTab = "dashboard" | "billing" | "inventory" | "held" | "customers" | "suppliers" | "operations";

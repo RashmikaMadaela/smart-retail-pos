@@ -125,9 +125,19 @@ export type SupplierLedger = {
 };
 
 export type SupplierBatchInput = {
-  product_id: string;
+  product_id?: string;
   qty_received: number;
   unit_cost: number;
   line_discount_pct: number;
+  new_product?: {
+    barcode_id?: string;
+    name: string;
+    buy_price: number;
+    sell_price: number;
+    default_discount_pct?: number;
+    card_surcharge_enabled?: boolean;
+    card_surcharge_pct?: number;
+    min_stock?: number;
+  };
 };
 
