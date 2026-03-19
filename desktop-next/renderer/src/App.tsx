@@ -1,10 +1,12 @@
 import { FormEvent, Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { HandCoins, LayoutDashboard, LogOut, PauseCircle, RefreshCw, Truck } from "lucide-react";
 import { LoginView } from "./features/LoginView";
-import type { ActiveTab, BatchLineDraft, CartItem, Customer, CustomerLedger, HeldSale, Product, Summary, Supplier, SupplierBatch, SupplierLedger } from "./features/types";
+import type { ActiveTab, BatchLineDraft, Customer, CustomerLedger, HeldSale, Product, Summary, Supplier, SupplierBatch, SupplierLedger } from "./features/types";
 import { cn } from "./lib/utils";
 import { posApiClient } from "./lib/posApiClient";
+import { useBillingStore } from "./store/useBillingStore";
 import { useSessionStore } from "./store/useSessionStore";
+import { useShellStore } from "./store/useShellStore";
 
 const SummaryStrip = lazy(async () => {
   const module = await import("./features/SummaryStrip");
@@ -39,17 +41,28 @@ export default function App() {
   const [message, setMessage] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
-  const [searchText, setSearchText] = useState("");
-  const [activeTab, setActiveTab] = useState<ActiveTab>("billing");
-
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [selectedProductId, setSelectedProductId] = useState("");
-  const [addQty, setAddQty] = useState("1");
-  const [paymentMode, setPaymentMode] = useState<"PAID" | "PARTIAL" | "UNPAID">("PAID");
-  const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD">("CASH");
-  const [paidAmount, setPaidAmount] = useState("");
-  const [customerName, setCustomerName] = useState("");
-  const [customerContact, setCustomerContact] = useState("");
+  const { activeTab, setActiveTab } = useShellStore();
+  const {
+    searchText,
+    selectedProductId,
+    addQty,
+    paymentMode,
+    paymentMethod,
+    paidAmount,
+    customerName,
+    customerContact,
+    cart,
+    setSearchText,
+    setSelectedProductId,
+    setAddQty,
+    setPaymentMode,
+    setPaymentMethod,
+    setPaidAmount,
+    setCustomerName,
+    setCustomerContact,
+    setCart,
+    clearCart,
+  } = useBillingStore();
 
   const [heldSales, setHeldSales] = useState<HeldSale[]>([]);
   const [selectedHeldId, setSelectedHeldId] = useState<number | null>(null);
@@ -351,7 +364,7 @@ export default function App() {
     }
 
     pushMessage(`Checkout successful. Sale ID: ${response.data.sale_id}`);
-    setCart([]);
+    clearCart();
     setPaidAmount("");
     await refreshProducts();
     await refreshSummary();
@@ -389,7 +402,7 @@ export default function App() {
     }
 
     pushMessage(`Bill held successfully. Hold ID: ${response.data.sale_id}`);
-    setCart([]);
+    clearCart();
     await refreshHeldSales(user.id);
   }
 
@@ -464,7 +477,7 @@ export default function App() {
     }
 
     pushMessage(`Held sale ${selectedHeldId} completed.`);
-    setCart([]);
+    clearCart();
     setSelectedHeldId(null);
     await refreshHeldSales(user?.id);
     await refreshProducts();
