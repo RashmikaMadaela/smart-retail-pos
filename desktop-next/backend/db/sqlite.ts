@@ -1,11 +1,7 @@
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const defaultDbPath = path.resolve(__dirname, "../../../database/pos.db");
+const defaultDbPath = path.resolve(process.cwd(), "../database/pos.db");
 let activeDbPath = process.env.POS_DB_PATH || defaultDbPath;
 let db: Database.Database | null = null;
 

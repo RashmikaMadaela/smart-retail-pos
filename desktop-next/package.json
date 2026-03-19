@@ -1,15 +1,53 @@
 {
   "name": "smart-retail-pos-desktop-next",
   "version": "0.1.0",
+  "description": "Electron + React migration shell for Smart Retail POS",
+  "author": "Smart Retail POS Team",
   "private": true,
   "type": "module",
+  "main": "dist-electron/main.cjs",
   "scripts": {
     "dev": "concurrently \"npm:dev:renderer\" \"npm:dev:electron\"",
     "dev:renderer": "vite",
     "dev:electron": "wait-on tcp:5173 && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 tsx electron/main/main.ts",
     "build:renderer": "vite build",
+    "build:electron": "tsup --config tsup.config.ts",
+    "build": "npm run build:renderer && npm run build:electron",
+    "start": "electron dist-electron/main.cjs",
+    "smoke": "npm run check && npm run test && npm run build",
+    "dist:nsis": "npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false BUILD_TARGET=nsis electron-builder --win nsis --publish never",
+    "dist:portable": "npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false BUILD_TARGET=portable electron-builder --win portable --publish never",
+    "dist": "npm run dist:nsis && npm run dist:portable",
     "check": "tsc --noEmit",
     "test": "vitest run"
+  },
+  "build": {
+    "appId": "com.smartretail.posnext",
+    "productName": "Smart Retail POS Next",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**",
+      "dist-electron/**",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../database",
+        "to": "database",
+        "filter": [
+          "pos.db"
+        ]
+      }
+    ],
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        "nsis"
+      ],
+      "artifactName": "SmartRetailPOSNext-${version}-${arch}-${env.BUILD_TARGET}.${ext}"
+    }
   },
   "dependencies": {
     "better-sqlite3": "^11.8.1",
@@ -29,7 +67,9 @@
     "concurrently": "^9.1.2",
     "cross-env": "^7.0.3",
     "electron": "^34.3.0",
+    "electron-builder": "^24.13.3",
     "jsdom": "^29.0.0",
+    "tsup": "^8.3.5",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2",
     "vite": "^6.2.1",

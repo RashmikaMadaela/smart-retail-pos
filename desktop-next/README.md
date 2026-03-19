@@ -38,6 +38,10 @@ This folder contains the new Electron + React + Node migration app scaffold.
 	- jsdom UI interaction tests for Billing, Held Sales, Customers, and Suppliers tabs
 	- renderer crash containment via `ErrorBoundary`
 	- safer renderer API wrapper with standardized fallback errors on bridge/runtime failures
+- Stage 8 release readiness checkpoint:
+	- production Electron build pipeline (`build:electron` via tsup)
+	- desktop packaging pipeline (`dist` via electron-builder)
+	- app-level smoke pipeline (`smoke`) and cutover checklist (`CUTOVER_CHECKLIST.md`)
 
 ## Commands
 
@@ -71,9 +75,46 @@ Run app in development mode:
 npm run dev
 ```
 
+Run production build (renderer + electron main/preload):
+
+```bash
+npm run build
+```
+
+Run packaged app from compiled output:
+
+```bash
+npm run start
+```
+
+Run smoke pipeline:
+
+```bash
+npm run smoke
+```
+
+Build Windows installer and portable artifacts:
+
+```bash
+npm run dist
+```
+
+Build only NSIS installer:
+
+```bash
+npm run dist:nsis
+```
+
+Build only portable executable:
+
+```bash
+npm run dist:portable
+```
+
 ## Notes
 
 - This is a parallel migration workspace. The existing Python app remains unchanged.
 - Stage 6 complete: `App.tsx` now coordinates feature components instead of owning all tab markup directly.
 - Stage 7 complete: feature tabs have interaction coverage and renderer-side crash/error hardening.
-- Next checkpoint: desktop packaging (installer build), production smoke tests, and cutover checklist finalization.
+- Stage 8 complete: desktop packaging scripts, smoke pipeline, and cutover checklist are now in place.
+- Next checkpoint: execute UAT checklist with business users and produce final release signoff.
