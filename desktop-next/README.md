@@ -42,6 +42,7 @@ This folder contains the new Electron + React + Node migration app scaffold.
 	- production Electron build pipeline (`build:electron` via tsup)
 	- desktop packaging pipeline (`dist` via electron-builder)
 	- app-level smoke pipeline (`smoke`) and cutover checklist (`CUTOVER_CHECKLIST.md`)
+	- branded app icon configured for runtime and installer (`build/icon.png`, `build/icon.ico`)
 
 ## Commands
 

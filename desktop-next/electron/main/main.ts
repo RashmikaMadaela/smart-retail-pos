@@ -22,6 +22,20 @@ function resolvePreloadPath() {
   return path.resolve(process.cwd(), "dist-electron", "preload.cjs");
 }
 
+function resolveRendererIndexPath() {
+  if (app.isPackaged) {
+    return path.join(app.getAppPath(), "dist", "index.html");
+  }
+  return path.resolve(process.cwd(), "dist", "index.html");
+}
+
+function resolveWindowIconPath() {
+  if (app.isPackaged) {
+    return path.join(app.getAppPath(), "build", "icon.png");
+  }
+  return path.resolve(process.cwd(), "build", "icon.png");
+}
+
 function createMainWindow() {
   const win = new BrowserWindow({
     width: 1320,
@@ -29,6 +43,7 @@ function createMainWindow() {
     minWidth: 1160,
     minHeight: 760,
     title: "Smart Retail POS Next",
+    icon: resolveWindowIconPath(),
     webPreferences: {
       preload: resolvePreloadPath(),
       contextIsolation: true,
@@ -43,7 +58,7 @@ function createMainWindow() {
     return;
   }
 
-  const rendererIndex = path.resolve(__dirname, "../../dist/index.html");
+  const rendererIndex = resolveRendererIndexPath();
   win.loadFile(rendererIndex);
 }
 

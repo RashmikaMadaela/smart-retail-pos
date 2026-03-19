@@ -2,7 +2,13 @@
   "name": "smart-retail-pos-desktop-next",
   "version": "0.1.0",
   "description": "Electron + React migration shell for Smart Retail POS",
-  "author": "Smart Retail POS Team",
+  "author": "Rashmika Madela",
+  "license": "UNLICENSED",
+  "homepage": "https://github.com/RashmikaMadaela/smart-retail-pos",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RashmikaMadaela/smart-retail-pos.git"
+  },
   "private": true,
   "type": "module",
   "main": "dist-electron/main.cjs",
@@ -30,6 +36,7 @@
     "files": [
       "dist/**",
       "dist-electron/**",
+      "build/icon.png",
       "package.json"
     ],
     "extraResources": [
@@ -43,10 +50,16 @@
     ],
     "win": {
       "signAndEditExecutable": false,
+      "icon": "build/icon.ico",
       "target": [
         "nsis"
       ],
       "artifactName": "SmartRetailPOSNext-${version}-${arch}-${env.BUILD_TARGET}.${ext}"
+    },
+    "nsis": {
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "displayLanguageSelector": false
     }
   },
   "dependencies": {
