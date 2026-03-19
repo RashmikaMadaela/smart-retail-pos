@@ -1,4 +1,6 @@
 import type { Customer, CustomerLedger } from "./types";
+import { SurfaceCard } from "@/components/ui/SurfaceCard";
+import { ToolbarCard } from "@/components/ui/ToolbarCard";
 
 type CustomersTabProps = {
   customers: Customer[];
@@ -27,29 +29,26 @@ export function CustomersTab({
 }: CustomersTabProps) {
   return (
     <section className="space-y-4">
-      <div className="flex flex-col gap-3 rounded-2xl border border-border/80 bg-background/45 p-4 md:flex-row md:items-center md:justify-between md:p-5">
-        <div>
-          <h2 className="m-0 text-xl font-semibold text-foreground">Customer Ledger</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Track outstanding balances and settle customer dues.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            className="w-64 max-w-full"
-            placeholder="Search customer"
-            value={customerSearchText}
-            onChange={(e) => onCustomerSearchChange(e.target.value)}
-          />
-          <button type="button" onClick={onRefreshCustomers}>
-            Refresh
-          </button>
-        </div>
-      </div>
+      <ToolbarCard
+        title="Customer Ledger"
+        description="Track outstanding balances and settle customer dues."
+        actions={
+          <>
+            <input
+              className="w-64 max-w-full"
+              placeholder="Search customer"
+              value={customerSearchText}
+              onChange={(e) => onCustomerSearchChange(e.target.value)}
+            />
+            <button type="button" onClick={onRefreshCustomers}>
+              Refresh
+            </button>
+          </>
+        }
+      />
 
       <div className="grid gap-4 xl:grid-cols-[1.2fr_minmax(0,1fr)]">
-        <div className="overflow-hidden rounded-2xl border border-border/80 bg-background/45">
-          <div className="border-b border-border/80 px-4 py-3">
-            <h3 className="m-0 text-lg font-semibold text-foreground">Customers</h3>
-          </div>
+        <SurfaceCard title="Customers" className="overflow-hidden" contentClassName="p-0">
           <table className="m-0">
             <thead>
               <tr>
@@ -84,11 +83,10 @@ export function CustomersTab({
               )}
             </tbody>
           </table>
-        </div>
+        </SurfaceCard>
 
         <div className="space-y-4">
-          <div className="rounded-2xl border border-border/80 bg-background/45 p-4">
-            <h3 className="m-0 text-lg font-semibold text-foreground">Settlement</h3>
+          <SurfaceCard title="Settlement">
             <label className="mt-3 block text-sm font-medium text-foreground">
               Payment Amount
               <input value={customerPayment} onChange={(e) => onCustomerPaymentChange(e.target.value)} />
@@ -96,12 +94,9 @@ export function CustomersTab({
             <button className="mt-3" type="button" onClick={onApplyCustomerPayment}>
               Record Payment
             </button>
-          </div>
+          </SurfaceCard>
 
-          <div className="overflow-hidden rounded-2xl border border-border/80 bg-background/45">
-            <div className="border-b border-border/80 px-4 py-3">
-              <h3 className="m-0 text-lg font-semibold text-foreground">Ledger</h3>
-            </div>
+          <SurfaceCard title="Ledger" className="overflow-hidden" contentClassName="p-0">
             <table className="m-0">
               <thead>
                 <tr>
@@ -132,7 +127,7 @@ export function CustomersTab({
                 )}
               </tbody>
             </table>
-          </div>
+          </SurfaceCard>
         </div>
       </div>
     </section>

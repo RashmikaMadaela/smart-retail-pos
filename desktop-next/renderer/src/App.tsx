@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { HandCoins, LayoutDashboard, LogOut, PauseCircle, RefreshCw, Truck } from "lucide-react";
 import { BillingTab } from "./features/BillingTab";
 import { CustomersTab } from "./features/CustomersTab";
@@ -58,6 +58,8 @@ export default function App() {
   const [supplierPayAmount, setSupplierPayAmount] = useState("");
   const [supplierPayMethod, setSupplierPayMethod] = useState("CASH");
   const [supplierPayNote, setSupplierPayNote] = useState("");
+
+  const shortcutHint = "Shortcuts: Ctrl+1 Billing, Ctrl+2 Held, Ctrl+3 Customers, Ctrl+4 Suppliers, Ctrl+/ Focus scanner, F8 Hold, F9 Checkout";
 
   const netColor = useMemo(() => {
     if (!summary) {
@@ -628,6 +630,73 @@ export default function App() {
     },
   ];
 
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    function dispatchBillingShortcut(action: "focus-scanner" | "hold-bill" | "checkout") {
+      window.dispatchEvent(new CustomEvent("pos-shortcut", { detail: action }));
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      const isTypingTarget =
+        !!target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable);
+
+      if (event.ctrlKey && event.key === "1") {
+        event.preventDefault();
+        setActiveTab("billing");
+        return;
+      }
+      if (event.ctrlKey && event.key === "2") {
+        event.preventDefault();
+        setActiveTab("held");
+        return;
+      }
+      if (event.ctrlKey && event.key === "3") {
+        event.preventDefault();
+        setActiveTab("customers");
+        return;
+      }
+      if (event.ctrlKey && event.key === "4") {
+        event.preventDefault();
+        setActiveTab("suppliers");
+        return;
+      }
+
+      if (isTypingTarget) {
+        return;
+      }
+
+      if (activeTab === "billing" && event.ctrlKey && event.key === "/") {
+        event.preventDefault();
+        dispatchBillingShortcut("focus-scanner");
+        return;
+      }
+
+      if (activeTab === "billing" && event.key === "F8") {
+        event.preventDefault();
+        dispatchBillingShortcut("hold-bill");
+        return;
+      }
+
+      if (activeTab === "billing" && event.key === "F9") {
+        event.preventDefault();
+        dispatchBillingShortcut("checkout");
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [activeTab, user]);
+
   if (!user) {
     return (
       <LoginView
@@ -692,6 +761,7 @@ export default function App() {
                 <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Operations</p>
                 <h2 className="mt-1 text-2xl font-semibold">Smart Retail POS Next</h2>
                 <p className="mt-1 text-sm text-muted-foreground">Billing, credits, held sales, and supplier ledgers from one workspace.</p>
+                <p className="mt-1 text-xs text-muted-foreground">{shortcutHint}</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <button

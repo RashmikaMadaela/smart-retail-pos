@@ -1,4 +1,6 @@
 import type { HeldSale } from "./types";
+import { SurfaceCard } from "@/components/ui/SurfaceCard";
+import { ToolbarCard } from "@/components/ui/ToolbarCard";
 
 type HeldSalesTabProps = {
   heldSales: HeldSale[];
@@ -19,25 +21,25 @@ export function HeldSalesTab({
 }: HeldSalesTabProps) {
   return (
     <section className="space-y-4">
-      <div className="flex flex-col gap-3 rounded-2xl border border-border/80 bg-background/45 p-4 md:flex-row md:items-center md:justify-between md:p-5">
-        <div>
-          <h2 className="m-0 text-xl font-semibold text-foreground">Held Sales</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Resume or complete parked transactions quickly.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={onRefreshHeldSales}>
-            Refresh Held
-          </button>
-          <button type="button" onClick={onRecallHeldSale}>
-            Recall to Cart
-          </button>
-          <button type="button" onClick={onCompleteHeldSale}>
-            Complete Selected
-          </button>
-        </div>
-      </div>
+      <ToolbarCard
+        title="Held Sales"
+        description="Resume or complete parked transactions quickly."
+        actions={
+          <>
+            <button type="button" onClick={onRefreshHeldSales}>
+              Refresh Held
+            </button>
+            <button type="button" onClick={onRecallHeldSale}>
+              Recall to Cart
+            </button>
+            <button type="button" onClick={onCompleteHeldSale}>
+              Complete Selected
+            </button>
+          </>
+        }
+      />
 
-      <div className="overflow-hidden rounded-2xl border border-border/80 bg-background/45">
+      <SurfaceCard className="overflow-hidden" contentClassName="p-0">
         <table className="m-0">
           <thead>
             <tr>
@@ -74,7 +76,7 @@ export function HeldSalesTab({
             )}
           </tbody>
         </table>
-      </div>
+      </SurfaceCard>
     </section>
   );
 }

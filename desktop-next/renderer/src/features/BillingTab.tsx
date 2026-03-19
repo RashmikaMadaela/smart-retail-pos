@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CartItem, Product } from "./types";
 
 type BillingTabProps = {
@@ -63,6 +63,7 @@ export function BillingTab({
   const [scannerInput, setScannerInput] = useState("");
   const [quickQty, setQuickQty] = useState("1");
   const [isCheckoutConfirmOpen, setIsCheckoutConfirmOpen] = useState(false);
+  const scannerRef = useRef<HTMLInputElement | null>(null);
 
   const itemCount = useMemo(
     () => cart.reduce((acc, item) => acc + Number(item.qty), 0),
@@ -85,6 +86,28 @@ export function BillingTab({
     onProcessSale();
   }
 
+  useEffect(() => {
+    function onShortcut(event: Event) {
+      const customEvent = event as CustomEvent<"focus-scanner" | "hold-bill" | "checkout">;
+      const action = customEvent.detail;
+      if (action === "focus-scanner") {
+        scannerRef.current?.focus();
+        scannerRef.current?.select();
+      }
+      if (action === "hold-bill") {
+        onHoldSale();
+      }
+      if (action === "checkout") {
+        openCheckoutConfirm();
+      }
+    }
+
+    window.addEventListener("pos-shortcut", onShortcut as EventListener);
+    return () => {
+      window.removeEventListener("pos-shortcut", onShortcut as EventListener);
+    };
+  }, [onHoldSale]);
+
   return (
     <section className="space-y-4">
       <div className="grid gap-4 xl:grid-cols-[1.65fr_minmax(320px,1fr)]">
@@ -94,6 +117,7 @@ export function BillingTab({
               <label className="m-0 text-sm font-medium text-foreground">
                 Scan/Barcode
                 <input
+                  ref={scannerRef}
                   value={scannerInput}
                   placeholder="Scan barcode and press Enter"
                   onChange={(e) => setScannerInput(e.target.value)}

@@ -1,4 +1,6 @@
 import type { BatchLineDraft, Supplier, SupplierLedger } from "./types";
+import { SurfaceCard } from "@/components/ui/SurfaceCard";
+import { ToolbarCard } from "@/components/ui/ToolbarCard";
 
 type SuppliersTabProps = {
   supplierName: string;
@@ -63,22 +65,19 @@ export function SuppliersTab({
 }: SuppliersTabProps) {
   return (
     <section className="space-y-4">
-      <div className="flex flex-col gap-3 rounded-2xl border border-border/80 bg-background/45 p-4 md:flex-row md:items-center md:justify-between md:p-5">
-        <div>
-          <h2 className="m-0 text-xl font-semibold text-foreground">Supplier Ledger</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Receive stock, track batches, and settle payables.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
+      <ToolbarCard
+        title="Supplier Ledger"
+        description="Receive stock, track batches, and settle payables."
+        actions={
           <button type="button" onClick={onRefreshSuppliers}>
             Refresh Suppliers
           </button>
-        </div>
-      </div>
+        }
+      />
 
       <div className="grid gap-4 xl:grid-cols-[1.2fr_minmax(0,1fr)]">
         <div className="space-y-4">
-          <div className="rounded-2xl border border-border/80 bg-background/45 p-4">
-            <h3 className="m-0 text-lg font-semibold text-foreground">Create Supplier</h3>
+          <SurfaceCard title="Create Supplier">
             <label className="mt-3 block text-sm font-medium text-foreground">
               Name
               <input value={supplierName} onChange={(e) => onSupplierNameChange(e.target.value)} />
@@ -90,12 +89,9 @@ export function SuppliersTab({
             <button className="mt-3" type="button" onClick={onCreateSupplier}>
               Create Supplier
             </button>
-          </div>
+          </SurfaceCard>
 
-          <div className="overflow-hidden rounded-2xl border border-border/80 bg-background/45">
-            <div className="border-b border-border/80 px-4 py-3">
-              <h3 className="m-0 text-lg font-semibold text-foreground">Suppliers</h3>
-            </div>
+          <SurfaceCard title="Suppliers" className="overflow-hidden" contentClassName="p-0">
             <table className="m-0">
               <thead>
                 <tr>
@@ -130,12 +126,11 @@ export function SuppliersTab({
                 )}
               </tbody>
             </table>
-          </div>
+          </SurfaceCard>
         </div>
 
         <div className="space-y-4">
-          <div className="rounded-2xl border border-border/80 bg-background/45 p-4">
-            <h3 className="m-0 text-lg font-semibold text-foreground">Receive Batch</h3>
+          <SurfaceCard title="Receive Batch">
             <label className="mt-3 block text-sm font-medium text-foreground">
               Reference No
               <input value={batchReference} onChange={(e) => onBatchReferenceChange(e.target.value)} />
@@ -206,10 +201,9 @@ export function SuppliersTab({
                 </tbody>
               </table>
             </div>
-          </div>
+          </SurfaceCard>
 
-          <div className="rounded-2xl border border-border/80 bg-background/45 p-4">
-            <h3 className="m-0 text-lg font-semibold text-foreground">Settle Batch</h3>
+          <SurfaceCard title="Settle Batch">
             <label className="mt-3 block text-sm font-medium text-foreground">
               Pay Amount
               <input value={supplierPayAmount} onChange={(e) => onSupplierPayAmountChange(e.target.value)} />
@@ -229,15 +223,12 @@ export function SuppliersTab({
             <button className="mt-3" type="button" onClick={onApplySupplierPayment}>
               Record Supplier Payment
             </button>
-          </div>
+          </SurfaceCard>
         </div>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <div className="overflow-hidden rounded-2xl border border-border/80 bg-background/45">
-          <div className="border-b border-border/80 px-4 py-3">
-            <h3 className="m-0 text-lg font-semibold text-foreground">Supplier Batches</h3>
-          </div>
+        <SurfaceCard title="Supplier Batches" className="overflow-hidden" contentClassName="p-0">
           <table className="m-0">
             <thead>
               <tr>
@@ -278,12 +269,9 @@ export function SuppliersTab({
               )}
             </tbody>
           </table>
-        </div>
+        </SurfaceCard>
 
-        <div className="overflow-hidden rounded-2xl border border-border/80 bg-background/45">
-          <div className="border-b border-border/80 px-4 py-3">
-            <h3 className="m-0 text-lg font-semibold text-foreground">Supplier Payments</h3>
-          </div>
+        <SurfaceCard title="Supplier Payments" className="overflow-hidden" contentClassName="p-0">
           <table className="m-0">
             <thead>
               <tr>
@@ -314,7 +302,7 @@ export function SuppliersTab({
               )}
             </tbody>
           </table>
-        </div>
+        </SurfaceCard>
       </div>
     </section>
   );
