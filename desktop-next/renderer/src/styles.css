@@ -36,6 +36,44 @@
     margin: 0;
     min-height: 100vh;
   }
+
+  label {
+    display: block;
+    margin: 14px 0;
+    color: #d9e4f5;
+  }
+
+  input {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+    border-radius: 10px;
+    border: 1px solid #35517d;
+    background: #0b1424;
+    color: #edf4ff;
+    padding: 10px 12px;
+  }
+
+  select {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+    border-radius: 10px;
+    border: 1px solid #35517d;
+    background: #0b1424;
+    color: #edf4ff;
+    padding: 10px 12px;
+  }
+
+  button {
+    border: 0;
+    border-radius: 10px;
+    color: #0b1424;
+    background-color: #60d2a1;
+    padding: 10px 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
 }
 
 * {
@@ -64,33 +102,6 @@
 
 .muted {
   color: #99aac2;
-}
-
-label {
-  display: block;
-  margin: 14px 0;
-  color: #d9e4f5;
-}
-
-input {
-  display: block;
-  width: 100%;
-  margin-top: 8px;
-  border-radius: 10px;
-  border: 1px solid #35517d;
-  background: #0b1424;
-  color: #edf4ff;
-  padding: 10px 12px;
-}
-
-button {
-  border: 0;
-  border-radius: 10px;
-  color: #0b1424;
-  background: linear-gradient(135deg, #7ce6b3 0%, #49c78f 100%);
-  padding: 10px 14px;
-  font-weight: 700;
-  cursor: pointer;
 }
 
 .error {
@@ -195,17 +206,6 @@ table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 12px;
-}
-
-select {
-  display: block;
-  width: 100%;
-  margin-top: 8px;
-  border-radius: 10px;
-  border: 1px solid #35517d;
-  background: #0b1424;
-  color: #edf4ff;
-  padding: 10px 12px;
 }
 
 .calc-grid {

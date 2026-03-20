@@ -1,4 +1,4 @@
-import { FormEvent, Suspense, lazy, useEffect, useMemo, useState } from "react";
+import { CSSProperties, FormEvent, Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { BarChart3, Boxes, HandCoins, LayoutDashboard, LogOut, PauseCircle, ReceiptText, RefreshCw, Truck } from "lucide-react";
 import { LoginView } from "./features/LoginView";
 import type { BarcodePrintItem } from "./features/OperationsTab";
@@ -936,6 +936,53 @@ export default function App() {
 
   const activeTabConfig = tabItems.find((tab) => tab.id === activeTab) || tabItems[0];
 
+  const tabVisuals: Record<ActiveTab, { selectedStyle: CSSProperties; chipBgClass: string; accentColor: string; refreshStyle: CSSProperties }> = {
+    dashboard: {
+      selectedStyle: { borderColor: "#7dd3fc", backgroundColor: "rgba(56, 189, 248, 0.16)", color: "#e0f2fe" },
+      chipBgClass: "bg-sky-300",
+      accentColor: "#7dd3fc",
+      refreshStyle: { borderColor: "rgba(125, 211, 252, 0.45)", backgroundColor: "rgba(56, 189, 248, 0.1)", color: "#e0f2fe" },
+    },
+    billing: {
+      selectedStyle: { borderColor: "#fcd34d", backgroundColor: "rgba(252, 211, 77, 0.16)", color: "#fef3c7" },
+      chipBgClass: "bg-amber-300",
+      accentColor: "#fcd34d",
+      refreshStyle: { borderColor: "rgba(252, 211, 77, 0.45)", backgroundColor: "rgba(252, 211, 77, 0.1)", color: "#fef3c7" },
+    },
+    inventory: {
+      selectedStyle: { borderColor: "#86efac", backgroundColor: "rgba(134, 239, 172, 0.16)", color: "#dcfce7" },
+      chipBgClass: "bg-emerald-300",
+      accentColor: "#86efac",
+      refreshStyle: { borderColor: "rgba(134, 239, 172, 0.45)", backgroundColor: "rgba(134, 239, 172, 0.1)", color: "#dcfce7" },
+    },
+    held: {
+      selectedStyle: { borderColor: "#a5b4fc", backgroundColor: "rgba(165, 180, 252, 0.16)", color: "#e0e7ff" },
+      chipBgClass: "bg-indigo-300",
+      accentColor: "#a5b4fc",
+      refreshStyle: { borderColor: "rgba(165, 180, 252, 0.45)", backgroundColor: "rgba(165, 180, 252, 0.1)", color: "#e0e7ff" },
+    },
+    customers: {
+      selectedStyle: { borderColor: "#67e8f9", backgroundColor: "rgba(103, 232, 249, 0.16)", color: "#e0f7fa" },
+      chipBgClass: "bg-cyan-300",
+      accentColor: "#67e8f9",
+      refreshStyle: { borderColor: "rgba(103, 232, 249, 0.45)", backgroundColor: "rgba(103, 232, 249, 0.1)", color: "#e0f7fa" },
+    },
+    suppliers: {
+      selectedStyle: { borderColor: "#fed7aa", backgroundColor: "rgba(254, 215, 170, 0.16)", color: "#ffedd5" },
+      chipBgClass: "bg-orange-300",
+      accentColor: "#fed7aa",
+      refreshStyle: { borderColor: "rgba(254, 215, 170, 0.45)", backgroundColor: "rgba(254, 215, 170, 0.1)", color: "#ffedd5" },
+    },
+    operations: {
+      selectedStyle: { borderColor: "#fda4af", backgroundColor: "rgba(253, 164, 175, 0.16)", color: "#ffe4e6" },
+      chipBgClass: "bg-rose-300",
+      accentColor: "#fda4af",
+      refreshStyle: { borderColor: "rgba(253, 164, 175, 0.45)", backgroundColor: "rgba(253, 164, 175, 0.1)", color: "#ffe4e6" },
+    },
+  };
+
+  const activeTabVisual = tabVisuals[activeTab];
+
   async function handleActiveTabRefresh() {
     if (activeTab === "dashboard") {
       await refreshSummary();
@@ -1083,21 +1130,22 @@ export default function App() {
             {tabItems.map((item) => {
               const Icon = item.icon;
               const selected = activeTab === item.id;
+              const visual = tabVisuals[item.id];
               return (
                 <button
                   key={item.id}
                   type="button"
+                  style={selected ? { ...visual.selectedStyle, borderWidth: "1px" } : undefined}
                   className={cn(
-                    "w-full rounded-xl border px-3 py-3 text-left transition-colors",
+                    "w-full rounded-xl border px-3 py-3 text-left transition-colors relative",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    selected
-                      ? item.selectedClass
-                      : "border-border/80 bg-background/65 text-foreground/90 hover:border-accent/50 hover:bg-background/90 hover:text-foreground",
+                    !selected && "border-border/80 bg-background/65 text-foreground/90 hover:border-accent/50 hover:bg-background/90 hover:text-foreground",
                   )}
                   onClick={() => setActiveTab(item.id)}
                 >
+                  {selected && <span className="absolute right-0 top-0 bottom-0 w-1.5 rounded-r-xl" style={{ backgroundColor: visual.accentColor }} aria-hidden="true" />}
                   <span className="flex items-center gap-2 text-sm font-semibold">
-                    <span className={cn("h-2 w-2 rounded-full", selected ? item.chipClass : "bg-muted-foreground/50")} aria-hidden="true" />
+                    <span className={cn("h-2 w-2 rounded-full", selected ? visual.chipBgClass : "bg-muted-foreground/50")} aria-hidden="true" />
                     <Icon size={16} aria-hidden="true" />
                     {item.label}
                   </span>
@@ -1111,9 +1159,9 @@ export default function App() {
         <section className="space-y-4">
           <header className="rounded-3xl border border-border/80 bg-card/80 p-4 shadow-panel backdrop-blur md:p-5">
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-              <div className={cn("border-l-2 pl-3", activeTabConfig.headerAccentClass)}>
+              <div className="border-l-2 pl-3" style={{ borderLeftColor: activeTabVisual.accentColor }}>
                 <p className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-muted-foreground">
-                  <span className={cn("h-2 w-2 rounded-full", activeTabConfig.chipClass)} aria-hidden="true" />
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: activeTabVisual.accentColor }} aria-hidden="true" />
                   {activeTabConfig.label}
                 </p>
                 <h2 className="mt-1 text-2xl font-semibold">{activeTabConfig.headerTitle}</h2>
@@ -1123,10 +1171,8 @@ export default function App() {
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  className={cn(
-                    "inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold",
-                    activeTabConfig.refreshClass,
-                  )}
+                  style={{ ...activeTabVisual.refreshStyle, borderWidth: "1px" }}
+                  className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition-colors"
                   onClick={() => void handleActiveTabRefresh()}
                 >
                   <RefreshCw size={16} aria-hidden="true" />
