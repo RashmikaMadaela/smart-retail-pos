@@ -563,6 +563,8 @@ export default function App() {
     }));
 
     setCart(recalled);
+    setSelectedHeldId(null);
+    await refreshHeldSales(user?.id);
     setActiveTab("billing");
     pushMessage(`Held sale ${selectedHeldId} loaded to cart.`);
   }
@@ -933,6 +935,44 @@ export default function App() {
       return;
     }
     pushMessage(`Opened inventory export folder: ${response.data.path}`);
+  }
+
+  async function clearAllDataNow() {
+    if (!isSuperAdmin) {
+      pushError("SuperAdmin access required.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "This will permanently clear all business data across sales, customers, suppliers, inventory, and expenses. Continue?",
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    const response = await posApiClient.clearAllData("SuperAdmin");
+    if (!response.ok) {
+      pushError(response.error || "Clear all data failed.");
+      return;
+    }
+
+    clearCart();
+    setHeldSales([]);
+    setSelectedHeldId(null);
+    setSelectedCustomerId(null);
+    setCustomerLedger(null);
+    setSelectedSupplierId(null);
+    setSupplierLedger(null);
+    setSelectedSupplierBatchId(null);
+
+    pushMessage(`All business data cleared. Rows removed: ${response.data.rows_affected}.`);
+
+    await refreshProducts();
+    await refreshCustomers();
+    await refreshSuppliers();
+    await refreshExpenses();
+    await refreshSummary();
+    await refreshHeldSales(user?.id);
   }
 
   const tabItems: Array<{
@@ -1323,7 +1363,7 @@ export default function App() {
                     </section>
                   }
                 >
-                  <SummaryStrip summary={summary} netColor={netColor} />
+                  <SummaryStrip summary={summary} netColor={netColor} isSuperAdmin={isSuperAdmin} onClearAllData={() => void clearAllDataNow()} />
                 </Suspense>
               ) : null}
 
