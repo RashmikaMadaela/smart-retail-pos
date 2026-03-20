@@ -1,9 +1,10 @@
-import { useState } from "react";
-import type { BatchLineDraft, Supplier, SupplierLedger } from "./types";
+import { useEffect, useMemo, useState } from "react";
+import type { BatchLineDraft, Product, Supplier, SupplierLedger } from "./types";
 import { SurfaceCard } from "@/components/ui/SurfaceCard";
 import { ToolbarCard } from "@/components/ui/ToolbarCard";
 
 type SuppliersTabProps = {
+  products: Product[];
   supplierName: string;
   supplierContact: string;
   suppliers: Supplier[];
@@ -21,6 +22,7 @@ type SuppliersTabProps = {
   onSupplierNameChange: (value: string) => void;
   onSupplierContactChange: (value: string) => void;
   onCreateSupplier: () => void;
+  onUpdateSupplier: (payload: { supplier_id: number; name: string; contact?: string }) => void | Promise<void>;
   onSelectSupplier: (supplierId: number) => void;
   onBatchReferenceChange: (value: string) => void;
   onBatchPaidChange: (value: string) => void;
@@ -35,6 +37,7 @@ type SuppliersTabProps = {
 };
 
 export function SuppliersTab({
+  products,
   supplierName,
   supplierContact,
   suppliers,
@@ -52,6 +55,7 @@ export function SuppliersTab({
   onSupplierNameChange,
   onSupplierContactChange,
   onCreateSupplier,
+  onUpdateSupplier,
   onSelectSupplier,
   onBatchReferenceChange,
   onBatchPaidChange,
@@ -64,7 +68,68 @@ export function SuppliersTab({
   onSupplierPayNoteChange,
   onApplySupplierPayment,
 }: SuppliersTabProps) {
-  const [receiveMode, setReceiveMode] = useState<"quick" | "bulk">("quick");
+  const [editingSupplierId, setEditingSupplierId] = useState<number | null>(null);
+  const [editSupplierName, setEditSupplierName] = useState("");
+  const [editSupplierContact, setEditSupplierContact] = useState("");
+
+  const matchedProduct = useMemo(() => {
+    const barcode = (batchLineDraft.product_id || "").trim().toLowerCase();
+    if (!barcode) {
+      return null;
+    }
+    return products.find((product) => product.barcode_id.trim().toLowerCase() === barcode) || null;
+  }, [products, batchLineDraft.product_id]);
+
+  const productNameSuggestions = useMemo(() => {
+    const needle = (batchLineDraft.new_item_name || "").trim().toLowerCase();
+    if (!needle) {
+      return products.slice(0, 12);
+    }
+    return products
+      .filter((product) => product.name.toLowerCase().includes(needle))
+      .slice(0, 12);
+  }, [products, batchLineDraft.new_item_name]);
+
+  useEffect(() => {
+    if (!matchedProduct) {
+      return;
+    }
+
+    const buyPrice = String(Number(matchedProduct.buy_price || 0));
+    const sellPrice = String(Number(matchedProduct.sell_price || 0));
+    const discPct = String(Number(matchedProduct.default_discount_pct || 0));
+    const surchargePct = String(
+      Number(matchedProduct.card_surcharge_enabled || 0) > 0 ? Number(matchedProduct.card_surcharge_pct || 0) : 0,
+    );
+
+    const nextDraft: BatchLineDraft = {
+      ...batchLineDraft,
+      create_new_item: false,
+      new_item_name: matchedProduct.name || "",
+      new_item_buy_price: buyPrice,
+      new_item_sell_price: sellPrice,
+      new_item_default_discount_pct: discPct,
+      new_item_card_surcharge_enabled: Number(matchedProduct.card_surcharge_enabled || 0) > 0,
+      new_item_card_surcharge_pct: surchargePct,
+      unit_cost: batchLineDraft.unit_cost || buyPrice,
+      line_discount_pct: batchLineDraft.line_discount_pct || discPct,
+    };
+
+    const isSame =
+      nextDraft.new_item_name === (batchLineDraft.new_item_name || "") &&
+      nextDraft.new_item_buy_price === (batchLineDraft.new_item_buy_price || "") &&
+      nextDraft.new_item_sell_price === (batchLineDraft.new_item_sell_price || "") &&
+      nextDraft.new_item_default_discount_pct === (batchLineDraft.new_item_default_discount_pct || "") &&
+      nextDraft.new_item_card_surcharge_enabled === Boolean(batchLineDraft.new_item_card_surcharge_enabled) &&
+      nextDraft.new_item_card_surcharge_pct === (batchLineDraft.new_item_card_surcharge_pct || "") &&
+      nextDraft.unit_cost === batchLineDraft.unit_cost &&
+      nextDraft.line_discount_pct === batchLineDraft.line_discount_pct &&
+      nextDraft.create_new_item === Boolean(batchLineDraft.create_new_item);
+
+    if (!isSame) {
+      onBatchLineDraftChange(nextDraft);
+    }
+  }, [matchedProduct, batchLineDraft, onBatchLineDraftChange]);
 
   return (
     <section className="space-y-4">
@@ -78,355 +143,385 @@ export function SuppliersTab({
         }
       />
 
-      <div className="grid gap-4 xl:grid-cols-[1.2fr_minmax(0,1fr)]">
-        <div className="space-y-4">
-          <SurfaceCard title="Create Supplier">
-            <label className="mt-3 block text-sm font-medium text-foreground">
-              Name
-              <input value={supplierName} onChange={(e) => onSupplierNameChange(e.target.value)} />
-            </label>
-            <label className="mt-3 block text-sm font-medium text-foreground">
-              Contact
-              <input value={supplierContact} onChange={(e) => onSupplierContactChange(e.target.value)} />
-            </label>
-            <button className="mt-3" type="button" onClick={onCreateSupplier}>
-              Create Supplier
-            </button>
-          </SurfaceCard>
+      <SurfaceCard title="Create Supplier">
+        <div className="grid gap-2 md:grid-cols-[1.3fr_1fr_auto] md:items-end">
+          <label className="m-0 block text-sm font-medium text-foreground">
+            Supplier Name
+            <input value={supplierName} onChange={(e) => onSupplierNameChange(e.target.value)} />
+          </label>
+          <label className="m-0 block text-sm font-medium text-foreground">
+            Contact
+            <input value={supplierContact} onChange={(e) => onSupplierContactChange(e.target.value)} />
+          </label>
+          <button type="button" onClick={onCreateSupplier}>
+            Create Supplier
+          </button>
+        </div>
+      </SurfaceCard>
 
-          <SurfaceCard title="Suppliers" className="overflow-hidden" contentClassName="p-0">
-            <table className="m-0">
-              <thead>
-                <tr>
-                  <th>Select</th>
-                  <th>Name</th>
-                  <th>Contact</th>
-                  <th>Outstanding</th>
+      <SurfaceCard title="Suppliers" className="overflow-hidden" contentClassName="p-0">
+        <table className="m-0">
+          <thead>
+            <tr>
+              <th>Select</th>
+              <th>Name</th>
+              <th>Contact</th>
+              <th>Outstanding</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {suppliers.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                  No suppliers available.
+                </td>
+              </tr>
+            ) : (
+              suppliers.map((supplier) => (
+                <tr key={supplier.id}>
+                  <td>
+                    <input
+                      type="radio"
+                      className="h-5 w-5 accent-cyan-300"
+                      checked={selectedSupplierId === supplier.id}
+                      onChange={() => onSelectSupplier(supplier.id)}
+                    />
+                  </td>
+                  <td>
+                    {editingSupplierId === supplier.id ? (
+                      <input value={editSupplierName} onChange={(e) => setEditSupplierName(e.target.value)} />
+                    ) : (
+                      supplier.name
+                    )}
+                  </td>
+                  <td>
+                    {editingSupplierId === supplier.id ? (
+                      <input value={editSupplierContact} onChange={(e) => setEditSupplierContact(e.target.value)} />
+                    ) : (
+                      supplier.contact || "-"
+                    )}
+                  </td>
+                  <td>{Number(supplier.total_outstanding).toFixed(2)}</td>
+                  <td>
+                    {editingSupplierId === supplier.id ? (
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          className="px-2 py-1 text-xs"
+                          onClick={() => {
+                            void onUpdateSupplier({
+                              supplier_id: supplier.id,
+                              name: editSupplierName,
+                              contact: editSupplierContact,
+                            });
+                            setEditingSupplierId(null);
+                          }}
+                        >
+                          Save
+                        </button>
+                        <button type="button" className="px-2 py-1 text-xs !bg-slate-600 !text-white" onClick={() => setEditingSupplierId(null)}>
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="px-2 py-1 text-xs"
+                        onClick={() => {
+                          setEditingSupplierId(supplier.id);
+                          setEditSupplierName(supplier.name);
+                          setEditSupplierContact(supplier.contact || "");
+                        }}
+                      >
+                        Edit
+                      </button>
+                    )}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {suppliers.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="py-10 text-center text-sm text-muted-foreground">
-                      No suppliers available.
-                    </td>
-                  </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </SurfaceCard>
+
+      <SurfaceCard title="Receive Batch" subtitle="Single method receive: add each stock line, then finalize invoice and paid amount.">
+        {matchedProduct ? <p className="mb-2 mt-0 text-xs text-sky-200">Existing barcode found. Product details synced from inventory.</p> : null}
+        <div className="grid gap-2 xl:grid-cols-[1.1fr_1.6fr_0.8fr_1fr_1fr_0.8fr_1fr_auto]">
+          <input
+            placeholder="Barcode (optional)"
+            value={batchLineDraft.product_id}
+            onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, product_id: e.target.value })}
+          />
+          <div className="relative">
+            <input
+              placeholder="Product Name"
+              value={batchLineDraft.new_item_name || ""}
+              onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, new_item_name: e.target.value, create_new_item: true })}
+            />
+            {(batchLineDraft.new_item_name || "").trim() ? (
+              <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto border border-slate-600 bg-slate-900 text-slate-100">
+                {productNameSuggestions.length === 0 ? (
+                  <p className="m-0 px-3 py-2 text-sm text-slate-300">No matching products</p>
                 ) : (
-                  suppliers.map((supplier) => (
-                    <tr key={supplier.id}>
-                      <td>
-                        <input
-                          type="radio"
-                          checked={selectedSupplierId === supplier.id}
-                          onChange={() => onSelectSupplier(supplier.id)}
-                        />
-                      </td>
-                      <td>{supplier.name}</td>
-                      <td>{supplier.contact || "-"}</td>
-                      <td>{Number(supplier.total_outstanding).toFixed(2)}</td>
-                    </tr>
+                  productNameSuggestions.map((product) => (
+                    <div
+                      key={product.barcode_id}
+                      role="button"
+                      tabIndex={0}
+                      className="flex w-full flex-col items-start gap-0.5 border-0 border-b border-slate-700 bg-slate-900 px-3 py-2 text-left text-[15px] text-slate-100 hover:bg-slate-800 focus:bg-slate-800"
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        onBatchLineDraftChange({
+                          ...batchLineDraft,
+                          product_id: product.barcode_id,
+                          new_item_name: product.name,
+                          create_new_item: false,
+                        });
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          onBatchLineDraftChange({
+                            ...batchLineDraft,
+                            product_id: product.barcode_id,
+                            new_item_name: product.name,
+                            create_new_item: false,
+                          });
+                        }
+                      }}
+                    >
+                      <span className="font-semibold text-slate-100">{product.name}</span>
+                      <span className="text-sm text-slate-300">
+                        {product.barcode_id} | Sell {Number(product.sell_price).toFixed(2)} | Stock {Number(product.stock).toFixed(2)}
+                      </span>
+                    </div>
                   ))
                 )}
-              </tbody>
-            </table>
-          </SurfaceCard>
-        </div>
-
-        <div className="space-y-4">
-          <SurfaceCard title="Receive Batch" subtitle="Choose quick single-line stock receive or bulk invoice mode.">
-            <div className="mb-3 flex flex-wrap gap-2">
-              <button
-                type="button"
-                className={receiveMode === "quick" ? "!bg-cyan-400 !text-slate-900" : "!bg-slate-600 !text-slate-100"}
-                onClick={() => setReceiveMode("quick")}
-              >
-                Quick Receive
-              </button>
-              <button
-                type="button"
-                className={receiveMode === "bulk" ? "!bg-cyan-400 !text-slate-900" : "!bg-slate-600 !text-slate-100"}
-                onClick={() => setReceiveMode("bulk")}
-              >
-                Bulk Invoice
-              </button>
-            </div>
-
-            <label className="mt-3 block text-sm font-medium text-foreground">
-              Reference No
-              <input value={batchReference} onChange={(e) => onBatchReferenceChange(e.target.value)} />
-            </label>
-            <label className="mt-3 block text-sm font-medium text-foreground">
-              Initial Paid
-              <input value={batchPaid} onChange={(e) => onBatchPaidChange(e.target.value)} />
-            </label>
-
-            {receiveMode === "quick" ? (
-              <div className="mt-3 grid gap-3 md:grid-cols-2">
-                <label className="block text-sm font-medium text-foreground">
-                  Product ID / Barcode
-                  <input
-                    placeholder="e.g. P001 or leave blank for SYS-*"
-                    value={batchLineDraft.product_id}
-                    onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, product_id: e.target.value })}
-                  />
-                </label>
-                <label className="block text-sm font-medium text-foreground">
-                  Quantity
-                  <input
-                    placeholder="Qty"
-                    value={batchLineDraft.qty_received}
-                    onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, qty_received: e.target.value })}
-                  />
-                </label>
-                <label className="block text-sm font-medium text-foreground">
-                  Unit Cost
-                  <input
-                    placeholder="Unit Cost"
-                    value={batchLineDraft.unit_cost}
-                    onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, unit_cost: e.target.value })}
-                  />
-                </label>
-                <label className="block text-sm font-medium text-foreground">
-                  Discount %
-                  <input
-                    placeholder="Disc %"
-                    value={batchLineDraft.line_discount_pct}
-                    onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, line_discount_pct: e.target.value })}
-                  />
-                </label>
-              </div>
-            ) : (
-              <div className="batch-line mt-3">
-                <input
-                  placeholder="Product ID / Barcode"
-                  value={batchLineDraft.product_id}
-                  onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, product_id: e.target.value })}
-                />
-                <input
-                  placeholder="Qty"
-                  value={batchLineDraft.qty_received}
-                  onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, qty_received: e.target.value })}
-                />
-                <input
-                  placeholder="Unit Cost"
-                  value={batchLineDraft.unit_cost}
-                  onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, unit_cost: e.target.value })}
-                />
-                <input
-                  placeholder="Disc %"
-                  value={batchLineDraft.line_discount_pct}
-                  onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, line_discount_pct: e.target.value })}
-                />
-              </div>
-            )}
-
-            <label className="mt-3 flex items-center gap-2 text-sm font-medium text-foreground">
-              <input
-                type="checkbox"
-                checked={Boolean(batchLineDraft.create_new_item)}
-                onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, create_new_item: e.target.checked })}
-              />
-              Create as new inventory item (if not existing)
-            </label>
-
-            {batchLineDraft.create_new_item ? (
-              <div className="mt-3 grid gap-3 md:grid-cols-2">
-                <label className="block text-sm font-medium text-foreground">
-                  Name
-                  <input
-                    placeholder="e.g. Samba Rice 1kg"
-                    value={batchLineDraft.new_item_name || ""}
-                    onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, new_item_name: e.target.value })}
-                  />
-                </label>
-                <label className="block text-sm font-medium text-foreground">
-                  Selling Price
-                  <input
-                    placeholder="e.g. 240"
-                    value={batchLineDraft.new_item_sell_price || ""}
-                    onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, new_item_sell_price: e.target.value })}
-                  />
-                </label>
-                <label className="block text-sm font-medium text-foreground">
-                  Buying Price
-                  <input
-                    placeholder="e.g. 200"
-                    value={batchLineDraft.new_item_buy_price || ""}
-                    onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, new_item_buy_price: e.target.value })}
-                  />
-                </label>
-                <label className="block text-sm font-medium text-foreground">
-                  Default Discount %
-                  <input
-                    placeholder="e.g. 5"
-                    value={batchLineDraft.new_item_default_discount_pct || "0"}
-                    onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, new_item_default_discount_pct: e.target.value })}
-                  />
-                </label>
-                <label className="block text-sm font-medium text-foreground">
-                  Card Surcharge %
-                  <input
-                    placeholder="e.g. 2.5"
-                    value={batchLineDraft.new_item_card_surcharge_pct || "0"}
-                    onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, new_item_card_surcharge_pct: e.target.value })}
-                  />
-                </label>
-                <label className="mt-7 flex items-center gap-2 text-sm font-medium text-foreground">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(batchLineDraft.new_item_card_surcharge_enabled)}
-                    onChange={(e) =>
-                      onBatchLineDraftChange({ ...batchLineDraft, new_item_card_surcharge_enabled: e.target.checked })
-                    }
-                  />
-                  Card surcharge enabled
-                </label>
               </div>
             ) : null}
-
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" onClick={onAddBatchLine}>
-                Add Line
-              </button>
-              <button type="button" onClick={onReceiveSupplierBatch}>
-                Receive Stock
-              </button>
-            </div>
-
-            <h4 className="mb-0 mt-4 text-base font-semibold text-foreground">Batch Lines</h4>
-            <div className="mt-2 overflow-hidden rounded-xl border border-border/80 bg-card/40">
-              <table className="m-0">
-                <thead>
-                  <tr>
-                    <th>Product</th>
-                    <th>Qty</th>
-                    <th>Cost</th>
-                    <th>Disc%</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {batchLines.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="py-6 text-center text-sm text-muted-foreground">
-                        No batch lines added.
-                      </td>
-                    </tr>
-                  ) : (
-                    batchLines.map((line, index) => (
-                      <tr key={`${line.product_id}-${index}`}>
-                        <td>{line.product_id || "(auto SYS-*)"}</td>
-                        <td>{line.qty_received}</td>
-                        <td>{line.unit_cost}</td>
-                        <td>{line.line_discount_pct}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </SurfaceCard>
-
-          <SurfaceCard title="Settle Batch">
-            <label className="mt-3 block text-sm font-medium text-foreground">
-              Pay Amount
-              <input value={supplierPayAmount} onChange={(e) => onSupplierPayAmountChange(e.target.value)} />
-            </label>
-            <label className="mt-3 block text-sm font-medium text-foreground">
-              Method
-              <select value={supplierPayMethod} onChange={(e) => onSupplierPayMethodChange(e.target.value)}>
-                <option value="CASH">CASH</option>
-                <option value="CARD">CARD</option>
-                <option value="BANK">BANK</option>
-              </select>
-            </label>
-            <label className="mt-3 block text-sm font-medium text-foreground">
-              Note
-              <input value={supplierPayNote} onChange={(e) => onSupplierPayNoteChange(e.target.value)} />
-            </label>
-            <button className="mt-3" type="button" onClick={onApplySupplierPayment}>
-              Record Supplier Payment
-            </button>
-          </SurfaceCard>
+          </div>
+          <input
+            className="no-spinner"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="Qty"
+            value={batchLineDraft.qty_received}
+            onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, qty_received: e.target.value })}
+          />
+          <input
+            className="no-spinner"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="Buying Price"
+            value={batchLineDraft.new_item_buy_price || batchLineDraft.unit_cost || ""}
+            onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, unit_cost: e.target.value, new_item_buy_price: e.target.value, create_new_item: !matchedProduct })}
+          />
+          <input
+            className="no-spinner"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="Selling Price"
+            value={batchLineDraft.new_item_sell_price || ""}
+            onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, new_item_sell_price: e.target.value, create_new_item: !matchedProduct })}
+          />
+          <input
+            className="no-spinner"
+            type="number"
+            min="0"
+            max="100"
+            step="0.01"
+            placeholder="Disc (%)"
+            value={batchLineDraft.line_discount_pct}
+            onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, line_discount_pct: e.target.value, new_item_default_discount_pct: e.target.value })}
+          />
+          <input
+            className="no-spinner"
+            type="number"
+            min="0"
+            max="100"
+            step="0.01"
+            placeholder="Card surcharge (%)"
+            value={batchLineDraft.new_item_card_surcharge_pct || ""}
+            onChange={(e) =>
+              onBatchLineDraftChange({
+                ...batchLineDraft,
+                new_item_card_surcharge_pct: e.target.value,
+                new_item_card_surcharge_enabled: Number(e.target.value || "0") > 0,
+                create_new_item: !matchedProduct,
+              })
+            }
+          />
+          <button type="button" onClick={onAddBatchLine}>
+            Add Line
+          </button>
         </div>
-      </div>
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        <SurfaceCard title="Supplier Batches" className="overflow-hidden" contentClassName="p-0">
+        <h4 className="mb-0 mt-4 text-base font-semibold text-foreground">Batch Lines</h4>
+        <div className="mt-2 overflow-hidden rounded-xl border border-border/80 bg-card/40">
           <table className="m-0">
             <thead>
               <tr>
-                <th>Select</th>
-                <th>ID</th>
-                <th>Ref</th>
-                <th>Total</th>
-                <th>Paid</th>
-                <th>Balance</th>
-                <th>Status</th>
+                <th>Barcode</th>
+                <th>Product Name</th>
+                <th>Qty</th>
+                <th>Buying Price</th>
+                <th>Selling Price</th>
+                <th>Disc (%)</th>
+                <th>Card Surcharge (%)</th>
+                <th>Line Total</th>
               </tr>
             </thead>
             <tbody>
-              {(supplierLedger?.batches || []).length === 0 ? (
+              {batchLines.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
-                    No supplier batches.
+                  <td colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
+                    No batch lines added.
                   </td>
                 </tr>
               ) : (
-                (supplierLedger?.batches || []).map((batch) => (
-                  <tr key={batch.id}>
-                    <td>
-                      <input
-                        type="radio"
-                        checked={selectedSupplierBatchId === Number(batch.id)}
-                        onChange={() => onSelectSupplierBatch(Number(batch.id))}
-                      />
-                    </td>
-                    <td>{batch.id}</td>
-                    <td>{batch.reference_no || "-"}</td>
-                    <td>{Number(batch.total_cost).toFixed(2)}</td>
-                    <td>{Number(batch.paid_amount).toFixed(2)}</td>
-                    <td>{Number(batch.balance_due).toFixed(2)}</td>
-                    <td>{batch.status}</td>
-                  </tr>
-                ))
+                batchLines.map((line, index) => {
+                  const qty = Number(line.qty_received || 0);
+                  const buy = Number(line.unit_cost || line.new_item_buy_price || 0);
+                  const disc = Number(line.line_discount_pct || 0);
+                  const base = qty * buy;
+                  const total = Number((base - base * (disc / 100)).toFixed(2));
+                  return (
+                    <tr key={`${line.product_id || "auto"}-${index}`}>
+                      <td>{line.product_id || "(auto)"}</td>
+                      <td>{line.new_item_name || "-"}</td>
+                      <td>{qty.toFixed(2)}</td>
+                      <td>{buy.toFixed(2)}</td>
+                      <td>{Number(line.new_item_sell_price || 0).toFixed(2)}</td>
+                      <td>{disc.toFixed(2)}</td>
+                      <td>{Number(line.new_item_card_surcharge_pct || 0).toFixed(2)}</td>
+                      <td>{total.toFixed(2)}</td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
-        </SurfaceCard>
+        </div>
 
-        <SurfaceCard title="Supplier Payments" className="overflow-hidden" contentClassName="p-0">
-          <table className="m-0">
-            <thead>
+        <div className="mt-3 grid gap-2 md:grid-cols-[1.2fr_1fr_auto] md:items-end">
+          <label className="m-0 block text-sm font-medium text-foreground">
+            Invoice No
+            <input value={batchReference} onChange={(e) => onBatchReferenceChange(e.target.value)} />
+          </label>
+          <label className="m-0 block text-sm font-medium text-foreground">
+            Amount Paid
+            <input className="no-spinner" value={batchPaid} onChange={(e) => onBatchPaidChange(e.target.value)} />
+          </label>
+          <button type="button" onClick={onReceiveSupplierBatch}>
+            Receive Stock
+          </button>
+        </div>
+      </SurfaceCard>
+
+      <SurfaceCard title="Settle Batch">
+        <div className="grid gap-2 md:grid-cols-[1fr_1fr_1.2fr_auto] md:items-end">
+          <label className="m-0 block text-sm font-medium text-foreground">
+            Pay Amount
+            <input value={supplierPayAmount} onChange={(e) => onSupplierPayAmountChange(e.target.value)} />
+          </label>
+          <label className="m-0 block text-sm font-medium text-foreground">
+            Method
+            <select value={supplierPayMethod} onChange={(e) => onSupplierPayMethodChange(e.target.value)}>
+              <option value="CASH">CASH</option>
+              <option value="CARD">CARD</option>
+              <option value="BANK">BANK</option>
+            </select>
+          </label>
+          <label className="m-0 block text-sm font-medium text-foreground">
+            Note
+            <input value={supplierPayNote} onChange={(e) => onSupplierPayNoteChange(e.target.value)} />
+          </label>
+          <button type="button" onClick={onApplySupplierPayment}>
+            Record Supplier Payment
+          </button>
+        </div>
+      </SurfaceCard>
+
+      <SurfaceCard title="Supplier Batches" className="overflow-hidden" contentClassName="p-0">
+        <table className="m-0">
+          <thead>
+            <tr>
+              <th>Select</th>
+              <th>ID</th>
+              <th>Ref</th>
+              <th>Total</th>
+              <th>Paid</th>
+              <th>Balance</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(supplierLedger?.batches || []).length === 0 ? (
               <tr>
-                <th>ID</th>
-                <th>Batch</th>
-                <th>Amount</th>
-                <th>Method</th>
-                <th>Paid At</th>
+                <td colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                  No supplier batches.
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {(supplierLedger?.payments || []).length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
-                    No supplier payments.
+            ) : (
+              (supplierLedger?.batches || []).map((batch) => (
+                <tr key={batch.id}>
+                  <td>
+                    <input
+                      type="radio"
+                      className="h-5 w-5 accent-cyan-300"
+                      checked={selectedSupplierBatchId === Number(batch.id)}
+                      onChange={() => onSelectSupplierBatch(Number(batch.id))}
+                    />
                   </td>
+                  <td>{batch.id}</td>
+                  <td>{batch.reference_no || "-"}</td>
+                  <td>{Number(batch.total_cost).toFixed(2)}</td>
+                  <td>{Number(batch.paid_amount).toFixed(2)}</td>
+                  <td>{Number(batch.balance_due).toFixed(2)}</td>
+                  <td>{batch.status}</td>
                 </tr>
-              ) : (
-                (supplierLedger?.payments || []).map((payment) => (
-                  <tr key={payment.id}>
-                    <td>{payment.id}</td>
-                    <td>{payment.batch_id || "-"}</td>
-                    <td>{Number(payment.amount).toFixed(2)}</td>
-                    <td>{payment.method}</td>
-                    <td>{payment.paid_at}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </SurfaceCard>
-      </div>
+              ))
+            )}
+          </tbody>
+        </table>
+      </SurfaceCard>
+
+      <SurfaceCard title="Supplier Payments" className="overflow-hidden" contentClassName="p-0">
+        <table className="m-0">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Batch</th>
+              <th>Amount</th>
+              <th>Method</th>
+              <th>Paid At</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(supplierLedger?.payments || []).length === 0 ? (
+              <tr>
+                <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                  No supplier payments.
+                </td>
+              </tr>
+            ) : (
+              (supplierLedger?.payments || []).map((payment) => (
+                <tr key={payment.id}>
+                  <td>{payment.id}</td>
+                  <td>{payment.batch_id || "-"}</td>
+                  <td>{Number(payment.amount).toFixed(2)}</td>
+                  <td>{payment.method}</td>
+                  <td>{payment.paid_at}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </SurfaceCard>
     </section>
   );
 }

@@ -43,6 +43,8 @@ export const posApiClient = {
 
   createSupplier: (payload: unknown) =>
     safeCall(() => window.posApi.createSupplier(payload) as Promise<ApiResult<{ message: string }>>, "Unable to create supplier"),
+  updateSupplier: (payload: unknown) =>
+    safeCall(() => window.posApi.updateSupplier(payload) as Promise<ApiResult<{ message: string }>>, "Unable to update supplier"),
   listSuppliers: (payload: unknown) =>
     safeCall(() => window.posApi.listSuppliers(payload) as Promise<ApiResult<any[]>>, "Unable to load suppliers"),
   receiveSupplierBatch: (payload: unknown) =>

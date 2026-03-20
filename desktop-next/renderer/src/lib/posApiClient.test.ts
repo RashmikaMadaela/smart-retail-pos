@@ -14,6 +14,7 @@ beforeEach(() => {
     getCustomerLedger: vi.fn().mockResolvedValue({ ok: true, data: {} }),
     recordCustomerPayment: vi.fn().mockResolvedValue({ ok: true, data: { message: "ok" } }),
     createSupplier: vi.fn().mockResolvedValue({ ok: true, data: { message: "ok" } }),
+    updateSupplier: vi.fn().mockResolvedValue({ ok: true, data: { message: "ok" } }),
     listSuppliers: vi.fn().mockResolvedValue({ ok: true, data: [] }),
     receiveSupplierBatch: vi.fn().mockResolvedValue({ ok: true, data: { batch_id: 2 } }),
     listSupplierBatches: vi.fn().mockResolvedValue({ ok: true, data: [] }),

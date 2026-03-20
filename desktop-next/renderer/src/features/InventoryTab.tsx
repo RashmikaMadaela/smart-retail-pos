@@ -107,6 +107,16 @@ export function InventoryTab({
     });
   }, [products, inventorySearch, lowStockOnly]);
 
+  const nameSuggestions = useMemo(() => {
+    const needle = newName.trim().toLowerCase();
+    if (!needle) {
+      return products.slice(0, 12);
+    }
+    return products
+      .filter((product) => product.name.toLowerCase().includes(needle))
+      .slice(0, 12);
+  }, [products, newName]);
+
   const outOfStockCount = products.filter((p) => Number(p.stock) <= 0).length;
   const lowStockCount = products.filter((p) => Number(p.stock) > 0 && Number(p.stock) <= 5).length;
 
@@ -138,7 +148,42 @@ export function InventoryTab({
         {barcodeMatched ? <p className="mb-2 mt-0 text-xs text-sky-200">Existing barcode found. Fields auto-filled, edit and click Update.</p> : null}
         <div className="grid gap-2 xl:grid-cols-[1.1fr_1.6fr_0.7fr_0.9fr_0.9fr_0.7fr_1fr_auto]">
           <input placeholder="Barcode (optional)" value={newBarcode} onChange={(event) => setNewBarcode(event.target.value)} />
-          <input placeholder="Product Name" value={newName} onChange={(event) => setNewName(event.target.value)} />
+          <div className="relative">
+            <input placeholder="Product Name" value={newName} onChange={(event) => setNewName(event.target.value)} />
+            {newName.trim() ? (
+              <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto border border-slate-600 bg-slate-900 text-slate-100">
+                {nameSuggestions.length === 0 ? (
+                  <p className="m-0 px-3 py-2 text-sm text-slate-300">No matching products</p>
+                ) : (
+                  nameSuggestions.map((product) => (
+                    <div
+                      key={product.barcode_id}
+                      role="button"
+                      tabIndex={0}
+                      className="flex w-full flex-col items-start gap-0.5 border-0 border-b border-slate-700 bg-slate-900 px-3 py-2 text-left text-[15px] text-slate-100 hover:bg-slate-800 focus:bg-slate-800"
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        setNewName(product.name);
+                        setNewBarcode(product.barcode_id);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          setNewName(product.name);
+                          setNewBarcode(product.barcode_id);
+                        }
+                      }}
+                    >
+                      <span className="font-semibold text-slate-100">{product.name}</span>
+                      <span className="text-sm text-slate-300">
+                        {product.barcode_id} | Sell {Number(product.sell_price).toFixed(2)} | Stock {Number(product.stock).toFixed(2)}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            ) : null}
+          </div>
           <input className="no-spinner" type="number" min="0" step="1" placeholder="Qty" value={newQty} onChange={(event) => setNewQty(event.target.value)} />
           <input
             className="no-spinner"

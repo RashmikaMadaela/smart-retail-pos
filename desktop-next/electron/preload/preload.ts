@@ -24,6 +24,7 @@ const api = {
     ipcRenderer.invoke("customer.getLedger", { customer_id: customerId }),
   recordCustomerPayment: (payload: unknown) => ipcRenderer.invoke("customer.recordPayment", payload),
   createSupplier: (payload: unknown) => ipcRenderer.invoke("supplier.create", payload),
+  updateSupplier: (payload: unknown) => ipcRenderer.invoke("supplier.update", payload),
   listSuppliers: (payload: unknown) => ipcRenderer.invoke("supplier.list", payload),
   receiveSupplierBatch: (payload: unknown) => ipcRenderer.invoke("supplier.receiveBatch", payload),
   listSupplierBatches: (payload: unknown) => ipcRenderer.invoke("supplier.listBatches", payload),

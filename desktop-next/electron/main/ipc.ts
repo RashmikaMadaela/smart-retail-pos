@@ -18,6 +18,7 @@ import {
   recordSupplierPayment,
   searchCustomers,
   searchSuppliers,
+  updateSupplier,
 } from "../../backend/services/ledgerService";
 import { createExpense, listExpenses } from "../../backend/services/expenseService";
 import { exportBarcodePdf, exportSaleBillPdf } from "../../backend/services/printService";
@@ -121,6 +122,12 @@ const supplierCreateSchema = z.object({
   contact: z.string().optional(),
   opening_balance: z.number().nonnegative().optional(),
   notes: z.string().optional(),
+});
+
+const supplierUpdateSchema = z.object({
+  supplier_id: z.number().int().positive(),
+  name: z.string().min(1),
+  contact: z.string().optional(),
 });
 
 const supplierSearchSchema = z.object({
@@ -352,6 +359,15 @@ export function registerIpcHandlers() {
       parsed.data.opening_balance ?? 0,
       parsed.data.notes || "",
     );
+    return result.ok ? ok({ message: result.data }) : fail(result.error);
+  });
+
+  ipcMain.handle("supplier.update", async (_event, payload) => {
+    const parsed = supplierUpdateSchema.safeParse(payload);
+    if (!parsed.success) {
+      return fail("Invalid supplier update payload");
+    }
+    const result = updateSupplier(parsed.data.supplier_id, parsed.data.name, parsed.data.contact || "");
     return result.ok ? ok({ message: result.data }) : fail(result.error);
   });
 

@@ -10,6 +10,7 @@ describe("SuppliersTab", () => {
 
     const view = render(
       <SuppliersTab
+        products={[]}
         supplierName=""
         supplierContact=""
         suppliers={[{ id: 3, name: "ABC Traders", contact: "0119999999", total_outstanding: 1000 }]}
@@ -27,6 +28,7 @@ describe("SuppliersTab", () => {
         onSupplierNameChange={vi.fn()}
         onSupplierContactChange={vi.fn()}
         onCreateSupplier={onCreateSupplier}
+        onUpdateSupplier={vi.fn()}
         onSelectSupplier={vi.fn()}
         onBatchReferenceChange={vi.fn()}
         onBatchPaidChange={vi.fn()}
@@ -54,6 +56,7 @@ describe("SuppliersTab", () => {
 
     const view = render(
       <SuppliersTab
+        products={[]}
         supplierName=""
         supplierContact=""
         suppliers={[{ id: 3, name: "ABC Traders", contact: "0119999999", total_outstanding: 1000 }]}
@@ -71,6 +74,7 @@ describe("SuppliersTab", () => {
         onSupplierNameChange={vi.fn()}
         onSupplierContactChange={vi.fn()}
         onCreateSupplier={vi.fn()}
+        onUpdateSupplier={vi.fn()}
         onSelectSupplier={vi.fn()}
         onBatchReferenceChange={vi.fn()}
         onBatchPaidChange={vi.fn()}

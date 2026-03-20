@@ -21,9 +21,24 @@ function positive(value: number, label: string) {
 }
 
 function generateSystemProductId() {
-  const stamp = new Date().toISOString().replace(/[-:TZ.]/g, "").slice(0, 14);
-  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
-  return `SYS-${stamp}-${rand}`;
+  const db = getDb();
+  const rows = db
+    .prepare("SELECT barcode_id FROM products WHERE barcode_id LIKE 'PS-%'")
+    .all() as Array<{ barcode_id: string }>;
+
+  let maxCode = 10000;
+  for (const row of rows) {
+    const match = /^PS-(\d+)$/.exec((row.barcode_id || "").trim());
+    if (!match) {
+      continue;
+    }
+    const value = Number(match[1]);
+    if (Number.isFinite(value) && value > maxCode) {
+      maxCode = value;
+    }
+  }
+
+  return `PS-${String(maxCode + 1)}`;
 }
 
 export function createOrGetCustomer(name: string, contact = ""): ServiceResult<Customer> {
@@ -194,6 +209,37 @@ export function createSupplier(name: string, contact = "", openingBalance = 0, n
       (notes || "").trim(),
     );
     return { ok: true, data: "Supplier created successfully." };
+  } catch (err: any) {
+    if (String(err?.message || "").includes("UNIQUE")) {
+      return { ok: false, error: "Error: Supplier already exists." };
+    }
+    return { ok: false, error: `Error: ${String(err?.message || err)}` };
+  }
+}
+
+export function updateSupplier(supplierId: number, name: string, contact = ""): ServiceResult<string> {
+  const supplierName = (name || "").trim();
+  if (!supplierName) {
+    return { ok: false, error: "Error: Supplier name is required." };
+  }
+
+  try {
+    const db = getDb();
+    const updated = db
+      .prepare(
+        `
+        UPDATE suppliers
+        SET name = ?, contact = ?
+        WHERE id = ?
+        `,
+      )
+      .run(supplierName, (contact || "").trim(), Number(supplierId));
+
+    if (updated.changes === 0) {
+      return { ok: false, error: "Error: Supplier not found." };
+    }
+
+    return { ok: true, data: "Supplier updated successfully." };
   } catch (err: any) {
     if (String(err?.message || "").includes("UNIQUE")) {
       return { ok: false, error: "Error: Supplier already exists." };
