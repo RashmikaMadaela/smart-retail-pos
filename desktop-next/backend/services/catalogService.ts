@@ -159,9 +159,27 @@ export function removeProduct(barcodeId: string): { barcode_id: string } {
     throw new Error(`Product not found: ${normalizedBarcode}`);
   }
 
-  const deleted = db
-    .prepare("DELETE FROM products WHERE barcode_id = ?")
-    .run(normalizedBarcode);
+  let deleted;
+  try {
+    deleted = db
+      .prepare("DELETE FROM products WHERE barcode_id = ?")
+      .run(normalizedBarcode);
+  } catch (error) {
+    const message = String((error as Error).message || error);
+    if (!message.toLowerCase().includes("foreign key constraint failed")) {
+      throw error;
+    }
+
+    // SuperAdmin hard delete: allow product removal even when history references product IDs.
+    db.pragma("foreign_keys = OFF");
+    try {
+      deleted = db
+        .prepare("DELETE FROM products WHERE barcode_id = ?")
+        .run(normalizedBarcode);
+    } finally {
+      db.pragma("foreign_keys = ON");
+    }
+  }
 
   if (Number(deleted.changes || 0) === 0) {
     throw new Error("Unable to remove product.");

@@ -270,72 +270,74 @@ export function InventoryTab({
         </div>
       </SurfaceCard>
 
-      <SurfaceCard title="Remove Product" subtitle="Remove by barcode or choose product name from dropdown.">
-        <div className="grid gap-2 xl:grid-cols-[1.1fr_1.6fr_auto]">
-          <input
-            placeholder="Barcode"
-            value={removeBarcode}
-            onChange={(event) => {
-              setRemoveBarcode(event.target.value);
-              if (!event.target.value.trim()) {
-                setRemoveName("");
-              }
-            }}
-          />
-          <div className="relative">
+      {isSuperAdmin ? (
+        <SurfaceCard title="Remove Product" subtitle="Remove by barcode or choose product name from dropdown.">
+          <div className="grid gap-2 xl:grid-cols-[1.1fr_1.6fr_auto]">
             <input
-              placeholder="Product Name"
-              value={removeName}
+              placeholder="Barcode"
+              value={removeBarcode}
               onChange={(event) => {
-                const nextName = event.target.value;
-                setRemoveName(nextName);
-                const exact = products.find((product) => product.name.toLowerCase() === nextName.trim().toLowerCase());
-                if (exact) {
-                  setRemoveBarcode(exact.barcode_id);
-                } else if (!nextName.trim()) {
-                  setRemoveBarcode("");
+                setRemoveBarcode(event.target.value);
+                if (!event.target.value.trim()) {
+                  setRemoveName("");
                 }
               }}
             />
-            {removeName.trim() ? (
-              <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto border border-slate-600 bg-slate-900 text-slate-100">
-                {removeNameSuggestions.length === 0 ? (
-                  <p className="m-0 px-3 py-2 text-sm text-slate-300">No matching products</p>
-                ) : (
-                  removeNameSuggestions.map((product) => (
-                    <div
-                      key={`remove-${product.barcode_id}`}
-                      role="button"
-                      tabIndex={0}
-                      className="flex w-full flex-col items-start gap-0.5 border-0 border-b border-slate-700 bg-slate-900 px-3 py-2 text-left text-[15px] text-slate-100 hover:bg-slate-800 focus:bg-slate-800"
-                      onMouseDown={(event) => {
-                        event.preventDefault();
-                        setRemoveName(product.name);
-                        setRemoveBarcode(product.barcode_id);
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
+            <div className="relative">
+              <input
+                placeholder="Product Name"
+                value={removeName}
+                onChange={(event) => {
+                  const nextName = event.target.value;
+                  setRemoveName(nextName);
+                  const exact = products.find((product) => product.name.toLowerCase() === nextName.trim().toLowerCase());
+                  if (exact) {
+                    setRemoveBarcode(exact.barcode_id);
+                  } else if (!nextName.trim()) {
+                    setRemoveBarcode("");
+                  }
+                }}
+              />
+              {removeName.trim() ? (
+                <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto border border-slate-600 bg-slate-900 text-slate-100">
+                  {removeNameSuggestions.length === 0 ? (
+                    <p className="m-0 px-3 py-2 text-sm text-slate-300">No matching products</p>
+                  ) : (
+                    removeNameSuggestions.map((product) => (
+                      <div
+                        key={`remove-${product.barcode_id}`}
+                        role="button"
+                        tabIndex={0}
+                        className="flex w-full flex-col items-start gap-0.5 border-0 border-b border-slate-700 bg-slate-900 px-3 py-2 text-left text-[15px] text-slate-100 hover:bg-slate-800 focus:bg-slate-800"
+                        onMouseDown={(event) => {
                           event.preventDefault();
                           setRemoveName(product.name);
                           setRemoveBarcode(product.barcode_id);
-                        }
-                      }}
-                    >
-                      <span className="font-semibold text-slate-100">{product.name}</span>
-                      <span className="text-sm text-slate-300">
-                        {product.barcode_id} | Sell {Number(product.sell_price).toFixed(2)} | Stock {Number(product.stock).toFixed(2)}
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
-            ) : null}
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            setRemoveName(product.name);
+                            setRemoveBarcode(product.barcode_id);
+                          }
+                        }}
+                      >
+                        <span className="font-semibold text-slate-100">{product.name}</span>
+                        <span className="text-sm text-slate-300">
+                          {product.barcode_id} | Sell {Number(product.sell_price).toFixed(2)} | Stock {Number(product.stock).toFixed(2)}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              ) : null}
+            </div>
+            <button type="button" className="danger" onClick={() => void removeProductRow()}>
+              Remove
+            </button>
           </div>
-          <button type="button" className="danger" onClick={() => void removeProductRow()}>
-            Remove
-          </button>
-        </div>
-      </SurfaceCard>
+        </SurfaceCard>
+      ) : null}
 
       {isSuperAdmin ? (
         <SurfaceCard title="SuperAdmin Inventory Tools" subtitle="Clear all product records and export/import inventory backups.">
