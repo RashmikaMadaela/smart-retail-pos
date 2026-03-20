@@ -6,9 +6,11 @@ const SummaryCharts = lazy(() => import("./SummaryCharts"));
 type SummaryStripProps = {
   summary: Summary | null;
   netColor: string;
+  isSuperAdmin?: boolean;
+  onClearAllData?: () => void;
 };
 
-export function SummaryStrip({ summary, netColor }: SummaryStripProps) {
+export function SummaryStrip({ summary, netColor, isSuperAdmin = false, onClearAllData }: SummaryStripProps) {
   const safeSummary = summary ?? {
     gross_sales: 0,
     cogs: 0,
@@ -32,6 +34,20 @@ export function SummaryStrip({ summary, netColor }: SummaryStripProps) {
 
   return (
     <section className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+      {isSuperAdmin ? (
+        <div className="xl:col-span-2 rounded-xl border border-rose-500/45 bg-rose-500/10 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="m-0 text-xs uppercase tracking-[0.12em] text-rose-200">SuperAdmin Danger Zone</p>
+              <p className="m-0 mt-1 text-sm text-rose-100">Clear all business data tables. This action cannot be undone.</p>
+            </div>
+            <button type="button" className="danger" onClick={onClearAllData}>
+              Clear All Data
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <div className="grid gap-3 sm:grid-cols-2">
         <article className="rounded-xl border border-border/80 bg-background/45 p-4">
           <h3 className="m-0 text-sm font-semibold uppercase tracking-[0.12em] text-muted-foreground">Gross Sales</h3>

@@ -69,6 +69,8 @@ export const posApiClient = {
     ),
   clearInventoryStock: (role: "SuperAdmin") =>
     safeCall(() => window.posApi.clearInventoryStock(role) as Promise<ApiResult<{ rows_affected: number }>>, "Unable to clear inventory stock"),
+  clearAllData: (role: "SuperAdmin") =>
+    safeCall(() => window.posApi.clearAllData(role) as Promise<ApiResult<{ rows_affected: number }>>, "Unable to clear all data"),
   exportInventoryData: (role: "SuperAdmin") =>
     safeCall(
       () => window.posApi.exportInventoryData(role) as Promise<ApiResult<{ file_path: string; product_count: number }>>,

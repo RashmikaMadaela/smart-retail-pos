@@ -31,6 +31,7 @@ declare global {
       exportSaleBillPdf: (saleId: number) => Promise<{ ok: boolean; data?: any; error?: string }>;
       exportBarcodePdf: (payload: unknown) => Promise<{ ok: boolean; data?: any; error?: string }>;
       clearInventoryStock: (role: "SuperAdmin") => Promise<{ ok: boolean; data?: any; error?: string }>;
+      clearAllData: (role: "SuperAdmin") => Promise<{ ok: boolean; data?: any; error?: string }>;
       exportInventoryData: (role: "SuperAdmin") => Promise<{ ok: boolean; data?: any; error?: string }>;
       importInventoryData: (payload: { role: "SuperAdmin"; file_path: string }) => Promise<{ ok: boolean; data?: any; error?: string }>;
       pickInventoryImportFile: (role: "SuperAdmin") => Promise<{ ok: boolean; data?: any; error?: string }>;

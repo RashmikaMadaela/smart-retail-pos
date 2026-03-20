@@ -44,6 +44,44 @@ export function clearInventoryStock(): ServiceResult<{ rows_affected: number }> 
   }
 }
 
+export function clearAllBusinessData(): ServiceResult<{ rows_affected: number }> {
+  try {
+    const db = getDb();
+
+    db.pragma("foreign_keys = OFF");
+    try {
+      const tx = db.transaction(() => {
+        let rowsAffected = 0;
+        const deleteTable = (tableName: string) => {
+          const result = db.prepare(`DELETE FROM ${tableName}`).run();
+          rowsAffected += Number(result.changes || 0);
+        };
+
+        // Keep users table intact to prevent lockout after reset.
+        deleteTable("sale_items");
+        deleteTable("sales");
+        deleteTable("supplier_payments");
+        deleteTable("supplier_batch_items");
+        deleteTable("supplier_batches");
+        deleteTable("customers");
+        deleteTable("suppliers");
+        deleteTable("products");
+        deleteTable("expenses");
+
+        db.prepare("DELETE FROM sqlite_sequence WHERE name IN ('sales','sale_items','customers','suppliers','supplier_batches','supplier_batch_items','supplier_payments','expenses')").run();
+
+        return rowsAffected;
+      });
+
+      return { ok: true, data: { rows_affected: tx() } };
+    } finally {
+      db.pragma("foreign_keys = ON");
+    }
+  } catch (error) {
+    return { ok: false, error: `Error: ${String((error as Error).message || error)}` };
+  }
+}
+
 export async function exportInventoryToJson(): Promise<ServiceResult<{ file_path: string; product_count: number }>> {
   try {
     const db = getDb();

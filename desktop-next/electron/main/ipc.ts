@@ -22,7 +22,7 @@ import {
 } from "../../backend/services/ledgerService";
 import { createExpense, listExpenses } from "../../backend/services/expenseService";
 import { exportBarcodePdf, exportSaleBillPdf } from "../../backend/services/printService";
-import { clearInventoryStock, exportInventoryToJson, importInventoryFromJson } from "../../backend/services/inventoryAdminService";
+import { clearAllBusinessData, clearInventoryStock, exportInventoryToJson, importInventoryFromJson } from "../../backend/services/inventoryAdminService";
 
 const loginSchema = z.object({
   username: z.string().min(1),
@@ -485,6 +485,15 @@ export function registerIpcHandlers() {
       return fail("SuperAdmin role required.");
     }
     const result = clearInventoryStock();
+    return result.ok ? ok(result.data) : fail(result.error);
+  });
+
+  ipcMain.handle("inventory.clearAllData", async (_event, payload) => {
+    const parsed = superAdminRoleSchema.safeParse(payload);
+    if (!parsed.success) {
+      return fail("SuperAdmin role required.");
+    }
+    const result = clearAllBusinessData();
     return result.ok ? ok(result.data) : fail(result.error);
   });
 
