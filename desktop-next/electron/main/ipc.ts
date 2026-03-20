@@ -2,7 +2,7 @@ import { BrowserWindow, dialog, ipcMain, shell } from "electron";
 import type { OpenDialogOptions } from "electron";
 import { z } from "zod";
 import { login } from "../../backend/services/authService";
-import { listProducts, searchProducts } from "../../backend/services/catalogService";
+import { createProduct, listProducts, searchProducts } from "../../backend/services/catalogService";
 import { getFinancialSummary } from "../../backend/services/reportService";
 import { completeHeldSale, holdSale, listHeldSales, processSale, recallHeldSale } from "../../backend/services/salesService";
 import {
@@ -35,6 +35,16 @@ const searchSchema = z.object({
 
 const listSchema = z.object({
   limit: z.number().int().positive().max(1000).optional(),
+});
+
+const createProductSchema = z.object({
+  barcode_id: z.string().optional(),
+  name: z.string().min(1),
+  qty: z.number().nonnegative(),
+  buy_price: z.number().positive(),
+  sell_price: z.number().positive(),
+  default_discount_pct: z.number().nonnegative().max(100).optional(),
+  card_surcharge_pct: z.number().nonnegative().max(100).optional(),
 });
 
 const cartItemSchema = z.object({
@@ -226,6 +236,19 @@ export function registerIpcHandlers() {
       return fail("Invalid search payload");
     }
     return ok(searchProducts(parsed.data.searchText, parsed.data.limit ?? 25));
+  });
+
+  ipcMain.handle("catalog.createProduct", async (_event, payload) => {
+    const parsed = createProductSchema.safeParse(payload ?? {});
+    if (!parsed.success) {
+      return fail("Invalid createProduct payload");
+    }
+    try {
+      const created = createProduct(parsed.data);
+      return ok(created);
+    } catch (err) {
+      return fail(String((err as Error).message || err));
+    }
   });
 
   ipcMain.handle("report.summary", async () => {

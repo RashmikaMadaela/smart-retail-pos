@@ -143,6 +143,28 @@ export default function App() {
     }
   }
 
+  async function createInventoryProductNow(payload: {
+    barcode_id?: string;
+    name: string;
+    qty: number;
+    buy_price: number;
+    sell_price: number;
+    default_discount_pct?: number;
+    card_surcharge_pct?: number;
+  }): Promise<{ ok: true; barcode_id: string; action: "created" | "updated" } | { ok: false }> {
+    const response = await posApiClient.createProduct(payload);
+    if (!response.ok) {
+      pushError(response.error || "Unable to add product.");
+      return { ok: false };
+    }
+
+    const generatedBarcode = response.data.barcode_id;
+    const actionLabel = response.data.action === "updated" ? "updated" : "added";
+    pushMessage(`Product ${actionLabel} successfully (${generatedBarcode}).`);
+    await refreshProducts();
+    return { ok: true, barcode_id: generatedBarcode, action: response.data.action };
+  }
+
   async function refreshHeldSales(cashierId?: number) {
     const response = await posApiClient.listHeldSales(cashierId);
     if (response.ok) {
@@ -1265,6 +1287,7 @@ export default function App() {
                 <InventoryTab
                   products={products}
                   onRefreshProducts={() => void refreshProducts()}
+                  onCreateProduct={(payload) => createInventoryProductNow(payload)}
                   isSuperAdmin={isSuperAdmin}
                   onClearInventory={() => void clearInventoryStockNow()}
                   onExportInventory={() => void exportInventoryNow()}

@@ -1,9 +1,12 @@
 export type Product = {
   barcode_id: string;
   name: string;
+  buy_price?: number;
   sell_price: number;
   stock: number;
   default_discount_pct?: number;
+  card_surcharge_pct?: number;
+  card_surcharge_enabled?: number;
 };
 
 export type Summary = {

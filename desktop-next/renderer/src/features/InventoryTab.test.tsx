@@ -14,6 +14,7 @@ describe("InventoryTab", () => {
           { barcode_id: "P002", name: "Yogurt", sell_price: 180, stock: 3 },
         ]}
         onRefreshProducts={onRefreshProducts}
+        onCreateProduct={vi.fn().mockResolvedValue({ ok: true, barcode_id: "PS-10001", action: "created" })}
         isSuperAdmin={false}
         onClearInventory={vi.fn()}
         onExportInventory={vi.fn()}

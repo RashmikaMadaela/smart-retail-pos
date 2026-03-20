@@ -7,6 +7,8 @@ const api = {
     ipcRenderer.invoke("catalog.listProducts", { limit }),
   searchProducts: (searchText: string, limit?: number) =>
     ipcRenderer.invoke("catalog.searchProducts", { searchText, limit }),
+  createProduct: (payload: unknown) =>
+    ipcRenderer.invoke("catalog.createProduct", payload),
   getSummary: () => ipcRenderer.invoke("report.summary"),
   processSale: (payload: unknown) => ipcRenderer.invoke("sales.processSale", payload),
   holdSale: (payload: unknown) => ipcRenderer.invoke("sales.holdSale", payload),

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Product } from "./types";
 import { SurfaceCard } from "@/components/ui/SurfaceCard";
 import { ToolbarCard } from "@/components/ui/ToolbarCard";
@@ -6,6 +6,15 @@ import { ToolbarCard } from "@/components/ui/ToolbarCard";
 type InventoryTabProps = {
   products: Product[];
   onRefreshProducts: () => void;
+  onCreateProduct: (payload: {
+    barcode_id?: string;
+    name: string;
+    qty: number;
+    buy_price: number;
+    sell_price: number;
+    default_discount_pct?: number;
+    card_surcharge_pct?: number;
+  }) => Promise<{ ok: true; barcode_id: string; action: "created" | "updated" } | { ok: false }>;
   isSuperAdmin: boolean;
   onClearInventory: () => void;
   onExportInventory: () => void;
@@ -17,6 +26,7 @@ type InventoryTabProps = {
 export function InventoryTab({
   products,
   onRefreshProducts,
+  onCreateProduct,
   isSuperAdmin,
   onClearInventory,
   onExportInventory,
@@ -27,6 +37,63 @@ export function InventoryTab({
   const [inventorySearch, setInventorySearch] = useState("");
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const [importFilePath, setImportFilePath] = useState("");
+  const [newBarcode, setNewBarcode] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newQty, setNewQty] = useState("0");
+  const [newBuyPrice, setNewBuyPrice] = useState("");
+  const [newSellPrice, setNewSellPrice] = useState("");
+  const [newDiscPct, setNewDiscPct] = useState("0");
+  const [newCardSurchargePct, setNewCardSurchargePct] = useState("");
+  const [barcodeMatched, setBarcodeMatched] = useState(false);
+
+  useEffect(() => {
+    const normalizedBarcode = newBarcode.trim().toLowerCase();
+    if (!normalizedBarcode) {
+      setBarcodeMatched(false);
+      return;
+    }
+
+    const match = products.find((product) => product.barcode_id.trim().toLowerCase() === normalizedBarcode);
+    if (!match) {
+      setBarcodeMatched(false);
+      return;
+    }
+
+    setBarcodeMatched(true);
+    setNewName(match.name || "");
+    setNewQty(String(Number(match.stock || 0)));
+    setNewBuyPrice(String(Number(match.buy_price || 0)));
+    setNewSellPrice(String(Number(match.sell_price || 0)));
+    setNewDiscPct(String(Number(match.default_discount_pct || 0)));
+    const surchargePct = Number(match.card_surcharge_enabled || 0) > 0 ? Number(match.card_surcharge_pct || 0) : 0;
+    setNewCardSurchargePct(String(surchargePct));
+  }, [newBarcode, products]);
+
+  async function addProductRow() {
+    const payload = {
+      barcode_id: newBarcode.trim() || undefined,
+      name: newName.trim(),
+      qty: Number(newQty || "0"),
+      buy_price: Number(newBuyPrice || "0"),
+      sell_price: Number(newSellPrice || "0"),
+      default_discount_pct: Number(newDiscPct || "0"),
+      card_surcharge_pct: Number(newCardSurchargePct || "0"),
+    };
+
+    const result = await onCreateProduct(payload);
+    if (!result.ok) {
+      return;
+    }
+
+    setNewBarcode("");
+    setNewName("");
+    setNewQty("0");
+    setNewBuyPrice("");
+    setNewSellPrice("");
+    setNewDiscPct("0");
+    setNewCardSurchargePct("");
+    setBarcodeMatched(false);
+  }
 
   const filtered = useMemo(() => {
     const keyword = inventorySearch.trim().toLowerCase();
@@ -66,6 +133,44 @@ export function InventoryTab({
           </>
         }
       />
+
+      <SurfaceCard title="Add Product" subtitle="Single-row quick entry. Leave barcode blank to auto-generate as PS-10001, PS-10002, ...">
+        {barcodeMatched ? <p className="mb-2 mt-0 text-xs text-sky-200">Existing barcode found. Fields auto-filled, edit and click Update.</p> : null}
+        <div className="grid gap-2 xl:grid-cols-[1.1fr_1.6fr_0.7fr_0.9fr_0.9fr_0.7fr_1fr_auto]">
+          <input placeholder="Barcode (optional)" value={newBarcode} onChange={(event) => setNewBarcode(event.target.value)} />
+          <input placeholder="Product Name" value={newName} onChange={(event) => setNewName(event.target.value)} />
+          <input type="number" min="0" step="1" placeholder="Qty" value={newQty} onChange={(event) => setNewQty(event.target.value)} />
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="Buying Price"
+            value={newBuyPrice}
+            onChange={(event) => setNewBuyPrice(event.target.value)}
+          />
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="Selling Price"
+            value={newSellPrice}
+            onChange={(event) => setNewSellPrice(event.target.value)}
+          />
+          <input type="number" min="0" max="100" step="0.01" placeholder="Disc (%)" value={newDiscPct} onChange={(event) => setNewDiscPct(event.target.value)} />
+          <input
+            type="number"
+            min="0"
+            max="100"
+            step="0.01"
+            placeholder="Card surcharge (%)"
+            value={newCardSurchargePct}
+            onChange={(event) => setNewCardSurchargePct(event.target.value)}
+          />
+          <button type="button" onClick={() => void addProductRow()}>
+            {barcodeMatched ? "Update" : "Add"}
+          </button>
+        </div>
+      </SurfaceCard>
 
       {isSuperAdmin ? (
         <SurfaceCard title="SuperAdmin Inventory Tools" subtitle="Clear all product records and export/import inventory backups.">
@@ -120,17 +225,20 @@ export function InventoryTab({
         <table className="m-0">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Name</th>
+              <th>Barcode</th>
+              <th>Product Name</th>
+              <th>Qty</th>
+              <th>Buying Price</th>
               <th>Selling Price</th>
-              <th>Stock</th>
+              <th>Disc (%)</th>
+              <th>Card Surcharge (%)</th>
               <th>Status</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                <td colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
                   No products match the current filters.
                 </td>
               </tr>
@@ -138,12 +246,16 @@ export function InventoryTab({
               filtered.map((product) => {
                 const stockValue = Number(product.stock);
                 const status = stockValue <= 0 ? "Out" : stockValue <= 5 ? "Low" : "Healthy";
+                const surcharge = Number(product.card_surcharge_enabled || 0) > 0 ? Number(product.card_surcharge_pct || 0).toFixed(2) : "0.00";
                 return (
                   <tr key={product.barcode_id}>
                     <td>{product.barcode_id}</td>
                     <td>{product.name}</td>
-                    <td>{Number(product.sell_price).toFixed(2)}</td>
                     <td>{stockValue.toFixed(2)}</td>
+                    <td>{Number(product.buy_price || 0).toFixed(2)}</td>
+                    <td>{Number(product.sell_price).toFixed(2)}</td>
+                    <td>{Number(product.default_discount_pct || 0).toFixed(2)}</td>
+                    <td>{surcharge}</td>
                     <td>{status}</td>
                   </tr>
                 );
