@@ -32,14 +32,14 @@ function resolveBillLogoPath() {
   ];
 
   const filenameCandidates = ["logo.jpeg", "logo.jpg", "logo.png", "logo.webp"];
-  const defaultLogoCandidates = searchRoots.flatMap((root) => [
-    ...filenameCandidates.map((name) => path.resolve(root, "renderer/public", name)),
+  const bundledLogoCandidates = searchRoots.flatMap((root) => [
     ...filenameCandidates.map((name) => path.resolve(root, "dist", name)),
+    ...filenameCandidates.map((name) => path.resolve(root, "renderer/public", name)),
   ]);
 
-  const defaultLogo = defaultLogoCandidates.find((candidate) => fs.existsSync(candidate));
-  if (defaultLogo) {
-    return defaultLogo;
+  const bundledLogo = bundledLogoCandidates.find((candidate) => fs.existsSync(candidate));
+  if (bundledLogo) {
+    return bundledLogo;
   }
 
   const envLogoPath = process.env.POS_BILL_LOGO_PATH;
@@ -105,29 +105,14 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
     const logoPath = resolveBillLogoPath();
     if (logoPath) {
       try {
-        const logoWidth = Math.min(usableWidth * 0.62, 130);
+        const logoWidth = Math.min(usableWidth * 0.76, 150);
         const x = (pageWidth - logoWidth) / 2;
-        doc.image(logoPath, x, y, { fit: [logoWidth, 70], align: "center" });
-        y += 76;
+        doc.image(logoPath, x, y, { fit: [logoWidth, 86], align: "center" });
+        y += 92;
       } catch {
         // Ignore logo rendering errors and continue with text receipt.
       }
     }
-
-    doc.font("Helvetica-Bold").fontSize(9.5).fillColor("#111111").text(process.env.POS_BILL_STORE_NAME || "Priyanka Stores", horizontalPadding, y, {
-      width: usableWidth,
-      align: "center",
-    });
-    y += lineHeight;
-    doc.font("Helvetica").fontSize(9).text(process.env.POS_BILL_STORE_LOCATION || "Polonnaruwa", horizontalPadding, y, {
-      width: usableWidth,
-      align: "center",
-    });
-    y += lineHeight;
-    doc.text(process.env.POS_BILL_STORE_PHONE || "0700000000", horizontalPadding, y, { width: usableWidth, align: "center" });
-    y += lineHeight;
-    doc.text(process.env.POS_BILL_STORE_EMAIL || "info@example.com", horizontalPadding, y, { width: usableWidth, align: "center" });
-    y += lineHeight + 3;
 
     drawDivider(y);
     y += 6;
