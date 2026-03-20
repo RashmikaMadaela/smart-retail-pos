@@ -31,6 +31,8 @@ export const posApiClient = {
     safeCall(() => window.posApi.listHeldSales(cashierId) as Promise<ApiResult<any[]>>, "Unable to load held sales"),
   recallHeldSale: (saleId: number) =>
     safeCall(() => window.posApi.recallHeldSale(saleId) as Promise<ApiResult<any>>, "Unable to recall held sale"),
+  voidHeldSale: (saleId: number) =>
+    safeCall(() => window.posApi.voidHeldSale(saleId) as Promise<ApiResult<{ message: string }>>, "Unable to void held sale"),
   completeHeldSale: (payload: unknown) =>
     safeCall(() => window.posApi.completeHeldSale(payload) as Promise<ApiResult<{ message: string }>>, "Unable to complete held sale"),
 
@@ -61,10 +63,13 @@ export const posApiClient = {
   createExpense: (payload: unknown) =>
     safeCall(() => window.posApi.createExpense(payload) as Promise<ApiResult<{ expense_id: number }>>, "Unable to create expense"),
   exportSaleBillPdf: (saleId: number) =>
-    safeCall(() => window.posApi.exportSaleBillPdf(saleId) as Promise<ApiResult<{ file_path: string }>>, "Unable to export sale PDF"),
+    safeCall(
+      () => window.posApi.exportSaleBillPdf(saleId) as Promise<ApiResult<{ file_path: string; printed: boolean; printer_name: string | null }>>,
+      "Unable to export sale PDF",
+    ),
   exportBarcodePdf: (payload: unknown) =>
     safeCall(
-      () => window.posApi.exportBarcodePdf(payload) as Promise<ApiResult<{ file_path: string; labels: number }>>,
+      () => window.posApi.exportBarcodePdf(payload) as Promise<ApiResult<{ file_path: string; labels: number; printed: boolean; printer_name: string | null }>>,
       "Unable to export barcode PDF",
     ),
   clearInventoryStock: (role: "SuperAdmin") =>

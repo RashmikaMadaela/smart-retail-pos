@@ -9,6 +9,7 @@ type HeldSalesTabProps = {
   onSelectHeldSale: (id: number) => void;
   onRecallHeldSale: () => void;
   onCompleteHeldSale: () => void;
+  onRemoveHeldSale: () => void;
 };
 
 export function HeldSalesTab({
@@ -18,6 +19,7 @@ export function HeldSalesTab({
   onSelectHeldSale,
   onRecallHeldSale,
   onCompleteHeldSale,
+  onRemoveHeldSale,
 }: HeldSalesTabProps) {
   return (
     <section className="space-y-4">
@@ -34,6 +36,9 @@ export function HeldSalesTab({
             </button>
             <button type="button" onClick={onCompleteHeldSale}>
               Complete Selected
+            </button>
+            <button type="button" onClick={onRemoveHeldSale} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Remove
             </button>
           </>
         }

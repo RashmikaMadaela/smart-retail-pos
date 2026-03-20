@@ -7,6 +7,7 @@ beforeEach(() => {
     holdSale: vi.fn().mockResolvedValue({ ok: true, data: { sale_id: 11 } }),
     listHeldSales: vi.fn().mockResolvedValue({ ok: true, data: [] }),
     recallHeldSale: vi.fn().mockResolvedValue({ ok: true, data: {} }),
+    voidHeldSale: vi.fn().mockResolvedValue({ ok: true, data: { message: "ok" } }),
     completeHeldSale: vi.fn().mockResolvedValue({ ok: true, data: { message: "done" } }),
     createOrGetCustomer: vi.fn().mockResolvedValue({ ok: true, data: { id: 1 } }),
     searchCustomers: vi.fn().mockResolvedValue({ ok: true, data: [] }),

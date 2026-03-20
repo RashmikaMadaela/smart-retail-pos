@@ -372,6 +372,13 @@ export function recallHeldSale(saleId: number): ServiceResult<SaleWithItems> {
   if (payload.sale.status !== "HELD") {
     return { ok: false, error: "Sale is not in HELD status." };
   }
+  
+  // Void the held sale after recalling
+  const voidResult = voidHeldSale(Number(saleId));
+  if (!voidResult.ok) {
+    return { ok: false, error: `Failed to void sale after recall: ${voidResult.error}` };
+  }
+  
   return { ok: true, data: payload };
 }
 
@@ -502,6 +509,27 @@ export function completeHeldSale(input: CompleteHeldSaleInput): ServiceResult<st
 
     const message = tx();
     return { ok: true, data: message };
+  } catch (err) {
+    return { ok: false, error: `Error: ${String((err as Error).message || err)}` };
+  }
+}
+
+export function voidHeldSale(saleId: number): ServiceResult<string> {
+  try {
+    const db = getDb();
+    const sale = db.prepare("SELECT * FROM sales WHERE id = ?").get(Number(saleId)) as any;
+    
+    if (!sale) {
+      return { ok: false, error: "Sale not found." };
+    }
+    
+    if (sale.status !== "HELD") {
+      return { ok: false, error: "Only held sales can be voided." };
+    }
+    
+    db.prepare("UPDATE sales SET status = 'VOID', timestamp = CURRENT_TIMESTAMP WHERE id = ?").run(Number(saleId));
+    
+    return { ok: true, data: "Held sale voided successfully." };
   } catch (err) {
     return { ok: false, error: `Error: ${String((err as Error).message || err)}` };
   }

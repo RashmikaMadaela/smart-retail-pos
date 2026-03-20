@@ -17,6 +17,7 @@ const api = {
   listHeldSales: (cashierId?: number) =>
     ipcRenderer.invoke("sales.listHeldSales", cashierId ? { cashier_id: cashierId } : {}),
   recallHeldSale: (saleId: number) => ipcRenderer.invoke("sales.recallHeldSale", { sale_id: saleId }),
+  voidHeldSale: (saleId: number) => ipcRenderer.invoke("sales.voidHeldSale", { sale_id: saleId }),
   completeHeldSale: (payload: unknown) =>
     ipcRenderer.invoke("sales.completeHeldSale", payload),
   createOrGetCustomer: (payload: unknown) => ipcRenderer.invoke("customer.createOrGet", payload),

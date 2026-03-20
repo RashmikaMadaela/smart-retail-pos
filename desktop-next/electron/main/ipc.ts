@@ -1,10 +1,11 @@
 import { BrowserWindow, dialog, ipcMain, shell } from "electron";
 import type { OpenDialogOptions } from "electron";
+import { pathToFileURL } from "node:url";
 import { z } from "zod";
 import { login } from "../../backend/services/authService";
 import { createProduct, listProducts, removeProduct, searchProducts } from "../../backend/services/catalogService";
 import { getFinancialSummary } from "../../backend/services/reportService";
-import { completeHeldSale, holdSale, listHeldSales, processSale, recallHeldSale } from "../../backend/services/salesService";
+import { completeHeldSale, holdSale, listHeldSales, processSale, recallHeldSale, voidHeldSale } from "../../backend/services/salesService";
 import {
   createOrGetCustomer,
   createSupplier,
@@ -83,6 +84,10 @@ const holdSaleSchema = z.object({
 });
 
 const recallSchema = z.object({
+  sale_id: z.number().int().positive(),
+});
+
+const voidSchema = z.object({
   sale_id: z.number().int().positive(),
 });
 
@@ -201,6 +206,7 @@ const barcodePrintSchema = z.object({
         product_id: z.string().min(1),
         name: z.string().optional(),
         qty: z.number().positive(),
+        sell_price: z.number().nonnegative().optional(),
       }),
     )
     .min(1),
@@ -221,6 +227,62 @@ function ok<T>(data: T) {
 
 function fail(message: string) {
   return { ok: false as const, error: message };
+}
+
+async function resolveConnectedPrinter(webContents: Electron.WebContents): Promise<{ connected: boolean; printerName?: string }> {
+  try {
+    const printers = await webContents.getPrintersAsync();
+    if (!printers || printers.length === 0) {
+      return { connected: false };
+    }
+
+    const preferredPrinter = (process.env.POS_PRINTER_NAME || "").trim();
+    if (preferredPrinter) {
+      const matched = printers.find((printer) => printer.name === preferredPrinter);
+      if (matched) {
+        return { connected: true, printerName: matched.name };
+      }
+    }
+
+    const fallback = printers.find((printer) => printer.isDefault) || printers[0];
+    return { connected: true, printerName: fallback?.name };
+  } catch {
+    return { connected: false };
+  }
+}
+
+async function printPdfFile(filePath: string, printerName?: string): Promise<boolean> {
+  const win = new BrowserWindow({
+    show: false,
+    webPreferences: {
+      sandbox: true,
+    },
+  });
+
+  try {
+    await win.loadURL(pathToFileURL(filePath).toString());
+
+    await new Promise<void>((resolve) => {
+      setTimeout(() => resolve(), 250);
+    });
+
+    return await new Promise<boolean>((resolve) => {
+      win.webContents.print(
+        {
+          silent: true,
+          printBackground: true,
+          deviceName: printerName,
+        },
+        (success) => resolve(Boolean(success)),
+      );
+    });
+  } catch {
+    return false;
+  } finally {
+    if (!win.isDestroyed()) {
+      win.destroy();
+    }
+  }
 }
 
 export function registerIpcHandlers() {
@@ -320,6 +382,15 @@ export function registerIpcHandlers() {
       return fail("Invalid completeHeldSale payload");
     }
     const result = completeHeldSale(parsed.data);
+    return result.ok ? ok({ message: result.data }) : fail(result.error);
+  });
+
+  ipcMain.handle("sales.voidHeldSale", async (_event, payload) => {
+    const parsed = voidSchema.safeParse(payload);
+    if (!parsed.success) {
+      return fail("Invalid voidHeldSale payload");
+    }
+    const result = voidHeldSale(parsed.data.sale_id);
     return result.ok ? ok({ message: result.data }) : fail(result.error);
   });
 
@@ -461,22 +532,44 @@ export function registerIpcHandlers() {
     return result.ok ? ok({ expense_id: result.data }) : fail(result.error);
   });
 
-  ipcMain.handle("print.salePdf", async (_event, payload) => {
+  ipcMain.handle("print.salePdf", async (event, payload) => {
     const parsed = salePrintSchema.safeParse(payload);
     if (!parsed.success) {
       return fail("Invalid sale print payload");
     }
     const result = await exportSaleBillPdf(parsed.data.sale_id);
-    return result.ok ? ok(result.data) : fail(result.error);
+    if (!result.ok) {
+      return fail(result.error);
+    }
+
+    const printer = await resolveConnectedPrinter(event.sender);
+    const printed = printer.connected ? await printPdfFile(result.data.file_path, printer.printerName) : false;
+
+    return ok({
+      ...result.data,
+      printed,
+      printer_name: printer.printerName || null,
+    });
   });
 
-  ipcMain.handle("print.barcodePdf", async (_event, payload) => {
+  ipcMain.handle("print.barcodePdf", async (event, payload) => {
     const parsed = barcodePrintSchema.safeParse(payload);
     if (!parsed.success) {
       return fail("Invalid barcode print payload");
     }
     const result = await exportBarcodePdf({ items: parsed.data.items });
-    return result.ok ? ok(result.data) : fail(result.error);
+    if (!result.ok) {
+      return fail(result.error);
+    }
+
+    const printer = await resolveConnectedPrinter(event.sender);
+    const printed = printer.connected ? await printPdfFile(result.data.file_path, printer.printerName) : false;
+
+    return ok({
+      ...result.data,
+      printed,
+      printer_name: printer.printerName || null,
+    });
   });
 
   ipcMain.handle("inventory.clearStock", async (_event, payload) => {

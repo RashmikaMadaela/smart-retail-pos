@@ -8,6 +8,7 @@ describe("HeldSalesTab", () => {
     const onSelectHeldSale = vi.fn();
     const onRecallHeldSale = vi.fn();
     const onCompleteHeldSale = vi.fn();
+    const onRemoveHeldSale = vi.fn();
 
     render(
       <HeldSalesTab
@@ -17,6 +18,7 @@ describe("HeldSalesTab", () => {
         onSelectHeldSale={onSelectHeldSale}
         onRecallHeldSale={onRecallHeldSale}
         onCompleteHeldSale={onCompleteHeldSale}
+        onRemoveHeldSale={onRemoveHeldSale}
       />,
     );
 

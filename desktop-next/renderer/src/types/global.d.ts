@@ -13,6 +13,7 @@ declare global {
       holdSale: (payload: unknown) => Promise<{ ok: boolean; data?: any; error?: string }>;
       listHeldSales: (cashierId?: number) => Promise<{ ok: boolean; data?: any; error?: string }>;
       recallHeldSale: (saleId: number) => Promise<{ ok: boolean; data?: any; error?: string }>;
+      voidHeldSale: (saleId: number) => Promise<{ ok: boolean; data?: any; error?: string }>;
       completeHeldSale: (payload: unknown) => Promise<{ ok: boolean; data?: any; error?: string }>;
       createOrGetCustomer: (payload: unknown) => Promise<{ ok: boolean; data?: any; error?: string }>;
       searchCustomers: (payload: unknown) => Promise<{ ok: boolean; data?: any; error?: string }>;

@@ -229,13 +229,18 @@ export default function App() {
         product_id: item.product_id,
         name: item.name,
         qty: Number(item.qty),
+        sell_price: Number(item.sell_price),
       })),
     });
     if (!response.ok) {
       pushError(response.error || "Barcode PDF export failed.");
       return;
     }
-    pushMessage(`Barcode PDF saved: ${response.data.file_path}`);
+    if (response.data.printed) {
+      pushMessage(`Barcodes printed on ${response.data.printer_name || "default printer"}. PDF saved: ${response.data.file_path}`);
+      return;
+    }
+    pushMessage(`No printer connected. Barcode PDF saved: ${response.data.file_path}`);
   }
 
   async function refreshSupplierLedger(supplierId: number) {
@@ -499,7 +504,11 @@ export default function App() {
     pushMessage(`Checkout successful. Sale ID: ${response.data.sale_id}`);
     const printResult = await posApiClient.exportSaleBillPdf(response.data.sale_id);
     if (printResult.ok) {
-      pushMessage(`Checkout successful. Sale ID: ${response.data.sale_id}. Bill PDF: ${printResult.data.file_path}`);
+      if (printResult.data.printed) {
+        pushMessage(`Checkout successful. Sale ID: ${response.data.sale_id}. Receipt printed on ${printResult.data.printer_name || "default printer"}. PDF: ${printResult.data.file_path}`);
+      } else {
+        pushMessage(`Checkout successful. Sale ID: ${response.data.sale_id}. No printer connected, PDF saved: ${printResult.data.file_path}`);
+      }
     }
     clearCart();
     setPaidAmount("");
@@ -625,13 +634,35 @@ export default function App() {
     pushMessage(`Held sale ${finalSaleId} completed.`);
     const printResult = await posApiClient.exportSaleBillPdf(finalSaleId);
     if (printResult.ok) {
-      pushMessage(`Held sale ${finalSaleId} completed. Bill PDF: ${printResult.data.file_path}`);
+      if (printResult.data.printed) {
+        pushMessage(`Held sale ${finalSaleId} completed. Receipt printed on ${printResult.data.printer_name || "default printer"}. PDF: ${printResult.data.file_path}`);
+      } else {
+        pushMessage(`Held sale ${finalSaleId} completed. No printer connected, PDF saved: ${printResult.data.file_path}`);
+      }
     }
     clearCart();
     setSelectedHeldId(null);
     await refreshHeldSales(user?.id);
     await refreshProducts();
     await refreshSummary();
+  }
+
+  async function removeHeldSaleNow() {
+    if (!selectedHeldId) {
+      pushError("Select a held sale first.");
+      return;
+    }
+
+    const response = await posApiClient.voidHeldSale(selectedHeldId);
+    if (!response.ok) {
+      pushError(response.error || "Failed to remove held sale.");
+      return;
+    }
+
+    const saleId = selectedHeldId;
+    pushMessage(`Held sale ${saleId} removed.`);
+    setSelectedHeldId(null);
+    await refreshHeldSales(user?.id);
   }
 
   async function recordCustomerSettlement() {
@@ -1407,6 +1438,7 @@ export default function App() {
                   onSelectHeldSale={setSelectedHeldId}
                   onRecallHeldSale={recallHeldSaleIntoCart}
                   onCompleteHeldSale={completeHeldSaleNow}
+                  onRemoveHeldSale={removeHeldSaleNow}
                 />
               ) : null}
 
