@@ -165,6 +165,18 @@ export default function App() {
     return { ok: true, barcode_id: generatedBarcode, action: response.data.action };
   }
 
+  async function removeInventoryProductNow(payload: { barcode_id: string }): Promise<{ ok: true } | { ok: false }> {
+    const response = await posApiClient.removeProduct({ barcode_id: payload.barcode_id });
+    if (!response.ok) {
+      pushError(response.error || "Unable to remove product.");
+      return { ok: false };
+    }
+
+    pushMessage(`Product removed successfully (${response.data.barcode_id}).`);
+    await refreshProducts();
+    return { ok: true };
+  }
+
   async function refreshHeldSales(cashierId?: number) {
     const response = await posApiClient.listHeldSales(cashierId);
     if (response.ok) {
@@ -1363,6 +1375,7 @@ export default function App() {
                   products={products}
                   onRefreshProducts={() => void refreshProducts()}
                   onCreateProduct={(payload) => createInventoryProductNow(payload)}
+                  onRemoveProduct={(payload) => removeInventoryProductNow(payload)}
                   isSuperAdmin={isSuperAdmin}
                   onClearInventory={() => void clearInventoryStockNow()}
                   onExportInventory={() => void exportInventoryNow()}

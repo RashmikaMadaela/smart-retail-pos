@@ -9,6 +9,8 @@ const api = {
     ipcRenderer.invoke("catalog.searchProducts", { searchText, limit }),
   createProduct: (payload: unknown) =>
     ipcRenderer.invoke("catalog.createProduct", payload),
+  removeProduct: (payload: unknown) =>
+    ipcRenderer.invoke("catalog.removeProduct", payload),
   getSummary: () => ipcRenderer.invoke("report.summary"),
   processSale: (payload: unknown) => ipcRenderer.invoke("sales.processSale", payload),
   holdSale: (payload: unknown) => ipcRenderer.invoke("sales.holdSale", payload),

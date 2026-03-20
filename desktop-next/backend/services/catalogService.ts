@@ -143,3 +143,29 @@ export function createProduct(input: CreateProductInput): { barcode_id: string; 
 
   return { barcode_id: barcodeId, action: "created" };
 }
+
+export function removeProduct(barcodeId: string): { barcode_id: string } {
+  const db = getDb();
+  const normalizedBarcode = (barcodeId || "").trim();
+  if (!normalizedBarcode) {
+    throw new Error("Product barcode is required.");
+  }
+
+  const existing = db
+    .prepare("SELECT barcode_id FROM products WHERE barcode_id = ?")
+    .get(normalizedBarcode) as { barcode_id: string } | undefined;
+
+  if (!existing) {
+    throw new Error(`Product not found: ${normalizedBarcode}`);
+  }
+
+  const deleted = db
+    .prepare("DELETE FROM products WHERE barcode_id = ?")
+    .run(normalizedBarcode);
+
+  if (Number(deleted.changes || 0) === 0) {
+    throw new Error("Unable to remove product.");
+  }
+
+  return { barcode_id: normalizedBarcode };
+}

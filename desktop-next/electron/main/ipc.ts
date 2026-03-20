@@ -2,7 +2,7 @@ import { BrowserWindow, dialog, ipcMain, shell } from "electron";
 import type { OpenDialogOptions } from "electron";
 import { z } from "zod";
 import { login } from "../../backend/services/authService";
-import { createProduct, listProducts, searchProducts } from "../../backend/services/catalogService";
+import { createProduct, listProducts, removeProduct, searchProducts } from "../../backend/services/catalogService";
 import { getFinancialSummary } from "../../backend/services/reportService";
 import { completeHeldSale, holdSale, listHeldSales, processSale, recallHeldSale } from "../../backend/services/salesService";
 import {
@@ -46,6 +46,10 @@ const createProductSchema = z.object({
   sell_price: z.number().positive(),
   default_discount_pct: z.number().nonnegative().max(100).optional(),
   card_surcharge_pct: z.number().nonnegative().max(100).optional(),
+});
+
+const removeProductSchema = z.object({
+  barcode_id: z.string().min(1),
 });
 
 const cartItemSchema = z.object({
@@ -253,6 +257,19 @@ export function registerIpcHandlers() {
     try {
       const created = createProduct(parsed.data);
       return ok(created);
+    } catch (err) {
+      return fail(String((err as Error).message || err));
+    }
+  });
+
+  ipcMain.handle("catalog.removeProduct", async (_event, payload) => {
+    const parsed = removeProductSchema.safeParse(payload ?? {});
+    if (!parsed.success) {
+      return fail("Invalid removeProduct payload");
+    }
+    try {
+      const removed = removeProduct(parsed.data.barcode_id);
+      return ok(removed);
     } catch (err) {
       return fail(String((err as Error).message || err));
     }

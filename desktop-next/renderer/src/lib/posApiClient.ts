@@ -19,6 +19,8 @@ export const posApiClient = {
     safeCall(() => window.posApi.searchProducts(searchText, limit) as Promise<ApiResult<any[]>>, "Unable to search products"),
   createProduct: (payload: unknown) =>
     safeCall(() => window.posApi.createProduct(payload) as Promise<ApiResult<{ barcode_id: string; action: "created" | "updated" }>>, "Unable to create product"),
+  removeProduct: (payload: { barcode_id: string }) =>
+    safeCall(() => window.posApi.removeProduct(payload) as Promise<ApiResult<{ barcode_id: string }>>, "Unable to remove product"),
   getSummary: () => safeCall(() => window.posApi.getSummary() as Promise<ApiResult<any>>, "Unable to load summary"),
 
   processSale: (payload: unknown) =>
