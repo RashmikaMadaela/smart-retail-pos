@@ -7,6 +7,7 @@ type BarcodeQueueItem = {
   product_id: string;
   name: string;
   qty: number;
+  sell_price: number;
 };
 
 export type BarcodePrintItem = BarcodeQueueItem;
@@ -45,7 +46,7 @@ export function OperationsTab({ products, expenses, onRefreshExpenses, onCreateE
     setQueue((prev) => {
       const existing = prev.find((item) => item.product_id === product.barcode_id);
       if (!existing) {
-        return [...prev, { product_id: product.barcode_id, name: product.name, qty }];
+        return [...prev, { product_id: product.barcode_id, name: product.name, qty, sell_price: Number(product.sell_price) }];
       }
       return prev.map((item) =>
         item.product_id === product.barcode_id ? { ...item, qty: Number((item.qty + qty).toFixed(2)) } : item,
@@ -113,13 +114,14 @@ export function OperationsTab({ products, expenses, onRefreshExpenses, onCreateE
                 <tr>
                   <th>Product ID</th>
                   <th>Name</th>
+                  <th>Price</th>
                   <th>Qty</th>
                 </tr>
               </thead>
               <tbody>
                 {queue.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="py-8 text-center text-sm text-muted-foreground">
+                    <td colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
                       No labels queued.
                     </td>
                   </tr>
@@ -128,6 +130,7 @@ export function OperationsTab({ products, expenses, onRefreshExpenses, onCreateE
                     <tr key={item.product_id}>
                       <td>{item.product_id}</td>
                       <td>{item.name}</td>
+                      <td>{Number(item.sell_price).toFixed(2)}</td>
                       <td>{item.qty.toFixed(2)}</td>
                     </tr>
                   ))
@@ -138,7 +141,7 @@ export function OperationsTab({ products, expenses, onRefreshExpenses, onCreateE
 
           <div className="mt-3 flex flex-wrap gap-2">
             <button type="button" onClick={() => void printQueueAsPdf()} disabled={queue.length === 0 || isPrinting}>
-              {isPrinting ? "Saving PDF..." : "Save Barcode PDF"}
+              {isPrinting ? "Saving/Printing..." : "Print Barcodes (Save PDF)"}
             </button>
           </div>
         </SurfaceCard>

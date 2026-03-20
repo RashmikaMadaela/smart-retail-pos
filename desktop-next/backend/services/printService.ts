@@ -10,6 +10,7 @@ type BarcodePdfItem = {
   product_id: string;
   name?: string;
   qty: number;
+  sell_price?: number;
 };
 
 type BarcodePdfInput = {
@@ -77,7 +78,7 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
 
     const outputPath = path.join(billsDir, `bill-sale-${saleId}-${nowStamp()}.pdf`);
     const mmToPt = (mm: number) => mm * 2.834645669;
-    const pageWidth = mmToPt(78);
+    const pageWidth = mmToPt(80);
     const horizontalPadding = 10;
     const usableWidth = pageWidth - horizontalPadding * 2;
     const lineHeight = 14;
@@ -235,6 +236,7 @@ export async function exportBarcodePdf(input: BarcodePdfInput): Promise<ServiceR
         product_id: String(item.product_id || "").trim(),
         name: String(item.name || "").trim(),
         qty: Number(item.qty || 0),
+        sell_price: Number(item.sell_price ?? 0),
       }))
       .filter((item) => item.product_id && Number.isFinite(item.qty) && item.qty > 0);
 
@@ -247,38 +249,49 @@ export async function exportBarcodePdf(input: BarcodePdfInput): Promise<ServiceR
     await ensureDir(barcodeDir);
 
     const outputPath = path.join(barcodeDir, `barcode-labels-${nowStamp()}.pdf`);
-    const doc = new PDFDocument({ size: "A4", margin: 36 });
+    const mmToPt = (mm: number) => mm * 2.834645669;
+    const labelWidth = mmToPt(38);
+    const labelHeight = mmToPt(25);
+    const padding = mmToPt(1.5);
+    const doc = new PDFDocument({ size: [labelWidth, labelHeight], margin: 0 });
 
-    doc.fontSize(16).text("Smart Retail POS Next", { align: "left" });
-    doc.moveDown(0.2);
-    doc.fontSize(11).text("Barcode Label Export");
-    doc.moveDown(0.8);
-
-    let y = doc.y;
     let labelCount = 0;
 
     for (const item of normalized) {
       const labelQty = Math.max(1, Math.round(item.qty));
       for (let i = 0; i < labelQty; i += 1) {
-        if (y > 730) {
-          doc.addPage();
-          y = 50;
+        if (labelCount > 0) {
+          doc.addPage({ size: [labelWidth, labelHeight], margin: 0 });
         }
 
         const png = await bwipjs.toBuffer({
           bcid: "code128",
           text: item.product_id,
-          scale: 2,
-          height: 10,
-          includetext: true,
-          textxalign: "center",
+          scale: 1,
+          height: 8,
+          includetext: false,
+          paddingwidth: 0,
+          paddingheight: 0,
         });
 
-        doc.roundedRect(36, y, 250, 86, 6).strokeColor("#c9d2e3").stroke();
-        doc.fontSize(9).fillColor("#111111").text(item.name || item.product_id, 46, y + 10, { width: 230 });
-        doc.image(png, 46, y + 28, { fit: [220, 45] });
+        doc.rect(0, 0, labelWidth, labelHeight).lineWidth(0.5).strokeColor("#d8d8d8").stroke();
+        doc.font("Helvetica-Bold").fontSize(6.6).fillColor("#111111").text(item.name || item.product_id, padding, padding, {
+          width: labelWidth - padding * 2,
+          height: mmToPt(4),
+          ellipsis: true,
+        });
+        doc.font("Helvetica").fontSize(6.4).fillColor("#222222").text(`Price: ${Number(item.sell_price || 0).toFixed(2)}`, padding, padding + mmToPt(4.2), {
+          width: labelWidth - padding * 2,
+        });
+        doc.image(png, padding, padding + mmToPt(8), {
+          fit: [labelWidth - padding * 2, mmToPt(11)],
+          align: "center",
+        });
+        doc.font("Helvetica").fontSize(6.1).fillColor("#111111").text(item.product_id, padding, labelHeight - mmToPt(4.2), {
+          width: labelWidth - padding * 2,
+          align: "center",
+        });
 
-        y += 96;
         labelCount += 1;
       }
     }
