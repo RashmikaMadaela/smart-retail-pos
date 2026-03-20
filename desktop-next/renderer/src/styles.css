@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+Sinhala:wght@400;600;700&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -24,6 +26,10 @@
   --input: 214 43% 27%;
   --ring: 201 95% 62%;
   --radius: 0.85rem;
+}
+
+html[lang="si"] {
+  font-family: "Noto Sans Sinhala", "Nirmala UI", "Iskoola Pota", sans-serif;
 }
 
 @layer base {
