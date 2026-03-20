@@ -178,6 +178,7 @@
     "settlement": "Settlement",
     "paymentAmount": "Payment Amount",
     "recordPayment": "Record Payment",
+    "delete": "Delete Customer",
     "ledger": "Ledger",
     "sale": "Sale",
     "total": "Total",

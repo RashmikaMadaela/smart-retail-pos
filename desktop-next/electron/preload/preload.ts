@@ -26,6 +26,7 @@ const api = {
   getCustomerLedger: (customerId: number) =>
     ipcRenderer.invoke("customer.getLedger", { customer_id: customerId }),
   recordCustomerPayment: (payload: unknown) => ipcRenderer.invoke("customer.recordPayment", payload),
+  deleteCustomer: (customerId: number) => ipcRenderer.invoke("customer.delete", { customer_id: customerId }),
   createSupplier: (payload: unknown) => ipcRenderer.invoke("supplier.create", payload),
   updateSupplier: (payload: unknown) => ipcRenderer.invoke("supplier.update", payload),
   listSuppliers: (payload: unknown) => ipcRenderer.invoke("supplier.list", payload),

@@ -44,6 +44,8 @@ export const posApiClient = {
     safeCall(() => window.posApi.getCustomerLedger(customerId) as Promise<ApiResult<any>>, "Unable to load customer ledger"),
   recordCustomerPayment: (payload: unknown) =>
     safeCall(() => window.posApi.recordCustomerPayment(payload) as Promise<ApiResult<{ message: string }>>, "Unable to record customer payment"),
+  deleteCustomer: (customerId: number) =>
+    safeCall(() => window.posApi.deleteCustomer(customerId) as Promise<ApiResult<{ message: string }>>, "Unable to delete customer"),
 
   createSupplier: (payload: unknown) =>
     safeCall(() => window.posApi.createSupplier(payload) as Promise<ApiResult<{ message: string }>>, "Unable to create supplier"),

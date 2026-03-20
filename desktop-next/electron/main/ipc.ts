@@ -8,6 +8,7 @@ import { getFinancialSummary } from "../../backend/services/reportService";
 import { completeHeldSale, holdSale, listHeldSales, processSale, recallHeldSale, voidHeldSale } from "../../backend/services/salesService";
 import {
   createOrGetCustomer,
+  deleteCustomer,
   createSupplier,
   getCustomer,
   getCustomerLedger,
@@ -433,6 +434,15 @@ export function registerIpcHandlers() {
       return fail("Invalid customer payment payload");
     }
     const result = recordCustomerPayment(parsed.data.customer_id, parsed.data.amount);
+    return result.ok ? ok({ message: result.data }) : fail(result.error);
+  });
+
+  ipcMain.handle("customer.delete", async (_event, payload) => {
+    const parsed = customerIdSchema.safeParse(payload);
+    if (!parsed.success) {
+      return fail("Invalid customer delete payload");
+    }
+    const result = deleteCustomer(parsed.data.customer_id);
     return result.ok ? ok({ message: result.data }) : fail(result.error);
   });
 

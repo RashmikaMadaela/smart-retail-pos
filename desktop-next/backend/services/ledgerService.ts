@@ -187,6 +187,44 @@ export function recordCustomerPayment(customerId: number, amount: number): Servi
   }
 }
 
+export function deleteCustomer(customerId: number): ServiceResult<string> {
+  try {
+    const db = getDb();
+
+    const tx = db.transaction(() => {
+      const customer = db
+        .prepare("SELECT id, total_outstanding FROM customers WHERE id = ?")
+        .get(Number(customerId)) as { id: number; total_outstanding: number } | undefined;
+      if (!customer) {
+        throw new Error("Customer not found.");
+      }
+
+      const outstanding = Number(customer.total_outstanding || 0);
+      if (outstanding > 0) {
+        throw new Error("Cannot delete customer with outstanding balance.");
+      }
+
+      const saleCountRow = db
+        .prepare("SELECT COUNT(1) AS count FROM sales WHERE customer_id = ?")
+        .get(Number(customerId)) as { count: number };
+      if (Number(saleCountRow.count) > 0) {
+        throw new Error("Cannot delete customer with sale history.");
+      }
+
+      const deleted = db.prepare("DELETE FROM customers WHERE id = ?").run(Number(customerId));
+      if (deleted.changes === 0) {
+        throw new Error("Customer not found.");
+      }
+
+      return "Customer deleted successfully.";
+    });
+
+    return { ok: true, data: tx() };
+  } catch (err) {
+    return { ok: false, error: `Error: ${String((err as Error).message || err)}` };
+  }
+}
+
 export function createSupplier(name: string, contact = "", openingBalance = 0, notes = ""): ServiceResult<string> {
   const supplierName = (name || "").trim();
   if (!supplierName) {

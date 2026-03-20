@@ -14,6 +14,7 @@ beforeEach(() => {
     getCustomer: vi.fn().mockResolvedValue({ ok: true, data: {} }),
     getCustomerLedger: vi.fn().mockResolvedValue({ ok: true, data: {} }),
     recordCustomerPayment: vi.fn().mockResolvedValue({ ok: true, data: { message: "ok" } }),
+    deleteCustomer: vi.fn().mockResolvedValue({ ok: true, data: { message: "ok" } }),
     createSupplier: vi.fn().mockResolvedValue({ ok: true, data: { message: "ok" } }),
     updateSupplier: vi.fn().mockResolvedValue({ ok: true, data: { message: "ok" } }),
     listSuppliers: vi.fn().mockResolvedValue({ ok: true, data: [] }),

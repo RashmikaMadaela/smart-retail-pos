@@ -738,6 +738,30 @@ export default function App() {
     await refreshSummary();
   }
 
+  async function deleteCustomerNow() {
+    if (!selectedCustomerId) {
+      pushError("Select a customer first.");
+      return;
+    }
+
+    const confirmed = window.confirm("Delete selected customer? This cannot be undone.");
+    if (!confirmed) {
+      return;
+    }
+
+    const response = await posApiClient.deleteCustomer(selectedCustomerId);
+    if (!response.ok) {
+      pushError(response.error || "Customer delete failed.");
+      return;
+    }
+
+    pushMessage(response.data.message || "Customer deleted.");
+    setSelectedCustomerId(null);
+    setCustomerLedger(null);
+    setCustomerPayment("");
+    await refreshCustomers();
+  }
+
   async function createSupplierNow() {
     if (!supplierName.trim()) {
       pushError("Supplier name is required.");
@@ -1560,6 +1584,7 @@ export default function App() {
                   }}
                   onCustomerPaymentChange={setCustomerPayment}
                   onApplyCustomerPayment={recordCustomerSettlement}
+                  onDeleteCustomer={deleteCustomerNow}
                 />
               ) : null}
 

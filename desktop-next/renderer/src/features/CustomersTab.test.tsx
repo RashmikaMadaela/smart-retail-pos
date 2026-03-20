@@ -8,6 +8,7 @@ describe("CustomersTab", () => {
   test("supports selecting customer and applying payment", () => {
     const onSelectCustomer = vi.fn();
     const onApplyCustomerPayment = vi.fn();
+    const onDeleteCustomer = vi.fn();
 
     render(
       <CustomersTab
@@ -21,13 +22,16 @@ describe("CustomersTab", () => {
         onSelectCustomer={onSelectCustomer}
         onCustomerPaymentChange={vi.fn()}
         onApplyCustomerPayment={onApplyCustomerPayment}
+        onDeleteCustomer={onDeleteCustomer}
       />,
     );
 
     fireEvent.click(screen.getByRole("radio"));
     fireEvent.click(screen.getByRole("button", { name: "Record Payment" }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete Customer" }));
 
     expect(onSelectCustomer).toHaveBeenCalledWith(7);
     expect(onApplyCustomerPayment).toHaveBeenCalledTimes(1);
+    expect(onDeleteCustomer).toHaveBeenCalledTimes(1);
   });
 });

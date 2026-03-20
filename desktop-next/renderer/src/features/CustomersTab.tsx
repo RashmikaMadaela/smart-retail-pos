@@ -14,6 +14,7 @@ type CustomersTabProps = {
   onSelectCustomer: (id: number) => void;
   onCustomerPaymentChange: (value: string) => void;
   onApplyCustomerPayment: () => void;
+  onDeleteCustomer: () => void;
 };
 
 export function CustomersTab({
@@ -27,6 +28,7 @@ export function CustomersTab({
   onSelectCustomer,
   onCustomerPaymentChange,
   onApplyCustomerPayment,
+  onDeleteCustomer,
 }: CustomersTabProps) {
   const { t } = useTranslation();
 
@@ -96,6 +98,13 @@ export function CustomersTab({
             </label>
             <button className="mt-3" type="button" onClick={onApplyCustomerPayment}>
               {t("customers.recordPayment")}
+            </button>
+            <button
+              className="mt-3 border-red-500/60 bg-red-500/10 text-red-300 hover:bg-red-500/20"
+              type="button"
+              onClick={onDeleteCustomer}
+            >
+              {t("customers.delete")}
             </button>
           </SurfaceCard>
 
