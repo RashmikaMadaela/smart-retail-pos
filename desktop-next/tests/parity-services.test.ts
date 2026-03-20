@@ -196,6 +196,37 @@ describe("sales parity", () => {
     expect(Number(product.stock)).toBe(14);
   });
 
+  test("processSale allows overpayment and keeps balance due at zero", () => {
+    const result = processSale({
+      cashier_id: 2,
+      customer_id: null,
+      cart_items: [{ product_id: "P100", qty: 1, price: 100, discount: 0 }],
+      subtotal: 100,
+      global_discount: 0,
+      total_amount: 100,
+      status: "COMPLETED",
+      paid_amount: 150,
+      payment_status: "PAID",
+      payment_method: "CASH",
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+
+    const db = new Database(dbPath, { fileMustExist: true });
+    const sale = db
+      .prepare("SELECT total, paid_amount, balance_due, payment_status FROM sales WHERE id = ?")
+      .get(result.data) as any;
+    db.close();
+
+    expect(Number(sale.total)).toBe(100);
+    expect(Number(sale.paid_amount)).toBe(150);
+    expect(Number(sale.balance_due)).toBe(0);
+    expect(sale.payment_status).toBe("PAID");
+  });
+
   test("hold then complete held sale updates stock only on completion", () => {
     const hold = holdSale({
       cashier_id: 2,

@@ -430,10 +430,10 @@ export function BillingTab({
             <p className="m-0 text-right font-semibold text-foreground">Rs. {lineDiscountTotal.toFixed(2)}</p>
             <p className="m-0 text-muted-foreground">Total</p>
             <p className="m-0 text-right text-lg font-bold" style={{ color: "#7dd3fc" }}>Rs. {baseTotal.toFixed(2)}</p>
-            <p className="m-0 text-muted-foreground">Change</p>
-            <p className="m-0 text-right font-semibold text-foreground">Rs. {changeDue.toFixed(2)}</p>
             <p className="m-0 text-muted-foreground">Balance Due</p>
-            <p className="m-0 text-right text-lg font-bold" style={{ color: "#fda4af" }}>Rs. {balanceDue.toFixed(2)}</p>
+            <p className="m-0 text-right font-semibold text-foreground">Rs. {balanceDue.toFixed(2)}</p>
+            <p className="m-0 text-muted-foreground">Change</p>
+            <p className="m-0 text-right text-lg font-bold" style={{ color: "#7dfcb4" }}>Rs. {changeDue.toFixed(2)}</p>
           </div>
 
           <div className="mt-4 grid gap-2 sm:grid-cols-2">

@@ -39,10 +39,10 @@ export function InventoryTab({
   const [importFilePath, setImportFilePath] = useState("");
   const [newBarcode, setNewBarcode] = useState("");
   const [newName, setNewName] = useState("");
-  const [newQty, setNewQty] = useState("0");
+  const [newQty, setNewQty] = useState("");
   const [newBuyPrice, setNewBuyPrice] = useState("");
   const [newSellPrice, setNewSellPrice] = useState("");
-  const [newDiscPct, setNewDiscPct] = useState("0");
+  const [newDiscPct, setNewDiscPct] = useState("");
   const [newCardSurchargePct, setNewCardSurchargePct] = useState("");
   const [barcodeMatched, setBarcodeMatched] = useState(false);
 
@@ -87,10 +87,10 @@ export function InventoryTab({
 
     setNewBarcode("");
     setNewName("");
-    setNewQty("0");
+    setNewQty("");
     setNewBuyPrice("");
     setNewSellPrice("");
-    setNewDiscPct("0");
+    setNewDiscPct("");
     setNewCardSurchargePct("");
     setBarcodeMatched(false);
   }
@@ -139,8 +139,9 @@ export function InventoryTab({
         <div className="grid gap-2 xl:grid-cols-[1.1fr_1.6fr_0.7fr_0.9fr_0.9fr_0.7fr_1fr_auto]">
           <input placeholder="Barcode (optional)" value={newBarcode} onChange={(event) => setNewBarcode(event.target.value)} />
           <input placeholder="Product Name" value={newName} onChange={(event) => setNewName(event.target.value)} />
-          <input type="number" min="0" step="1" placeholder="Qty" value={newQty} onChange={(event) => setNewQty(event.target.value)} />
+          <input className="no-spinner" type="number" min="0" step="1" placeholder="Qty" value={newQty} onChange={(event) => setNewQty(event.target.value)} />
           <input
+            className="no-spinner"
             type="number"
             min="0"
             step="0.01"
@@ -149,6 +150,7 @@ export function InventoryTab({
             onChange={(event) => setNewBuyPrice(event.target.value)}
           />
           <input
+            className="no-spinner"
             type="number"
             min="0"
             step="0.01"
@@ -156,8 +158,9 @@ export function InventoryTab({
             value={newSellPrice}
             onChange={(event) => setNewSellPrice(event.target.value)}
           />
-          <input type="number" min="0" max="100" step="0.01" placeholder="Disc (%)" value={newDiscPct} onChange={(event) => setNewDiscPct(event.target.value)} />
+          <input className="no-spinner" type="number" min="0" max="100" step="0.01" placeholder="Disc (%)" value={newDiscPct} onChange={(event) => setNewDiscPct(event.target.value)} />
           <input
+            className="no-spinner"
             type="number"
             min="0"
             max="100"

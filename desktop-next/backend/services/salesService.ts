@@ -78,11 +78,9 @@ function computePaymentState(totalAmount: number, paidAmount?: number | null, pa
   nonNegative(total, "Total amount");
   nonNegative(paid, "Paid amount");
 
-  if (paid > total) {
-    throw new Error("Paid amount cannot exceed total amount.");
-  }
-
-  const balanceDue = Number((total - paid).toFixed(2));
+  // Allow overpayment and return change to customer; balance due cannot be negative.
+  const coveredAmount = Math.min(total, paid);
+  const balanceDue = Number((total - coveredAmount).toFixed(2));
   let normalizedStatus = (paymentStatus || "").trim().toUpperCase();
   if (!normalizedStatus) {
     if (balanceDue === 0) {
