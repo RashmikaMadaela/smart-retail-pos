@@ -387,32 +387,40 @@ export function BillingTab({
               </select>
             </label>
 
-            <label className="m-0 text-sm font-medium text-foreground">
-              Payment Method
-              <select value={paymentMethod} onChange={(e) => onPaymentMethodChange(e.target.value as "CASH" | "CARD") }>
-                <option value="CASH">CASH</option>
-                <option value="CARD">CARD</option>
-              </select>
-            </label>
+            {paymentMode !== "PARTIAL" && (
+              <label className="m-0 text-sm font-medium text-foreground">
+                Payment Method
+                <select value={paymentMethod} onChange={(e) => onPaymentMethodChange(e.target.value as "CASH" | "CARD") }>
+                  <option value="CASH">CASH</option>
+                  <option value="CARD">CARD</option>
+                </select>
+              </label>
+            )}
 
-            <label className="m-0 text-sm font-medium text-foreground">
-              Paid Amount
-              <input
-                value={paidAmount}
-                onChange={(e) => onPaidAmountChange(e.target.value)}
-                placeholder={paymentMode === "PAID" ? "Blank = full amount" : "Required"}
-              />
-            </label>
+            {paymentMode !== "UNPAID" && (
+              <label className="m-0 text-sm font-medium text-foreground">
+                Paid Amount
+                <input
+                  value={paidAmount}
+                  onChange={(e) => onPaidAmountChange(e.target.value)}
+                  placeholder={paymentMode === "PAID" ? "Blank = full amount" : "Required"}
+                />
+              </label>
+            )}
 
-            <label className="m-0 text-sm font-medium text-foreground">
-              Customer Name (credit only)
-              <input value={customerName} onChange={(e) => onCustomerNameChange(e.target.value)} />
-            </label>
+            {paymentMode !== "PAID" && (
+              <>
+                <label className="m-0 text-sm font-medium text-foreground">
+                  Customer Name (credit only)
+                  <input value={customerName} onChange={(e) => onCustomerNameChange(e.target.value)} />
+                </label>
 
-            <label className="m-0 text-sm font-medium text-foreground">
-              Customer Contact
-              <input value={customerContact} onChange={(e) => onCustomerContactChange(e.target.value)} />
-            </label>
+                <label className="m-0 text-sm font-medium text-foreground">
+                  Customer Contact
+                  <input value={customerContact} onChange={(e) => onCustomerContactChange(e.target.value)} />
+                </label>
+              </>
+            )}
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl border border-border/80 bg-card/55 p-3 text-sm">
@@ -421,18 +429,18 @@ export function BillingTab({
             <p className="m-0 text-muted-foreground">Line Discount</p>
             <p className="m-0 text-right font-semibold text-foreground">Rs. {lineDiscountTotal.toFixed(2)}</p>
             <p className="m-0 text-muted-foreground">Total</p>
-            <p className="m-0 text-right font-semibold text-foreground">Rs. {baseTotal.toFixed(2)}</p>
+            <p className="m-0 text-right text-lg font-bold" style={{ color: "#7dd3fc" }}>Rs. {baseTotal.toFixed(2)}</p>
             <p className="m-0 text-muted-foreground">Change</p>
             <p className="m-0 text-right font-semibold text-foreground">Rs. {changeDue.toFixed(2)}</p>
             <p className="m-0 text-muted-foreground">Balance Due</p>
-            <p className="m-0 text-right font-semibold text-foreground">Rs. {balanceDue.toFixed(2)}</p>
+            <p className="m-0 text-right text-lg font-bold" style={{ color: "#fda4af" }}>Rs. {balanceDue.toFixed(2)}</p>
           </div>
 
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            <button type="button" className="!bg-gradient-to-r !from-slate-500 !to-slate-600 !text-white" onClick={onHoldSale}>
+            <button type="button" className="!bg-gradient-to-r !from-slate-500 !to-slate-600 !text-white transition-all hover:shadow-lg" onClick={onHoldSale}>
               Hold Bill
             </button>
-            <button type="button" className="!bg-gradient-to-r !from-emerald-400 !to-emerald-500 !text-slate-900" onClick={openCheckoutConfirm}>
+            <button type="button" className="!bg-gradient-to-r !from-emerald-400 !to-emerald-500 !text-slate-900 transition-all hover:shadow-lg" onClick={openCheckoutConfirm}>
               Checkout
             </button>
           </div>
@@ -446,7 +454,7 @@ export function BillingTab({
             <p className="mt-2 text-sm text-muted-foreground">Review totals before finalizing the sale.</p>
             <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl border border-border/80 bg-background/50 p-3 text-sm">
               <p className="m-0 text-muted-foreground">Total</p>
-              <p className="m-0 text-right font-semibold text-foreground">Rs. {baseTotal.toFixed(2)}</p>
+              <p className="m-0 text-right font-bold" style={{ color: "#7dd3fc" }}>Rs. {baseTotal.toFixed(2)}</p>
               <p className="m-0 text-muted-foreground">Paid</p>
               <p className="m-0 text-right font-semibold text-foreground">{paidAmount.trim() || "Auto"}</p>
               <p className="m-0 text-muted-foreground">Mode</p>
