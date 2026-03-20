@@ -1,4 +1,5 @@
 import React from "react";
+import i18n from "@/i18n";
 
 type ErrorBoundaryState = {
   hasError: boolean;
@@ -12,7 +13,7 @@ export class ErrorBoundary extends React.Component<React.PropsWithChildren, Erro
   };
 
   static getDerivedStateFromError(error: unknown): ErrorBoundaryState {
-    const message = error instanceof Error ? error.message : "Unexpected renderer error";
+    const message = error instanceof Error ? error.message : i18n.t("error.unexpected");
     return { hasError: true, message };
   }
 
@@ -25,11 +26,11 @@ export class ErrorBoundary extends React.Component<React.PropsWithChildren, Erro
       return (
         <main className="app-shell">
           <section className="panel-card">
-            <h2>Something went wrong</h2>
-            <p className="muted">The POS UI hit an unexpected error.</p>
+            <h2>{i18n.t("error.title")}</h2>
+            <p className="muted">{i18n.t("error.subtitle")}</p>
             <p className="notice error">{this.state.message}</p>
             <button type="button" onClick={() => window.location.reload()}>
-              Reload App
+              {i18n.t("error.reload")}
             </button>
           </section>
         </main>

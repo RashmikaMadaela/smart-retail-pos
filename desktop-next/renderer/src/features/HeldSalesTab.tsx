@@ -1,4 +1,5 @@
 import type { HeldSale } from "./types";
+import { useTranslation } from "react-i18next";
 import { SurfaceCard } from "@/components/ui/SurfaceCard";
 import { ToolbarCard } from "@/components/ui/ToolbarCard";
 
@@ -21,24 +22,26 @@ export function HeldSalesTab({
   onCompleteHeldSale,
   onRemoveHeldSale,
 }: HeldSalesTabProps) {
+  const { t } = useTranslation();
+
   return (
     <section className="space-y-4">
       <ToolbarCard
-        title="Held Sales"
-        description="Resume or complete parked transactions quickly."
+        title={t("held.title")}
+        description={t("held.description")}
         actions={
           <>
             <button type="button" onClick={onRefreshHeldSales}>
-              Refresh Held
+              {t("held.refresh")}
             </button>
             <button type="button" onClick={onRecallHeldSale}>
-              Recall to Cart
+              {t("held.recall")}
             </button>
             <button type="button" onClick={onCompleteHeldSale}>
-              Complete Selected
+              {t("held.complete")}
             </button>
             <button type="button" onClick={onRemoveHeldSale} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Remove
+              {t("held.remove")}
             </button>
           </>
         }
@@ -48,18 +51,18 @@ export function HeldSalesTab({
         <table className="m-0">
           <thead>
             <tr>
-              <th>Select</th>
-              <th>ID</th>
-              <th>Timestamp</th>
-              <th>Total</th>
-              <th>Cashier</th>
+              <th>{t("held.select")}</th>
+              <th>{t("held.id")}</th>
+              <th>{t("held.timestamp")}</th>
+              <th>{t("held.total")}</th>
+              <th>{t("held.cashier")}</th>
             </tr>
           </thead>
           <tbody>
             {heldSales.length === 0 ? (
               <tr>
                 <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
-                  No held sales found.
+                  {t("held.empty")}
                 </td>
               </tr>
             ) : (

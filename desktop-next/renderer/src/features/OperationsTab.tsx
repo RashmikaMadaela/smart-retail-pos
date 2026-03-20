@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { SurfaceCard } from "@/components/ui/SurfaceCard";
 import { ToolbarCard } from "@/components/ui/ToolbarCard";
 import type { Expense, Product } from "./types";
@@ -21,6 +22,7 @@ type OperationsTabProps = {
 };
 
 export function OperationsTab({ products, expenses, onRefreshExpenses, onCreateExpense, onPrintBarcodes }: OperationsTabProps) {
+  const { t } = useTranslation();
   const [barcodeInput, setBarcodeInput] = useState("");
   const [barcodeQty, setBarcodeQty] = useState("1");
   const [queue, setQueue] = useState<BarcodeQueueItem[]>([]);
@@ -83,46 +85,46 @@ export function OperationsTab({ products, expenses, onRefreshExpenses, onCreateE
   return (
     <section className="space-y-4">
       <ToolbarCard
-        title="Barcode & Expenses"
-        description="Manage barcode print queue and expense entries."
+        title={t("operations.title")}
+        description={t("operations.description")}
         actions={
           <button type="button" onClick={onRefreshExpenses}>
-            Refresh Expenses
+            {t("operations.refreshExpenses")}
           </button>
         }
       />
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <SurfaceCard title="Barcode Queue" subtitle="Prepare product labels for printing workflow.">
+        <SurfaceCard title={t("operations.barcodeQueue")} subtitle={t("operations.barcodeQueueSubtitle")}>
           <div className="grid gap-3 md:grid-cols-[1fr_120px_auto]">
             <input
-              placeholder="Barcode/Product ID"
+              placeholder={t("operations.barcodeInput")}
               value={barcodeInput}
               onChange={(event) => setBarcodeInput(event.target.value)}
             />
-            <input value={barcodeQty} onChange={(event) => setBarcodeQty(event.target.value)} placeholder="Qty" />
+            <input value={barcodeQty} onChange={(event) => setBarcodeQty(event.target.value)} placeholder={t("operations.qty")} />
             <button type="button" onClick={addToQueue}>
-              Add to Queue
+              {t("operations.addToQueue")}
             </button>
           </div>
 
-          <p className="mt-3 text-sm text-muted-foreground">Queued labels: {queueCount.toFixed(2)}</p>
+          <p className="mt-3 text-sm text-muted-foreground">{t("operations.queued", { count: Number(queueCount.toFixed(2)) })}</p>
 
           <div className="mt-3 overflow-hidden rounded-xl border border-border/80 bg-card/40">
             <table className="m-0">
               <thead>
                 <tr>
-                  <th>Product ID</th>
-                  <th>Name</th>
-                  <th>Price</th>
-                  <th>Qty</th>
+                  <th>{t("operations.productId")}</th>
+                  <th>{t("operations.name")}</th>
+                  <th>{t("operations.price")}</th>
+                  <th>{t("operations.qty")}</th>
                 </tr>
               </thead>
               <tbody>
                 {queue.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
-                      No labels queued.
+                      {t("operations.emptyQueue")}
                     </td>
                   </tr>
                 ) : (
@@ -141,28 +143,28 @@ export function OperationsTab({ products, expenses, onRefreshExpenses, onCreateE
 
           <div className="mt-3 flex flex-wrap gap-2">
             <button type="button" onClick={() => void printQueueAsPdf()} disabled={queue.length === 0 || isPrinting}>
-              {isPrinting ? "Saving/Printing..." : "Print Barcodes (Save PDF)"}
+              {isPrinting ? t("operations.printing") : t("operations.print")}
             </button>
           </div>
         </SurfaceCard>
 
-        <SurfaceCard title="Expenses" subtitle="Record operating expenses and review recent entries.">
+        <SurfaceCard title={t("operations.expenses")} subtitle={t("operations.expensesSubtitle")}>
           <div className="grid gap-3 md:grid-cols-2">
             <label className="text-sm font-medium text-foreground">
-              Description
+              {t("operations.expenseDescription")}
               <input value={expenseDescription} onChange={(event) => setExpenseDescription(event.target.value)} />
             </label>
             <label className="text-sm font-medium text-foreground">
-              Amount
+              {t("operations.amount")}
               <input value={expenseAmount} onChange={(event) => setExpenseAmount(event.target.value)} />
             </label>
             <label className="text-sm font-medium text-foreground">
-              Category
+              {t("operations.category")}
               <input value={expenseCategory} onChange={(event) => setExpenseCategory(event.target.value)} />
             </label>
             <div className="self-end">
               <button type="button" onClick={submitExpense}>
-                Record Expense
+                {t("operations.recordExpense")}
               </button>
             </div>
           </div>
@@ -171,18 +173,18 @@ export function OperationsTab({ products, expenses, onRefreshExpenses, onCreateE
             <table className="m-0">
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Description</th>
-                  <th>Category</th>
-                  <th>Amount</th>
-                  <th>Date</th>
+                  <th>{t("held.id")}</th>
+                  <th>{t("operations.expenseDescription")}</th>
+                  <th>{t("operations.category")}</th>
+                  <th>{t("operations.amount")}</th>
+                  <th>{t("operations.date")}</th>
                 </tr>
               </thead>
               <tbody>
                 {expenses.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
-                      No expenses found.
+                      {t("operations.emptyExpenses")}
                     </td>
                   </tr>
                 ) : (

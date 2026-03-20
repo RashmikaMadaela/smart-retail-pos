@@ -1,4 +1,5 @@
 import type { Customer, CustomerLedger } from "./types";
+import { useTranslation } from "react-i18next";
 import { SurfaceCard } from "@/components/ui/SurfaceCard";
 import { ToolbarCard } from "@/components/ui/ToolbarCard";
 
@@ -27,42 +28,44 @@ export function CustomersTab({
   onCustomerPaymentChange,
   onApplyCustomerPayment,
 }: CustomersTabProps) {
+  const { t } = useTranslation();
+
   return (
     <section className="space-y-4">
       <ToolbarCard
-        title="Customer Ledger"
-        description="Track outstanding balances and settle customer dues."
+        title={t("customers.title")}
+        description={t("customers.description")}
         actions={
           <>
             <input
               className="w-64 max-w-full"
-              placeholder="Search customer"
+              placeholder={t("customers.search")}
               value={customerSearchText}
               onChange={(e) => onCustomerSearchChange(e.target.value)}
             />
             <button type="button" onClick={onRefreshCustomers}>
-              Refresh
+              {t("customers.refresh")}
             </button>
           </>
         }
       />
 
       <div className="grid gap-4 xl:grid-cols-[1.2fr_minmax(0,1fr)]">
-        <SurfaceCard title="Customers" className="overflow-hidden" contentClassName="p-0">
+        <SurfaceCard title={t("customers.listTitle")} className="overflow-hidden" contentClassName="p-0">
           <table className="m-0">
             <thead>
               <tr>
-                <th>Select</th>
-                <th>Name</th>
-                <th>Contact</th>
-                <th>Outstanding</th>
+                <th>{t("customers.select")}</th>
+                <th>{t("customers.name")}</th>
+                <th>{t("customers.contact")}</th>
+                <th>{t("customers.outstanding")}</th>
               </tr>
             </thead>
             <tbody>
               {customers.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="py-10 text-center text-sm text-muted-foreground">
-                    No customers found.
+                    {t("customers.empty")}
                   </td>
                 </tr>
               ) : (
@@ -86,32 +89,32 @@ export function CustomersTab({
         </SurfaceCard>
 
         <div className="space-y-4">
-          <SurfaceCard title="Settlement">
+          <SurfaceCard title={t("customers.settlement")}>
             <label className="mt-3 block text-sm font-medium text-foreground">
-              Payment Amount
+              {t("customers.paymentAmount")}
               <input value={customerPayment} onChange={(e) => onCustomerPaymentChange(e.target.value)} />
             </label>
             <button className="mt-3" type="button" onClick={onApplyCustomerPayment}>
-              Record Payment
+              {t("customers.recordPayment")}
             </button>
           </SurfaceCard>
 
-          <SurfaceCard title="Ledger" className="overflow-hidden" contentClassName="p-0">
+          <SurfaceCard title={t("customers.ledger")} className="overflow-hidden" contentClassName="p-0">
             <table className="m-0">
               <thead>
                 <tr>
-                  <th>Sale</th>
-                  <th>Total</th>
-                  <th>Paid</th>
-                  <th>Balance</th>
-                  <th>Status</th>
+                  <th>{t("customers.sale")}</th>
+                  <th>{t("customers.total")}</th>
+                  <th>{t("customers.paid")}</th>
+                  <th>{t("customers.balance")}</th>
+                  <th>{t("customers.status")}</th>
                 </tr>
               </thead>
               <tbody>
                 {(customerLedger?.sales || []).length === 0 ? (
                   <tr>
                     <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
-                      No customer ledger entries.
+                      {t("customers.noLedger")}
                     </td>
                   </tr>
                 ) : (

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { BatchLineDraft, Product, Supplier, SupplierLedger } from "./types";
 import { SurfaceCard } from "@/components/ui/SurfaceCard";
 import { ToolbarCard } from "@/components/ui/ToolbarCard";
@@ -68,6 +69,7 @@ export function SuppliersTab({
   onSupplierPayNoteChange,
   onApplySupplierPayment,
 }: SuppliersTabProps) {
+  const { t } = useTranslation();
   const [editingSupplierId, setEditingSupplierId] = useState<number | null>(null);
   const [editSupplierName, setEditSupplierName] = useState("");
   const [editSupplierContact, setEditSupplierContact] = useState("");
@@ -134,47 +136,47 @@ export function SuppliersTab({
   return (
     <section className="space-y-4">
       <ToolbarCard
-        title="Supplier Ledger"
-        description="Receive stock, track batches, and settle payables."
+        title={t("suppliers.title")}
+        description={t("suppliers.description")}
         actions={
           <button type="button" onClick={onRefreshSuppliers}>
-            Refresh Suppliers
+            {t("suppliers.refresh")}
           </button>
         }
       />
 
-      <SurfaceCard title="Create Supplier">
+      <SurfaceCard title={t("suppliers.createSupplier")}>
         <div className="grid gap-2 md:grid-cols-[1.3fr_1fr_auto] md:items-end">
           <label className="m-0 block text-sm font-medium text-foreground">
-            Supplier Name
+            {t("suppliers.supplierName")}
             <input value={supplierName} onChange={(e) => onSupplierNameChange(e.target.value)} />
           </label>
           <label className="m-0 block text-sm font-medium text-foreground">
-            Contact
+            {t("suppliers.contact")}
             <input value={supplierContact} onChange={(e) => onSupplierContactChange(e.target.value)} />
           </label>
           <button type="button" onClick={onCreateSupplier}>
-            Create Supplier
+            {t("suppliers.createSupplier")}
           </button>
         </div>
       </SurfaceCard>
 
-      <SurfaceCard title="Suppliers" className="overflow-hidden" contentClassName="p-0">
+      <SurfaceCard title={t("suppliers.suppliers")} className="overflow-hidden" contentClassName="p-0">
         <table className="m-0">
           <thead>
             <tr>
-              <th>Select</th>
-              <th>Name</th>
-              <th>Contact</th>
-              <th>Outstanding</th>
-              <th>Action</th>
+              <th>{t("suppliers.select")}</th>
+              <th>{t("suppliers.name")}</th>
+              <th>{t("suppliers.contact")}</th>
+              <th>{t("suppliers.outstanding")}</th>
+              <th>{t("suppliers.action")}</th>
             </tr>
           </thead>
           <tbody>
             {suppliers.length === 0 ? (
               <tr>
                 <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
-                  No suppliers available.
+                  {t("suppliers.noSuppliers")}
                 </td>
               </tr>
             ) : (
@@ -218,10 +220,10 @@ export function SuppliersTab({
                             setEditingSupplierId(null);
                           }}
                         >
-                          Save
+                          {t("suppliers.save")}
                         </button>
                         <button type="button" className="px-2 py-1 text-xs !bg-slate-600 !text-white" onClick={() => setEditingSupplierId(null)}>
-                          Cancel
+                          {t("suppliers.cancel")}
                         </button>
                       </div>
                     ) : (
@@ -234,7 +236,7 @@ export function SuppliersTab({
                           setEditSupplierContact(supplier.contact || "");
                         }}
                       >
-                        Edit
+                        {t("suppliers.edit")}
                       </button>
                     )}
                   </td>
@@ -245,24 +247,24 @@ export function SuppliersTab({
         </table>
       </SurfaceCard>
 
-      <SurfaceCard title="Receive Batch" subtitle="Single method receive: add each stock line, then finalize invoice and paid amount.">
-        {matchedProduct ? <p className="mb-2 mt-0 text-xs text-sky-200">Existing barcode found. Product details synced from inventory.</p> : null}
+      <SurfaceCard title={t("suppliers.receiveBatch")} subtitle={t("suppliers.receiveBatchSubtitle")}>
+        {matchedProduct ? <p className="mb-2 mt-0 text-xs text-sky-200">{t("suppliers.barcodeMatched")}</p> : null}
         <div className="grid gap-2 xl:grid-cols-[1.1fr_1.6fr_0.8fr_1fr_1fr_0.8fr_1fr_auto]">
           <input
-            placeholder="Barcode (optional)"
+            placeholder={t("suppliers.barcodeOptional")}
             value={batchLineDraft.product_id}
             onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, product_id: e.target.value })}
           />
           <div className="relative">
             <input
-              placeholder="Product Name"
+              placeholder={t("suppliers.productName")}
               value={batchLineDraft.new_item_name || ""}
               onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, new_item_name: e.target.value, create_new_item: true })}
             />
             {(batchLineDraft.new_item_name || "").trim() ? (
               <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto border border-slate-600 bg-slate-900 text-slate-100">
                 {productNameSuggestions.length === 0 ? (
-                  <p className="m-0 px-3 py-2 text-sm text-slate-300">No matching products</p>
+                  <p className="m-0 px-3 py-2 text-sm text-slate-300">{t("suppliers.noMatching")}</p>
                 ) : (
                   productNameSuggestions.map((product) => (
                     <div
@@ -293,7 +295,7 @@ export function SuppliersTab({
                     >
                       <span className="font-semibold text-slate-100">{product.name}</span>
                       <span className="text-sm text-slate-300">
-                        {product.barcode_id} | Sell {Number(product.sell_price).toFixed(2)} | Stock {Number(product.stock).toFixed(2)}
+                        {product.barcode_id} | {t("suppliers.sell")} {Number(product.sell_price).toFixed(2)} | {t("suppliers.stock")} {Number(product.stock).toFixed(2)}
                       </span>
                     </div>
                   ))
@@ -306,7 +308,7 @@ export function SuppliersTab({
             type="number"
             min="0"
             step="0.01"
-            placeholder="Qty"
+            placeholder={t("suppliers.qty")}
             value={batchLineDraft.qty_received}
             onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, qty_received: e.target.value })}
           />
@@ -315,7 +317,7 @@ export function SuppliersTab({
             type="number"
             min="0"
             step="0.01"
-            placeholder="Buying Price"
+            placeholder={t("suppliers.buyPrice")}
             value={batchLineDraft.new_item_buy_price || batchLineDraft.unit_cost || ""}
             onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, unit_cost: e.target.value, new_item_buy_price: e.target.value, create_new_item: !matchedProduct })}
           />
@@ -324,7 +326,7 @@ export function SuppliersTab({
             type="number"
             min="0"
             step="0.01"
-            placeholder="Selling Price"
+            placeholder={t("suppliers.sellPrice")}
             value={batchLineDraft.new_item_sell_price || ""}
             onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, new_item_sell_price: e.target.value, create_new_item: !matchedProduct })}
           />
@@ -334,7 +336,7 @@ export function SuppliersTab({
             min="0"
             max="100"
             step="0.01"
-            placeholder="Disc (%)"
+            placeholder={t("suppliers.discPct")}
             value={batchLineDraft.line_discount_pct}
             onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, line_discount_pct: e.target.value, new_item_default_discount_pct: e.target.value })}
           />
@@ -344,7 +346,7 @@ export function SuppliersTab({
             min="0"
             max="100"
             step="0.01"
-            placeholder="Card surcharge (%)"
+            placeholder={t("suppliers.cardSurcharge")}
             value={batchLineDraft.new_item_card_surcharge_pct || ""}
             onChange={(e) =>
               onBatchLineDraftChange({
@@ -356,30 +358,30 @@ export function SuppliersTab({
             }
           />
           <button type="button" onClick={onAddBatchLine}>
-            Add Line
+            {t("suppliers.addLine")}
           </button>
         </div>
 
-        <h4 className="mb-0 mt-4 text-base font-semibold text-foreground">Batch Lines</h4>
+        <h4 className="mb-0 mt-4 text-base font-semibold text-foreground">{t("suppliers.batchLines")}</h4>
         <div className="mt-2 overflow-hidden rounded-xl border border-border/80 bg-card/40">
           <table className="m-0">
             <thead>
               <tr>
-                <th>Barcode</th>
-                <th>Product Name</th>
-                <th>Qty</th>
-                <th>Buying Price</th>
-                <th>Selling Price</th>
-                <th>Disc (%)</th>
-                <th>Card Surcharge (%)</th>
-                <th>Line Total</th>
+                <th>{t("suppliers.barcode")}</th>
+                <th>{t("suppliers.productName")}</th>
+                <th>{t("suppliers.qty")}</th>
+                <th>{t("suppliers.buyPrice")}</th>
+                <th>{t("suppliers.sellPrice")}</th>
+                <th>{t("suppliers.discPct")}</th>
+                <th>{t("suppliers.cardSurcharge")}</th>
+                <th>{t("suppliers.lineTotal")}</th>
               </tr>
             </thead>
             <tbody>
               {batchLines.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
-                    No batch lines added.
+                    {t("suppliers.noBatchLines")}
                   </td>
                 </tr>
               ) : (
@@ -409,27 +411,27 @@ export function SuppliersTab({
 
         <div className="mt-3 grid gap-2 md:grid-cols-[1.2fr_1fr_auto] md:items-end">
           <label className="m-0 block text-sm font-medium text-foreground">
-            Invoice No
+            {t("suppliers.invoiceNo")}
             <input value={batchReference} onChange={(e) => onBatchReferenceChange(e.target.value)} />
           </label>
           <label className="m-0 block text-sm font-medium text-foreground">
-            Amount Paid
+            {t("suppliers.amountPaid")}
             <input className="no-spinner" value={batchPaid} onChange={(e) => onBatchPaidChange(e.target.value)} />
           </label>
           <button type="button" onClick={onReceiveSupplierBatch}>
-            Receive Stock
+            {t("suppliers.receiveStock")}
           </button>
         </div>
       </SurfaceCard>
 
-      <SurfaceCard title="Settle Batch">
+      <SurfaceCard title={t("suppliers.settleBatch")}>
         <div className="grid gap-2 md:grid-cols-[1fr_1fr_1.2fr_auto] md:items-end">
           <label className="m-0 block text-sm font-medium text-foreground">
-            Pay Amount
+            {t("suppliers.payAmount")}
             <input value={supplierPayAmount} onChange={(e) => onSupplierPayAmountChange(e.target.value)} />
           </label>
           <label className="m-0 block text-sm font-medium text-foreground">
-            Method
+            {t("suppliers.method")}
             <select value={supplierPayMethod} onChange={(e) => onSupplierPayMethodChange(e.target.value)}>
               <option value="CASH">CASH</option>
               <option value="CARD">CARD</option>
@@ -437,33 +439,33 @@ export function SuppliersTab({
             </select>
           </label>
           <label className="m-0 block text-sm font-medium text-foreground">
-            Note
+            {t("suppliers.note")}
             <input value={supplierPayNote} onChange={(e) => onSupplierPayNoteChange(e.target.value)} />
           </label>
           <button type="button" onClick={onApplySupplierPayment}>
-            Record Supplier Payment
+            {t("suppliers.recordSupplierPayment")}
           </button>
         </div>
       </SurfaceCard>
 
-      <SurfaceCard title="Supplier Batches" className="overflow-hidden" contentClassName="p-0">
+      <SurfaceCard title={t("suppliers.supplierBatches")} className="overflow-hidden" contentClassName="p-0">
         <table className="m-0">
           <thead>
             <tr>
-              <th>Select</th>
-              <th>ID</th>
-              <th>Ref</th>
-              <th>Total</th>
-              <th>Paid</th>
-              <th>Balance</th>
-              <th>Status</th>
+              <th>{t("suppliers.select")}</th>
+              <th>{t("suppliers.id")}</th>
+              <th>{t("suppliers.ref")}</th>
+              <th>{t("suppliers.total")}</th>
+              <th>{t("suppliers.paid")}</th>
+              <th>{t("suppliers.balance")}</th>
+              <th>{t("suppliers.status")}</th>
             </tr>
           </thead>
           <tbody>
             {(supplierLedger?.batches || []).length === 0 ? (
               <tr>
                 <td colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
-                  No supplier batches.
+                  {t("suppliers.noBatches")}
                 </td>
               </tr>
             ) : (
@@ -490,22 +492,22 @@ export function SuppliersTab({
         </table>
       </SurfaceCard>
 
-      <SurfaceCard title="Supplier Payments" className="overflow-hidden" contentClassName="p-0">
+      <SurfaceCard title={t("suppliers.supplierPayments")} className="overflow-hidden" contentClassName="p-0">
         <table className="m-0">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Batch</th>
-              <th>Amount</th>
-              <th>Method</th>
-              <th>Paid At</th>
+              <th>{t("suppliers.id")}</th>
+              <th>{t("suppliers.batch")}</th>
+              <th>{t("suppliers.amount")}</th>
+              <th>{t("suppliers.method")}</th>
+              <th>{t("suppliers.paidAt")}</th>
             </tr>
           </thead>
           <tbody>
             {(supplierLedger?.payments || []).length === 0 ? (
               <tr>
                 <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
-                  No supplier payments.
+                  {t("suppliers.noPayments")}
                 </td>
               </tr>
             ) : (

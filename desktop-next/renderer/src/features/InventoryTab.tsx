@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { Product } from "./types";
 import { SurfaceCard } from "@/components/ui/SurfaceCard";
 import { ToolbarCard } from "@/components/ui/ToolbarCard";
@@ -36,6 +37,7 @@ export function InventoryTab({
   onPickImportFile,
   onOpenExportFolder,
 }: InventoryTabProps) {
+  const { t } = useTranslation();
   const [inventorySearch, setInventorySearch] = useState("");
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const [importFilePath, setImportFilePath] = useState("");
@@ -173,37 +175,37 @@ export function InventoryTab({
   return (
     <section className="space-y-4">
       <ToolbarCard
-        title="Inventory"
-        description="Browse and monitor product stock levels in real time."
+        title={t("inventory.title")}
+        description={t("inventory.description")}
         actions={
           <>
             <input
               className="w-64 max-w-full"
-              placeholder="Search ID or product name"
+              placeholder={t("inventory.search")}
               value={inventorySearch}
               onChange={(event) => setInventorySearch(event.target.value)}
             />
             <label className="m-0 inline-flex items-center gap-2 rounded-xl border border-border/80 px-3 py-2 text-sm text-foreground">
               <input type="checkbox" checked={lowStockOnly} onChange={(event) => setLowStockOnly(event.target.checked)} />
-              Low stock only
+              {t("inventory.lowOnly")}
             </label>
             <button type="button" onClick={onRefreshProducts}>
-              Refresh Products
+              {t("inventory.refresh")}
             </button>
           </>
         }
       />
 
-      <SurfaceCard title="Add Product" subtitle="Single-row quick entry. Leave barcode blank to auto-generate as PS-10001, PS-10002, ...">
-        {barcodeMatched ? <p className="mb-2 mt-0 text-xs text-sky-200">Existing barcode found. Fields auto-filled, edit and click Update.</p> : null}
+      <SurfaceCard title={t("inventory.addProduct")} subtitle={t("inventory.addProductSubtitle")}>
+        {barcodeMatched ? <p className="mb-2 mt-0 text-xs text-sky-200">{t("inventory.barcodeMatched")}</p> : null}
         <div className="grid gap-2 xl:grid-cols-[1.1fr_1.6fr_0.7fr_0.9fr_0.9fr_0.7fr_1fr_auto]">
-          <input placeholder="Barcode (optional)" value={newBarcode} onChange={(event) => setNewBarcode(event.target.value)} />
+          <input placeholder={t("inventory.barcodeOptional")} value={newBarcode} onChange={(event) => setNewBarcode(event.target.value)} />
           <div className="relative">
-            <input placeholder="Product Name" value={newName} onChange={(event) => setNewName(event.target.value)} />
+            <input placeholder={t("inventory.productName")} value={newName} onChange={(event) => setNewName(event.target.value)} />
             {newName.trim() ? (
               <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto border border-slate-600 bg-slate-900 text-slate-100">
                 {nameSuggestions.length === 0 ? (
-                  <p className="m-0 px-3 py-2 text-sm text-slate-300">No matching products</p>
+                  <p className="m-0 px-3 py-2 text-sm text-slate-300">{t("inventory.noMatching")}</p>
                 ) : (
                   nameSuggestions.map((product) => (
                     <div
@@ -226,7 +228,7 @@ export function InventoryTab({
                     >
                       <span className="font-semibold text-slate-100">{product.name}</span>
                       <span className="text-sm text-slate-300">
-                        {product.barcode_id} | Sell {Number(product.sell_price).toFixed(2)} | Stock {Number(product.stock).toFixed(2)}
+                          {product.barcode_id} | {t("inventory.sell")} {Number(product.sell_price).toFixed(2)} | {t("inventory.stock")} {Number(product.stock).toFixed(2)}
                       </span>
                     </div>
                   ))
@@ -234,13 +236,13 @@ export function InventoryTab({
               </div>
             ) : null}
           </div>
-          <input className="no-spinner" type="number" min="0" step="1" placeholder="Qty" value={newQty} onChange={(event) => setNewQty(event.target.value)} />
+          <input className="no-spinner" type="number" min="0" step="1" placeholder={t("inventory.qty")} value={newQty} onChange={(event) => setNewQty(event.target.value)} />
           <input
             className="no-spinner"
             type="number"
             min="0"
             step="0.01"
-            placeholder="Buying Price"
+            placeholder={t("inventory.buyPrice")}
             value={newBuyPrice}
             onChange={(event) => setNewBuyPrice(event.target.value)}
           />
@@ -249,32 +251,32 @@ export function InventoryTab({
             type="number"
             min="0"
             step="0.01"
-            placeholder="Selling Price"
+            placeholder={t("inventory.sellPrice")}
             value={newSellPrice}
             onChange={(event) => setNewSellPrice(event.target.value)}
           />
-          <input className="no-spinner" type="number" min="0" max="100" step="0.01" placeholder="Disc (%)" value={newDiscPct} onChange={(event) => setNewDiscPct(event.target.value)} />
+          <input className="no-spinner" type="number" min="0" max="100" step="0.01" placeholder={t("inventory.discPct")} value={newDiscPct} onChange={(event) => setNewDiscPct(event.target.value)} />
           <input
             className="no-spinner"
             type="number"
             min="0"
             max="100"
             step="0.01"
-            placeholder="Card surcharge (%)"
+            placeholder={t("inventory.cardSurcharge")}
             value={newCardSurchargePct}
             onChange={(event) => setNewCardSurchargePct(event.target.value)}
           />
           <button type="button" onClick={() => void addProductRow()}>
-            {barcodeMatched ? "Update" : "Add"}
+            {barcodeMatched ? t("inventory.update") : t("inventory.add")}
           </button>
         </div>
       </SurfaceCard>
 
       {isSuperAdmin ? (
-        <SurfaceCard title="Remove Product" subtitle="Remove by barcode or choose product name from dropdown.">
+        <SurfaceCard title={t("inventory.removeProduct")} subtitle={t("inventory.removeSubtitle")}>
           <div className="grid gap-2 xl:grid-cols-[1.1fr_1.6fr_auto]">
             <input
-              placeholder="Barcode"
+              placeholder={t("inventory.barcode")}
               value={removeBarcode}
               onChange={(event) => {
                 setRemoveBarcode(event.target.value);
@@ -285,7 +287,7 @@ export function InventoryTab({
             />
             <div className="relative">
               <input
-                placeholder="Product Name"
+                placeholder={t("inventory.productName")}
                 value={removeName}
                 onChange={(event) => {
                   const nextName = event.target.value;
@@ -301,7 +303,7 @@ export function InventoryTab({
               {removeName.trim() ? (
                 <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto border border-slate-600 bg-slate-900 text-slate-100">
                   {removeNameSuggestions.length === 0 ? (
-                    <p className="m-0 px-3 py-2 text-sm text-slate-300">No matching products</p>
+                    <p className="m-0 px-3 py-2 text-sm text-slate-300">{t("inventory.noMatching")}</p>
                   ) : (
                     removeNameSuggestions.map((product) => (
                       <div
@@ -324,7 +326,7 @@ export function InventoryTab({
                       >
                         <span className="font-semibold text-slate-100">{product.name}</span>
                         <span className="text-sm text-slate-300">
-                          {product.barcode_id} | Sell {Number(product.sell_price).toFixed(2)} | Stock {Number(product.stock).toFixed(2)}
+                          {product.barcode_id} | {t("inventory.sell")} {Number(product.sell_price).toFixed(2)} | {t("inventory.stock")} {Number(product.stock).toFixed(2)}
                         </span>
                       </div>
                     ))
@@ -333,17 +335,17 @@ export function InventoryTab({
               ) : null}
             </div>
             <button type="button" className="danger" onClick={() => void removeProductRow()}>
-              Remove
+              {t("inventory.remove")}
             </button>
           </div>
         </SurfaceCard>
       ) : null}
 
       {isSuperAdmin ? (
-        <SurfaceCard title="SuperAdmin Inventory Tools" subtitle="Clear all product records and export/import inventory backups.">
+        <SurfaceCard title={t("inventory.superTools")} subtitle={t("inventory.superToolsSubtitle")}>
           <div className="grid gap-3 md:grid-cols-[1fr_auto_auto_auto]">
             <input
-              placeholder="Path to exported inventory JSON"
+              placeholder={t("inventory.importPath")}
               value={importFilePath}
               onChange={(event) => setImportFilePath(event.target.value)}
             />
@@ -356,63 +358,63 @@ export function InventoryTab({
                 }
               }}
             >
-              Browse File
+              {t("inventory.browseFile")}
             </button>
             <button type="button" onClick={() => onImportInventory(importFilePath)}>
-              Import Inventory
+              {t("inventory.import")}
             </button>
             <button type="button" onClick={onExportInventory}>
-              Export Inventory
+              {t("inventory.export")}
             </button>
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             <button type="button" onClick={onOpenExportFolder}>
-              Open Export Folder
+              {t("inventory.openExport")}
             </button>
             <button type="button" className="danger" onClick={onClearInventory}>
-              Clear All Inventory Records
+              {t("inventory.clearAll")}
             </button>
           </div>
         </SurfaceCard>
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <SurfaceCard title="Total Products" contentClassName="pt-3">
+        <SurfaceCard title={t("inventory.totalProducts")} contentClassName="pt-3">
           <p className="m-0 text-2xl font-semibold text-foreground">{products.length}</p>
         </SurfaceCard>
-        <SurfaceCard title="Low Stock" contentClassName="pt-3">
+        <SurfaceCard title={t("inventory.lowStock")} contentClassName="pt-3">
           <p className="m-0 text-2xl font-semibold text-amber-300">{lowStockCount}</p>
         </SurfaceCard>
-        <SurfaceCard title="Out of Stock" contentClassName="pt-3">
+        <SurfaceCard title={t("inventory.outOfStock")} contentClassName="pt-3">
           <p className="m-0 text-2xl font-semibold text-rose-300">{outOfStockCount}</p>
         </SurfaceCard>
       </div>
 
-      <SurfaceCard title="Products" className="overflow-hidden" contentClassName="p-0">
+      <SurfaceCard title={t("inventory.products")} className="overflow-hidden" contentClassName="p-0">
         <table className="m-0">
           <thead>
             <tr>
-              <th>Barcode</th>
-              <th>Product Name</th>
-              <th>Qty</th>
-              <th>Buying Price</th>
-              <th>Selling Price</th>
-              <th>Disc (%)</th>
-              <th>Card Surcharge (%)</th>
-              <th>Status</th>
+              <th>{t("inventory.barcode")}</th>
+              <th>{t("inventory.productName")}</th>
+              <th>{t("inventory.qty")}</th>
+              <th>{t("inventory.buyPrice")}</th>
+              <th>{t("inventory.sellPrice")}</th>
+              <th>{t("inventory.discPct")}</th>
+              <th>{t("inventory.cardSurcharge")}</th>
+              <th>{t("inventory.status")}</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
-                  No products match the current filters.
+                  {t("inventory.noMatch")}
                 </td>
               </tr>
             ) : (
               filtered.map((product) => {
                 const stockValue = Number(product.stock);
-                const status = stockValue <= 0 ? "Out" : stockValue <= 5 ? "Low" : "Healthy";
+                const status = stockValue <= 0 ? t("inventory.statusOut") : stockValue <= 5 ? t("inventory.statusLow") : t("inventory.statusHealthy");
                 const surcharge = Number(product.card_surcharge_enabled || 0) > 0 ? Number(product.card_surcharge_pct || 0).toFixed(2) : "0.00";
                 return (
                   <tr key={product.barcode_id}>

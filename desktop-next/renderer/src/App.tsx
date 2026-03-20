@@ -1,5 +1,6 @@
 import { CSSProperties, FormEvent, Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { BarChart3, Boxes, HandCoins, LayoutDashboard, LogOut, PauseCircle, ReceiptText, RefreshCw, Truck } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { LoginView } from "./features/LoginView";
 import type { BarcodePrintItem } from "./features/OperationsTab";
 import type { ActiveTab, BatchLineDraft, Customer, CustomerLedger, Expense, HeldSale, Product, Summary, Supplier, SupplierBatch, SupplierLedger } from "./features/types";
@@ -8,6 +9,7 @@ import { posApiClient } from "./lib/posApiClient";
 import { useBillingStore } from "./store/useBillingStore";
 import { useSessionStore } from "./store/useSessionStore";
 import { useShellStore } from "./store/useShellStore";
+import { useLocaleStore } from "./store/useLocaleStore";
 
 const SummaryStrip = lazy(async () => {
   const module = await import("./features/SummaryStrip");
@@ -45,6 +47,8 @@ const OperationsTab = lazy(async () => {
 });
 
 export default function App() {
+  const { t } = useTranslation();
+  const { locale, setLocale } = useLocaleStore();
   const { user, setUser } = useSessionStore();
   const [username, setUsername] = useState("admin");
   const [password, setPassword] = useState("admin123");
@@ -105,7 +109,7 @@ export default function App() {
   const [supplierPayMethod, setSupplierPayMethod] = useState("CASH");
   const [supplierPayNote, setSupplierPayNote] = useState("");
 
-  const shortcutHint = "Shortcuts: Ctrl+1 Dashboard, Ctrl+2 Billing, Ctrl+3 Inventory, Ctrl+4 Held, Ctrl+5 Customers, Ctrl+6 Suppliers, Ctrl+7 Operations, Ctrl+/ Focus scanner, F8 Hold, F9 Checkout";
+  const shortcutHint = t("shortcuts");
 
   const netColor = useMemo(() => {
     if (!summary) {
@@ -237,10 +241,13 @@ export default function App() {
       return;
     }
     if (response.data.printed) {
-      pushMessage(`Barcodes printed on ${response.data.printer_name || "default printer"}. PDF saved: ${response.data.file_path}`);
+      pushMessage(t("messages.barcodesPrinted", {
+        printer: response.data.printer_name || "default printer",
+        path: response.data.file_path,
+      }));
       return;
     }
-    pushMessage(`No printer connected. Barcode PDF saved: ${response.data.file_path}`);
+    pushMessage(t("messages.barcodesSaved", { path: response.data.file_path }));
   }
 
   async function refreshSupplierLedger(supplierId: number) {
@@ -505,9 +512,16 @@ export default function App() {
     const printResult = await posApiClient.exportSaleBillPdf(response.data.sale_id);
     if (printResult.ok) {
       if (printResult.data.printed) {
-        pushMessage(`Checkout successful. Sale ID: ${response.data.sale_id}. Receipt printed on ${printResult.data.printer_name || "default printer"}. PDF: ${printResult.data.file_path}`);
+        pushMessage(t("messages.receiptPrinted", {
+          saleId: response.data.sale_id,
+          printer: printResult.data.printer_name || "default printer",
+          path: printResult.data.file_path,
+        }));
       } else {
-        pushMessage(`Checkout successful. Sale ID: ${response.data.sale_id}. No printer connected, PDF saved: ${printResult.data.file_path}`);
+        pushMessage(t("messages.receiptSaved", {
+          saleId: response.data.sale_id,
+          path: printResult.data.file_path,
+        }));
       }
     }
     clearCart();
@@ -635,9 +649,16 @@ export default function App() {
     const printResult = await posApiClient.exportSaleBillPdf(finalSaleId);
     if (printResult.ok) {
       if (printResult.data.printed) {
-        pushMessage(`Held sale ${finalSaleId} completed. Receipt printed on ${printResult.data.printer_name || "default printer"}. PDF: ${printResult.data.file_path}`);
+        pushMessage(t("messages.heldPrinted", {
+          saleId: finalSaleId,
+          printer: printResult.data.printer_name || "default printer",
+          path: printResult.data.file_path,
+        }));
       } else {
-        pushMessage(`Held sale ${finalSaleId} completed. No printer connected, PDF saved: ${printResult.data.file_path}`);
+        pushMessage(t("messages.heldSaved", {
+          saleId: finalSaleId,
+          path: printResult.data.file_path,
+        }));
       }
     }
     clearCart();
@@ -1021,94 +1042,94 @@ export default function App() {
   }> = [
     {
       id: "dashboard",
-      label: "Dashboard",
-      description: "Financial reports",
+      label: t("tabs.dashboard.label"),
+      description: t("tabs.dashboard.description"),
       icon: BarChart3,
       selectedClass: "border-sky-300/55 bg-sky-400/12 text-sky-100",
       chipClass: "bg-sky-300",
       headerAccentClass: "border-l-sky-300/70",
       refreshClass: "border-sky-300/45 bg-sky-400/10 text-sky-100 hover:border-sky-300/70",
-      headerTitle: "Dashboard Overview",
-      headerSubtitle: "Track sales, margins, and operational KPIs in one place.",
-      refreshLabel: "Refresh KPI",
+      headerTitle: t("tabs.dashboard.title"),
+      headerSubtitle: t("tabs.dashboard.subtitle"),
+      refreshLabel: t("actions.refreshKpi"),
     },
     {
       id: "billing",
-      label: "Billing",
-      description: "Fast POS checkout",
+      label: t("tabs.billing.label"),
+      description: t("tabs.billing.description"),
       icon: LayoutDashboard,
       selectedClass: "border-amber-300/55 bg-amber-400/12 text-amber-100",
       chipClass: "bg-amber-300",
       headerAccentClass: "border-l-amber-300/70",
       refreshClass: "border-amber-300/45 bg-amber-400/10 text-amber-100 hover:border-amber-300/70",
-      headerTitle: "Billing Workspace",
-      headerSubtitle: "Scan, add, and checkout quickly with cashier-focused controls.",
-      refreshLabel: "Refresh Products",
+      headerTitle: t("tabs.billing.title"),
+      headerSubtitle: t("tabs.billing.subtitle"),
+      refreshLabel: t("actions.refreshProducts"),
     },
     {
       id: "inventory",
-      label: "Inventory",
-      description: "Stock visibility",
+      label: t("tabs.inventory.label"),
+      description: t("tabs.inventory.description"),
       icon: Boxes,
       selectedClass: "border-emerald-300/55 bg-emerald-400/12 text-emerald-100",
       chipClass: "bg-emerald-300",
       headerAccentClass: "border-l-emerald-300/70",
       refreshClass: "border-emerald-300/45 bg-emerald-400/10 text-emerald-100 hover:border-emerald-300/70",
-      headerTitle: "Inventory Control",
-      headerSubtitle: "Monitor stock health, low-level alerts, and product availability.",
-      refreshLabel: "Refresh Stock",
+      headerTitle: t("tabs.inventory.title"),
+      headerSubtitle: t("tabs.inventory.subtitle"),
+      refreshLabel: t("actions.refreshStock"),
     },
     {
       id: "held",
-      label: "Held Sales",
-      description: "Pending sale drafts",
+      label: t("tabs.held.label"),
+      description: t("tabs.held.description"),
       icon: PauseCircle,
       selectedClass: "border-indigo-300/55 bg-indigo-400/12 text-indigo-100",
       chipClass: "bg-indigo-300",
       headerAccentClass: "border-l-indigo-300/70",
       refreshClass: "border-indigo-300/45 bg-indigo-400/10 text-indigo-100 hover:border-indigo-300/70",
-      headerTitle: "Held Bills Queue",
-      headerSubtitle: "Resume, complete, and manage pending draft bills safely.",
-      refreshLabel: "Refresh Held Sales",
+      headerTitle: t("tabs.held.title"),
+      headerSubtitle: t("tabs.held.subtitle"),
+      refreshLabel: t("actions.refreshHeld"),
     },
     {
       id: "customers",
-      label: "Customers",
-      description: "Credit and settlements",
+      label: t("tabs.customers.label"),
+      description: t("tabs.customers.description"),
       icon: HandCoins,
       selectedClass: "border-cyan-300/55 bg-cyan-400/12 text-cyan-100",
       chipClass: "bg-cyan-300",
       headerAccentClass: "border-l-cyan-300/70",
       refreshClass: "border-cyan-300/45 bg-cyan-400/10 text-cyan-100 hover:border-cyan-300/70",
-      headerTitle: "Customer Ledger",
-      headerSubtitle: "Handle credit balances, settlement history, and payment updates.",
-      refreshLabel: "Refresh Customers",
+      headerTitle: t("tabs.customers.title"),
+      headerSubtitle: t("tabs.customers.subtitle"),
+      refreshLabel: t("actions.refreshCustomers"),
     },
     {
       id: "suppliers",
-      label: "Suppliers",
-      description: "Stock and payables",
+      label: t("tabs.suppliers.label"),
+      description: t("tabs.suppliers.description"),
       icon: Truck,
       selectedClass: "border-orange-300/55 bg-orange-400/12 text-orange-100",
       chipClass: "bg-orange-300",
       headerAccentClass: "border-l-orange-300/70",
       refreshClass: "border-orange-300/45 bg-orange-400/10 text-orange-100 hover:border-orange-300/70",
-      headerTitle: "Supplier Operations",
-      headerSubtitle: "Receive stock batches and track supplier payable settlements.",
-      refreshLabel: "Refresh Suppliers",
+      headerTitle: t("tabs.suppliers.title"),
+      headerSubtitle: t("tabs.suppliers.subtitle"),
+      refreshLabel: t("actions.refreshSuppliers"),
     },
     {
       id: "operations",
-      label: "Operations",
-      description: "Barcode and expenses",
+      label: t("tabs.operations.label"),
+      description: t("tabs.operations.description"),
       icon: ReceiptText,
       selectedClass: "border-rose-300/55 bg-rose-400/12 text-rose-100",
       chipClass: "bg-rose-300",
       headerAccentClass: "border-l-rose-300/70",
       refreshClass: "border-rose-300/45 bg-rose-400/10 text-rose-100 hover:border-rose-300/70",
-      headerTitle: "Operations Hub",
-      headerSubtitle: "Manage expenses and barcode label generation efficiently.",
-      refreshLabel: "Refresh Operations",
+      headerTitle: t("tabs.operations.title"),
+      headerSubtitle: t("tabs.operations.subtitle"),
+      refreshLabel: t("actions.refreshOperations"),
     },
   ];
 
@@ -1293,15 +1314,15 @@ export default function App() {
       <div className="mx-auto grid max-w-[1600px] gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
         <aside className="rounded-3xl border border-border/80 bg-card/80 p-4 shadow-panel backdrop-blur">
           <div className="space-y-1 border-b border-border/80 pb-4">
-            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Smart Retail</p>
-            <h1 className="text-2xl font-semibold">POS Next</h1>
-            <p className="text-sm text-muted-foreground">Store Control Center</p>
+            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">{t("shell.store")}</p>
+            <h1 className="text-2xl font-semibold">{t("shell.app")}</h1>
+            <p className="text-sm text-muted-foreground">{t("shell.center")}</p>
           </div>
 
           <div className="mt-4 rounded-xl border border-border/80 bg-background/40 p-3 text-sm">
-            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Session</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t("shell.session")}</p>
             <p className="mt-1 font-semibold text-foreground">{user.username}</p>
-            <p className="text-muted-foreground">Role: {user.role}</p>
+            <p className="text-muted-foreground">{t("shell.role")}: {user.role}</p>
           </div>
 
           <nav className="mt-4 space-y-2" aria-label="Primary navigation">
@@ -1347,6 +1368,28 @@ export default function App() {
                 <p className="mt-1 text-xs text-muted-foreground">{shortcutHint}</p>
               </div>
               <div className="flex flex-wrap gap-2">
+                <div className="inline-flex overflow-hidden rounded-xl border border-border/80 bg-background/50">
+                  <button
+                    type="button"
+                    className={cn(
+                      "rounded-none px-3 py-2 text-sm font-semibold",
+                      locale === "en" ? "bg-primary/85 text-primary-foreground" : "bg-transparent text-foreground/90",
+                    )}
+                    onClick={() => setLocale("en")}
+                  >
+                    {t("language.english")}
+                  </button>
+                  <button
+                    type="button"
+                    className={cn(
+                      "rounded-none px-3 py-2 text-sm font-semibold",
+                      locale === "si" ? "bg-primary/85 text-primary-foreground" : "bg-transparent text-foreground/90",
+                    )}
+                    onClick={() => setLocale("si")}
+                  >
+                    {t("language.sinhala")}
+                  </button>
+                </div>
                 <button
                   type="button"
                   style={{ ...activeTabVisual.refreshStyle, borderWidth: "1px" }}
@@ -1366,7 +1409,7 @@ export default function App() {
                   }}
                 >
                   <LogOut size={16} aria-hidden="true" />
-                  Logout
+                  {t("actions.logout")}
                 </button>
               </div>
             </div>
@@ -1376,7 +1419,7 @@ export default function App() {
           </header>
 
           <section className="rounded-3xl border border-border/80 bg-card/65 p-4 shadow-panel backdrop-blur md:p-5">
-            <Suspense fallback={<div className="rounded-xl border border-border/80 bg-background/45 p-6 text-sm text-muted-foreground">Loading tab...</div>}>
+            <Suspense fallback={<div className="rounded-xl border border-border/80 bg-background/45 p-6 text-sm text-muted-foreground">{t("shell.loading")}</div>}>
               {activeTab === "dashboard" ? (
                 <Suspense
                   fallback={

@@ -1,4 +1,5 @@
 import { FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 
 type LoginViewProps = {
   username: string;
@@ -10,18 +11,20 @@ type LoginViewProps = {
 };
 
 export function LoginView(props: LoginViewProps) {
+  const { t } = useTranslation();
+
   return (
     <main className="login-shell">
       <section className="login-card">
-        <h1>Smart Retail POS Next</h1>
-        <p className="muted">Electron + React migration shell</p>
+        <h1>{t("login.title")}</h1>
+        <p className="muted">{t("login.subtitle")}</p>
         <form onSubmit={props.onSubmit}>
           <label>
-            Username
+            {t("login.username")}
             <input value={props.username} onChange={(event) => props.onUsernameChange(event.target.value)} />
           </label>
           <label>
-            Password
+            {t("login.password")}
             <input
               type="password"
               value={props.password}
@@ -29,7 +32,7 @@ export function LoginView(props: LoginViewProps) {
             />
           </label>
           {props.error ? <p className="error">{props.error}</p> : null}
-          <button type="submit">Login</button>
+          <button type="submit">{t("login.submit")}</button>
         </form>
       </section>
     </main>
