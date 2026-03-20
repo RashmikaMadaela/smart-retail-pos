@@ -382,19 +382,45 @@ export default function App() {
 
   const baseTotal = Math.max(0, Number((subTotal - lineDiscountTotal).toFixed(2)));
 
+  const cardSurchargeTotal = useMemo(() => {
+    if (paymentMethod !== "CARD") {
+      return 0;
+    }
+
+    const surcharge = cart.reduce((acc, item) => {
+      const product = products.find((p) => p.barcode_id === item.product_id);
+      if (!product || Number(product.card_surcharge_enabled || 0) !== 1) {
+        return acc;
+      }
+      const pct = Number(product.card_surcharge_pct || 0);
+      if (!Number.isFinite(pct) || pct <= 0) {
+        return acc;
+      }
+      const lineBase = Number(item.qty) * Math.max(0, Number(item.price) - Number(item.discount));
+      return acc + lineBase * (pct / 100);
+    }, 0);
+
+    return Number(surcharge.toFixed(2));
+  }, [cart, products, paymentMethod]);
+
+  const finalTotal = Number((baseTotal + cardSurchargeTotal).toFixed(2));
+
   const paidValue = useMemo(() => {
     if (paymentMode === "UNPAID") {
       return 0;
     }
+    if (paymentMethod === "CARD") {
+      return finalTotal;
+    }
     if (!paidAmount.trim()) {
-      return paymentMode === "PAID" ? baseTotal : 0;
+      return paymentMode === "PAID" ? finalTotal : 0;
     }
     const parsed = Number(paidAmount);
     return Number.isFinite(parsed) ? parsed : 0;
-  }, [paymentMode, paidAmount, baseTotal]);
+  }, [paymentMode, paymentMethod, paidAmount, finalTotal]);
 
-  const changeDue = Math.max(0, Number((paidValue - baseTotal).toFixed(2)));
-  const balanceDue = Math.max(0, Number((baseTotal - paidValue).toFixed(2)));
+  const changeDue = Math.max(0, Number((paidValue - finalTotal).toFixed(2)));
+  const balanceDue = Math.max(0, Number((finalTotal - paidValue).toFixed(2)));
 
   async function processCheckout() {
     if (!user) {
@@ -422,7 +448,13 @@ export default function App() {
       customerId = Number(cRes.data.id);
     }
 
-    const paidPayload = paymentMode === "UNPAID" ? 0 : paidAmount.trim() ? Number(paidAmount) : baseTotal;
+    const paidPayload = paymentMode === "UNPAID"
+      ? 0
+      : paymentMethod === "CARD"
+        ? finalTotal
+        : paidAmount.trim()
+          ? Number(paidAmount)
+          : finalTotal;
     if (Number.isNaN(paidPayload) || paidPayload < 0) {
       pushError("Paid amount must be a non-negative number.");
       return;
@@ -546,7 +578,13 @@ export default function App() {
       customerId = Number(cRes.data.id);
     }
 
-    const paidPayload = paymentMode === "UNPAID" ? 0 : paidAmount.trim() ? Number(paidAmount) : baseTotal;
+    const paidPayload = paymentMode === "UNPAID"
+      ? 0
+      : paymentMethod === "CARD"
+        ? finalTotal
+        : paidAmount.trim()
+          ? Number(paidAmount)
+          : finalTotal;
     const response = await posApiClient.completeHeldSale({
       sale_id: selectedHeldId,
       customer_id: customerId,
@@ -632,9 +670,37 @@ export default function App() {
     await refreshSuppliers();
   }
 
+  async function updateSupplierNow(payload: { supplier_id: number; name: string; contact?: string }) {
+    if (!payload.name.trim()) {
+      pushError("Supplier name is required.");
+      return;
+    }
+
+    const response = await posApiClient.updateSupplier({
+      supplier_id: payload.supplier_id,
+      name: payload.name.trim(),
+      contact: (payload.contact || "").trim(),
+    });
+    if (!response.ok) {
+      pushError(response.error || "Supplier update failed.");
+      return;
+    }
+
+    pushMessage(response.data.message || "Supplier updated.");
+    await refreshSuppliers();
+    if (selectedSupplierId === payload.supplier_id) {
+      await refreshSupplierLedger(payload.supplier_id);
+    }
+  }
+
   function addSupplierBatchLine() {
-    const createNewItem = Boolean(batchLineDraft.create_new_item);
-    if (!createNewItem && !batchLineDraft.product_id.trim()) {
+    const normalizedProductId = batchLineDraft.product_id.trim();
+    const matchedProduct = normalizedProductId
+      ? products.find((product) => product.barcode_id.trim().toLowerCase() === normalizedProductId.toLowerCase())
+      : null;
+
+    const createNewItem = !matchedProduct;
+    if (!createNewItem && !normalizedProductId) {
       pushError("Batch line product id is required.");
       return;
     }
@@ -671,7 +737,14 @@ export default function App() {
       }
     }
 
-    setBatchLines((prev) => [...prev, { ...batchLineDraft }]);
+    setBatchLines((prev) => [
+      ...prev,
+      {
+        ...batchLineDraft,
+        create_new_item: createNewItem,
+        product_id: normalizedProductId,
+      },
+    ]);
     setBatchLineDraft({
       product_id: "",
       qty_received: "",
@@ -1255,6 +1328,8 @@ export default function App() {
                     subTotal={subTotal}
                     lineDiscountTotal={lineDiscountTotal}
                     baseTotal={baseTotal}
+                    cardSurchargeTotal={cardSurchargeTotal}
+                    totalAmount={finalTotal}
                     changeDue={changeDue}
                     balanceDue={balanceDue}
                     onQuickAddProduct={addProductToCartById}
@@ -1317,6 +1392,7 @@ export default function App() {
 
               {activeTab === "suppliers" ? (
                 <SuppliersTab
+                  products={products}
                   supplierName={supplierName}
                   supplierContact={supplierContact}
                   suppliers={suppliers}
@@ -1334,6 +1410,7 @@ export default function App() {
                   onSupplierNameChange={setSupplierName}
                   onSupplierContactChange={setSupplierContact}
                   onCreateSupplier={createSupplierNow}
+                  onUpdateSupplier={updateSupplierNow}
                   onSelectSupplier={(supplierId) => {
                     setSelectedSupplierId(supplierId);
                     void refreshSupplierLedger(supplierId);

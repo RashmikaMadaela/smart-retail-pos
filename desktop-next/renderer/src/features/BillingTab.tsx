@@ -12,6 +12,8 @@ type BillingTabProps = {
   subTotal: number;
   lineDiscountTotal: number;
   baseTotal: number;
+  cardSurchargeTotal: number;
+  totalAmount: number;
   changeDue: number;
   balanceDue: number;
   onQuickAddProduct: (productId: string, qty: number) => void | Promise<void>;
@@ -38,6 +40,8 @@ export function BillingTab({
   subTotal,
   lineDiscountTotal,
   baseTotal,
+  cardSurchargeTotal,
+  totalAmount,
   changeDue,
   balanceDue,
   onQuickAddProduct,
@@ -397,7 +401,7 @@ export function BillingTab({
               </label>
             )}
 
-            {paymentMode !== "UNPAID" && (
+            {paymentMode !== "UNPAID" && paymentMethod !== "CARD" && (
               <label className="m-0 text-sm font-medium text-foreground">
                 Paid Amount
                 <input
@@ -428,8 +432,14 @@ export function BillingTab({
             <p className="m-0 text-right font-semibold text-foreground">Rs. {subTotal.toFixed(2)}</p>
             <p className="m-0 text-muted-foreground">Line Discount</p>
             <p className="m-0 text-right font-semibold text-foreground">Rs. {lineDiscountTotal.toFixed(2)}</p>
+            {paymentMethod === "CARD" && cardSurchargeTotal > 0 ? (
+              <>
+                <p className="m-0 text-muted-foreground">Card Surcharge</p>
+                <p className="m-0 text-right font-semibold text-foreground">Rs. {cardSurchargeTotal.toFixed(2)}</p>
+              </>
+            ) : null}
             <p className="m-0 text-muted-foreground">Total</p>
-            <p className="m-0 text-right text-lg font-bold" style={{ color: "#7dd3fc" }}>Rs. {baseTotal.toFixed(2)}</p>
+            <p className="m-0 text-right text-lg font-bold" style={{ color: "#7dd3fc" }}>Rs. {totalAmount.toFixed(2)}</p>
             <p className="m-0 text-muted-foreground">Balance Due</p>
             <p className="m-0 text-right font-semibold text-foreground">Rs. {balanceDue.toFixed(2)}</p>
             <p className="m-0 text-muted-foreground">Change</p>
@@ -454,9 +464,17 @@ export function BillingTab({
             <p className="mt-2 text-sm text-muted-foreground">Review totals before finalizing the sale.</p>
             <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl border border-border/80 bg-background/50 p-3 text-sm">
               <p className="m-0 text-muted-foreground">Total</p>
-              <p className="m-0 text-right font-bold" style={{ color: "#7dd3fc" }}>Rs. {baseTotal.toFixed(2)}</p>
+              <p className="m-0 text-right font-bold" style={{ color: "#7dd3fc" }}>Rs. {totalAmount.toFixed(2)}</p>
+              {paymentMethod === "CARD" && cardSurchargeTotal > 0 ? (
+                <>
+                  <p className="m-0 text-muted-foreground">Card Surcharge</p>
+                  <p className="m-0 text-right font-semibold text-foreground">Rs. {cardSurchargeTotal.toFixed(2)}</p>
+                </>
+              ) : null}
               <p className="m-0 text-muted-foreground">Paid</p>
-              <p className="m-0 text-right font-semibold text-foreground">{paidAmount.trim() || "Auto"}</p>
+              <p className="m-0 text-right font-semibold text-foreground">
+                {paymentMethod === "CARD" ? `Rs. ${totalAmount.toFixed(2)}` : paidAmount.trim() || "Auto"}
+              </p>
               <p className="m-0 text-muted-foreground">Mode</p>
               <p className="m-0 text-right font-semibold text-foreground">{paymentMode}</p>
             </div>
