@@ -833,50 +833,140 @@ export default function App() {
     label: string;
     description: string;
     icon: typeof LayoutDashboard;
+    selectedClass: string;
+    chipClass: string;
+    headerAccentClass: string;
+    refreshClass: string;
+    headerTitle: string;
+    headerSubtitle: string;
+    refreshLabel: string;
   }> = [
     {
       id: "dashboard",
       label: "Dashboard",
       description: "Financial reports",
       icon: BarChart3,
+      selectedClass: "border-sky-300/55 bg-sky-400/12 text-sky-100",
+      chipClass: "bg-sky-300",
+      headerAccentClass: "border-l-sky-300/70",
+      refreshClass: "border-sky-300/45 bg-sky-400/10 text-sky-100 hover:border-sky-300/70",
+      headerTitle: "Dashboard Overview",
+      headerSubtitle: "Track sales, margins, and operational KPIs in one place.",
+      refreshLabel: "Refresh KPI",
     },
     {
       id: "billing",
       label: "Billing",
       description: "Fast POS checkout",
       icon: LayoutDashboard,
+      selectedClass: "border-amber-300/55 bg-amber-400/12 text-amber-100",
+      chipClass: "bg-amber-300",
+      headerAccentClass: "border-l-amber-300/70",
+      refreshClass: "border-amber-300/45 bg-amber-400/10 text-amber-100 hover:border-amber-300/70",
+      headerTitle: "Billing Workspace",
+      headerSubtitle: "Scan, add, and checkout quickly with cashier-focused controls.",
+      refreshLabel: "Refresh Products",
     },
     {
       id: "inventory",
       label: "Inventory",
       description: "Stock visibility",
       icon: Boxes,
+      selectedClass: "border-emerald-300/55 bg-emerald-400/12 text-emerald-100",
+      chipClass: "bg-emerald-300",
+      headerAccentClass: "border-l-emerald-300/70",
+      refreshClass: "border-emerald-300/45 bg-emerald-400/10 text-emerald-100 hover:border-emerald-300/70",
+      headerTitle: "Inventory Control",
+      headerSubtitle: "Monitor stock health, low-level alerts, and product availability.",
+      refreshLabel: "Refresh Stock",
     },
     {
       id: "held",
       label: "Held Sales",
       description: "Pending sale drafts",
       icon: PauseCircle,
+      selectedClass: "border-indigo-300/55 bg-indigo-400/12 text-indigo-100",
+      chipClass: "bg-indigo-300",
+      headerAccentClass: "border-l-indigo-300/70",
+      refreshClass: "border-indigo-300/45 bg-indigo-400/10 text-indigo-100 hover:border-indigo-300/70",
+      headerTitle: "Held Bills Queue",
+      headerSubtitle: "Resume, complete, and manage pending draft bills safely.",
+      refreshLabel: "Refresh Held Sales",
     },
     {
       id: "customers",
       label: "Customers",
       description: "Credit and settlements",
       icon: HandCoins,
+      selectedClass: "border-cyan-300/55 bg-cyan-400/12 text-cyan-100",
+      chipClass: "bg-cyan-300",
+      headerAccentClass: "border-l-cyan-300/70",
+      refreshClass: "border-cyan-300/45 bg-cyan-400/10 text-cyan-100 hover:border-cyan-300/70",
+      headerTitle: "Customer Ledger",
+      headerSubtitle: "Handle credit balances, settlement history, and payment updates.",
+      refreshLabel: "Refresh Customers",
     },
     {
       id: "suppliers",
       label: "Suppliers",
       description: "Stock and payables",
       icon: Truck,
+      selectedClass: "border-orange-300/55 bg-orange-400/12 text-orange-100",
+      chipClass: "bg-orange-300",
+      headerAccentClass: "border-l-orange-300/70",
+      refreshClass: "border-orange-300/45 bg-orange-400/10 text-orange-100 hover:border-orange-300/70",
+      headerTitle: "Supplier Operations",
+      headerSubtitle: "Receive stock batches and track supplier payable settlements.",
+      refreshLabel: "Refresh Suppliers",
     },
     {
       id: "operations",
       label: "Operations",
       description: "Barcode and expenses",
       icon: ReceiptText,
+      selectedClass: "border-rose-300/55 bg-rose-400/12 text-rose-100",
+      chipClass: "bg-rose-300",
+      headerAccentClass: "border-l-rose-300/70",
+      refreshClass: "border-rose-300/45 bg-rose-400/10 text-rose-100 hover:border-rose-300/70",
+      headerTitle: "Operations Hub",
+      headerSubtitle: "Manage expenses and barcode label generation efficiently.",
+      refreshLabel: "Refresh Operations",
     },
   ];
+
+  const activeTabConfig = tabItems.find((tab) => tab.id === activeTab) || tabItems[0];
+
+  async function handleActiveTabRefresh() {
+    if (activeTab === "dashboard") {
+      await refreshSummary();
+      return;
+    }
+    if (activeTab === "billing" || activeTab === "inventory") {
+      await refreshProducts();
+      return;
+    }
+    if (activeTab === "held") {
+      await refreshHeldSales(user?.id);
+      return;
+    }
+    if (activeTab === "customers") {
+      await refreshCustomers();
+      if (selectedCustomerId) {
+        await refreshCustomerLedger(selectedCustomerId);
+      }
+      return;
+    }
+    if (activeTab === "suppliers") {
+      await refreshSuppliers();
+      if (selectedSupplierId) {
+        await refreshSupplierLedger(selectedSupplierId);
+      }
+      return;
+    }
+
+    await refreshExpenses();
+    await refreshProducts();
+  }
 
   useEffect(() => {
     if (!user) {
@@ -1001,12 +1091,13 @@ export default function App() {
                     "w-full rounded-xl border px-3 py-3 text-left transition-colors",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     selected
-                      ? "border-accent/80 bg-accent/35 text-foreground"
+                      ? item.selectedClass
                       : "border-border/80 bg-background/65 text-foreground/90 hover:border-accent/50 hover:bg-background/90 hover:text-foreground",
                   )}
                   onClick={() => setActiveTab(item.id)}
                 >
                   <span className="flex items-center gap-2 text-sm font-semibold">
+                    <span className={cn("h-2 w-2 rounded-full", selected ? item.chipClass : "bg-muted-foreground/50")} aria-hidden="true" />
                     <Icon size={16} aria-hidden="true" />
                     {item.label}
                   </span>
@@ -1020,20 +1111,26 @@ export default function App() {
         <section className="space-y-4">
           <header className="rounded-3xl border border-border/80 bg-card/80 p-4 shadow-panel backdrop-blur md:p-5">
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-              <div>
-                <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Operations</p>
-                <h2 className="mt-1 text-2xl font-semibold">Smart Retail POS Next</h2>
-                <p className="mt-1 text-sm text-muted-foreground">Billing, credits, held sales, and supplier ledgers from one workspace.</p>
+              <div className={cn("border-l-2 pl-3", activeTabConfig.headerAccentClass)}>
+                <p className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-muted-foreground">
+                  <span className={cn("h-2 w-2 rounded-full", activeTabConfig.chipClass)} aria-hidden="true" />
+                  {activeTabConfig.label}
+                </p>
+                <h2 className="mt-1 text-2xl font-semibold">{activeTabConfig.headerTitle}</h2>
+                <p className="mt-1 text-sm text-muted-foreground">{activeTabConfig.headerSubtitle}</p>
                 <p className="mt-1 text-xs text-muted-foreground">{shortcutHint}</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  className="inline-flex items-center gap-2 rounded-xl border border-border/80 bg-background/45 px-3 py-2 text-sm font-semibold text-foreground hover:border-accent/60"
-                  onClick={() => void refreshSummary()}
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold",
+                    activeTabConfig.refreshClass,
+                  )}
+                  onClick={() => void handleActiveTabRefresh()}
                 >
                   <RefreshCw size={16} aria-hidden="true" />
-                  Refresh KPI
+                  {activeTabConfig.refreshLabel}
                 </button>
                 <button
                   type="button"
@@ -1079,12 +1176,6 @@ export default function App() {
 
               {activeTab === "billing" ? (
                 <>
-                  <div className="mb-4 flex items-center justify-between gap-3">
-                    <h3 className="text-lg font-semibold">Billing Workflow</h3>
-                    <button type="button" onClick={() => void refreshProducts()}>
-                      Refresh Products
-                    </button>
-                  </div>
                   <BillingTab
                     products={products}
                     cart={cart}

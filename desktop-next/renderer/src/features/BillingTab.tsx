@@ -207,20 +207,29 @@ export function BillingTab({
                           <p className="m-0 px-3 py-2 text-sm text-slate-300">No matching products</p>
                       ) : (
                         nameSuggestions.map((product) => (
-                          <button
+                          <div
                             key={product.barcode_id}
-                            type="button"
+                            role="button"
+                            tabIndex={0}
                               className="flex w-full flex-col items-start gap-0.5 border-0 border-b border-slate-700 bg-slate-900 px-3 py-2 text-left text-[15px] text-slate-100 hover:bg-slate-800 focus:bg-slate-800"
-                            onClick={() => {
+                            onMouseDown={(event) => {
+                              event.preventDefault();
                               setProductNameInput(product.name);
                               setScannerInput(product.barcode_id);
+                            }}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                setProductNameInput(product.name);
+                                setScannerInput(product.barcode_id);
+                              }
                             }}
                           >
                               <span className="font-semibold text-slate-100">{product.name}</span>
                               <span className="text-sm text-slate-300">
                               {product.barcode_id} | Rs. {Number(product.sell_price).toFixed(2)} | Stock {Number(product.stock).toFixed(2)}
                             </span>
-                          </button>
+                          </div>
                         ))
                       )}
                     </div>
