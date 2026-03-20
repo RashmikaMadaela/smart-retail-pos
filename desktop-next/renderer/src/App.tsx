@@ -313,6 +313,33 @@ export default function App() {
     setCart((prev) => prev.filter((row) => row.product_id !== productId));
   }
 
+  function updateCartDiscount(productId: string, mode: "percent" | "amount", rawValue: string) {
+    const parsed = Number(rawValue || "0");
+    const safeValue = Number.isFinite(parsed) ? parsed : 0;
+
+    setCart((prev) =>
+      prev.map((row) => {
+        if (row.product_id !== productId) {
+          return row;
+        }
+
+        if (mode === "percent") {
+          const pct = Math.max(0, Math.min(100, safeValue));
+          return {
+            ...row,
+            discount: Number(((row.price * pct) / 100).toFixed(2)),
+          };
+        }
+
+        const amount = Math.max(0, Math.min(row.price, safeValue));
+        return {
+          ...row,
+          discount: Number(amount.toFixed(2)),
+        };
+      }),
+    );
+  }
+
   const subTotal = useMemo(
     () =>
       cart.reduce((acc, item) => {
@@ -1072,6 +1099,7 @@ export default function App() {
                     changeDue={changeDue}
                     balanceDue={balanceDue}
                     onQuickAddProduct={addProductToCartById}
+                    onUpdateCartDiscount={updateCartDiscount}
                     onAdjustCartQty={adjustCartQty}
                     onRemoveFromCart={removeFromCart}
                     onPaymentModeChange={setPaymentMode}

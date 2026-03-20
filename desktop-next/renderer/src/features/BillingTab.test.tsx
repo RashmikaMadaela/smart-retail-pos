@@ -25,6 +25,7 @@ describe("BillingTab", () => {
         changeDue={0}
         balanceDue={0}
         onQuickAddProduct={onQuickAddProduct}
+        onUpdateCartDiscount={vi.fn()}
         onAdjustCartQty={onAdjustCartQty}
         onRemoveFromCart={onRemoveFromCart}
         onPaymentModeChange={vi.fn()}

@@ -15,6 +15,7 @@ type BillingTabProps = {
   changeDue: number;
   balanceDue: number;
   onQuickAddProduct: (productId: string, qty: number) => void | Promise<void>;
+  onUpdateCartDiscount: (productId: string, mode: "percent" | "amount", value: string) => void;
   onAdjustCartQty: (productId: string, delta: number) => void;
   onRemoveFromCart: (productId: string) => void;
   onPaymentModeChange: (value: "PAID" | "PARTIAL" | "UNPAID") => void;
@@ -40,6 +41,7 @@ export function BillingTab({
   changeDue,
   balanceDue,
   onQuickAddProduct,
+  onUpdateCartDiscount,
   onAdjustCartQty,
   onRemoveFromCart,
   onPaymentModeChange,
@@ -53,6 +55,7 @@ export function BillingTab({
   const [scannerInput, setScannerInput] = useState("");
   const [productNameInput, setProductNameInput] = useState("");
   const [quickQty, setQuickQty] = useState("1");
+  const [discountDrafts, setDiscountDrafts] = useState<Record<string, { percent: string; amount: string }>>({});
   const [isCheckoutConfirmOpen, setIsCheckoutConfirmOpen] = useState(false);
   const scannerRef = useRef<HTMLInputElement | null>(null);
 
@@ -153,6 +156,21 @@ export function BillingTab({
     };
   }, [onHoldSale]);
 
+  useEffect(() => {
+    setDiscountDrafts((prev) => {
+      const next: Record<string, { percent: string; amount: string }> = {};
+      for (const item of cart) {
+        const discountPct = item.price > 0 ? Number(((item.discount / item.price) * 100).toFixed(2)) : 0;
+        const previous = prev[item.product_id];
+        next[item.product_id] = {
+          percent: previous?.percent ?? discountPct.toFixed(2),
+          amount: previous?.amount ?? item.discount.toFixed(2),
+        };
+      }
+      return next;
+    });
+  }, [cart]);
+
   return (
     <section className="space-y-4">
       <div className="space-y-4">
@@ -177,19 +195,37 @@ export function BillingTab({
 
               <label className="m-0 text-sm font-medium text-foreground">
                 Product Name
-                <input
-                  list="billing-product-name-options"
-                  value={productNameInput}
-                  placeholder="Type to search and select"
-                  onChange={(e) => handleProductNameInput(e.target.value)}
-                />
-                <datalist id="billing-product-name-options">
-                  {nameSuggestions.map((product) => (
-                    <option key={product.barcode_id} value={product.name}>
-                      {product.barcode_id} | Rs. {Number(product.sell_price).toFixed(2)} | Stock {Number(product.stock).toFixed(2)}
-                    </option>
-                  ))}
-                </datalist>
+                <div className="relative">
+                  <input
+                    value={productNameInput}
+                    placeholder="Type to search and select"
+                    onChange={(e) => handleProductNameInput(e.target.value)}
+                  />
+                  {productNameInput.trim() ? (
+                      <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto border border-slate-600 bg-slate-900 text-slate-100">
+                      {nameSuggestions.length === 0 ? (
+                          <p className="m-0 px-3 py-2 text-sm text-slate-300">No matching products</p>
+                      ) : (
+                        nameSuggestions.map((product) => (
+                          <button
+                            key={product.barcode_id}
+                            type="button"
+                              className="flex w-full flex-col items-start gap-0.5 border-0 border-b border-slate-700 bg-slate-900 px-3 py-2 text-left text-[15px] text-slate-100 hover:bg-slate-800 focus:bg-slate-800"
+                            onClick={() => {
+                              setProductNameInput(product.name);
+                              setScannerInput(product.barcode_id);
+                            }}
+                          >
+                              <span className="font-semibold text-slate-100">{product.name}</span>
+                              <span className="text-sm text-slate-300">
+                              {product.barcode_id} | Rs. {Number(product.sell_price).toFixed(2)} | Stock {Number(product.stock).toFixed(2)}
+                            </span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  ) : null}
+                </div>
               </label>
 
               <label className="m-0 text-sm font-medium text-foreground">
@@ -220,6 +256,7 @@ export function BillingTab({
                   <th>Name</th>
                   <th>Qty</th>
                   <th>Price</th>
+                  <th>Disc(%)</th>
                   <th>Disc</th>
                   <th>Total</th>
                   <th>Action</th>
@@ -228,36 +265,99 @@ export function BillingTab({
               <tbody>
                 {cart.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                    <td colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
                       Cart is empty. Add a product to start billing.
                     </td>
                   </tr>
                 ) : (
-                  cart.map((item) => (
-                    <tr key={item.product_id}>
-                      <td>{item.product_id}</td>
-                      <td>{item.name}</td>
-                      <td>
-                        <div className="flex items-center gap-1">
-                          <button type="button" className="!px-2 !py-1" onClick={() => onAdjustCartQty(item.product_id, -1)}>
-                            -
+                  cart.map((item) => {
+                    const discountPct = item.price > 0 ? Number(((item.discount / item.price) * 100).toFixed(2)) : 0;
+                    const draft = discountDrafts[item.product_id] || {
+                      percent: discountPct.toFixed(2),
+                      amount: item.discount.toFixed(2),
+                    };
+                    return (
+                      <tr key={item.product_id}>
+                        <td>{item.product_id}</td>
+                        <td>{item.name}</td>
+                        <td>
+                          <div className="flex items-center gap-1">
+                            <button type="button" className="!px-2 !py-1" onClick={() => onAdjustCartQty(item.product_id, -1)}>
+                              -
+                            </button>
+                            <span className="inline-block min-w-12 text-center">{item.qty.toFixed(2)}</span>
+                            <button type="button" className="!px-2 !py-1" onClick={() => onAdjustCartQty(item.product_id, 1)}>
+                              +
+                            </button>
+                          </div>
+                        </td>
+                        <td>{item.price.toFixed(2)}</td>
+                        <td>
+                          <input
+                            className="w-16 min-w-[64px]"
+                            value={draft.percent}
+                            onChange={(event) => {
+                              const value = event.target.value;
+                              setDiscountDrafts((prev) => ({
+                                ...prev,
+                                [item.product_id]: {
+                                  ...(prev[item.product_id] || { percent: "", amount: "" }),
+                                  percent: value,
+                                },
+                              }));
+                            }}
+                            onBlur={(event) => {
+                              onUpdateCartDiscount(item.product_id, "percent", event.target.value);
+                              const clamped = Math.max(0, Math.min(100, Number(event.target.value || "0")));
+                              setDiscountDrafts((prev) => ({
+                                ...prev,
+                                [item.product_id]: {
+                                  ...(prev[item.product_id] || { percent: "", amount: "" }),
+                                  percent: Number.isFinite(clamped) ? clamped.toFixed(2) : "0.00",
+                                  amount: Number((((item.price || 0) * clamped) / 100).toFixed(2)).toFixed(2),
+                                },
+                              }));
+                            }}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            className="w-16 min-w-[64px]"
+                            value={draft.amount}
+                            onChange={(event) => {
+                              const value = event.target.value;
+                              setDiscountDrafts((prev) => ({
+                                ...prev,
+                                [item.product_id]: {
+                                  ...(prev[item.product_id] || { percent: "", amount: "" }),
+                                  amount: value,
+                                },
+                              }));
+                            }}
+                            onBlur={(event) => {
+                              onUpdateCartDiscount(item.product_id, "amount", event.target.value);
+                              const clamped = Math.max(0, Math.min(item.price, Number(event.target.value || "0")));
+                              const percent = item.price > 0 ? Number(((clamped / item.price) * 100).toFixed(2)) : 0;
+                              setDiscountDrafts((prev) => ({
+                                ...prev,
+                                [item.product_id]: {
+                                  ...(prev[item.product_id] || { percent: "", amount: "" }),
+                                  amount: Number.isFinite(clamped) ? clamped.toFixed(2) : "0.00",
+                                  percent: Number.isFinite(percent) ? percent.toFixed(2) : "0.00",
+                                },
+                              }));
+                            }}
+                          />
+                        </td>
+                        <td>{(item.qty * Math.max(0, item.price - item.discount)).toFixed(2)}</td>
+                        <td>
+                          <button type="button" className="danger" onClick={() => onRemoveFromCart(item.product_id)}>
+                            Remove
                           </button>
-                          <span className="inline-block min-w-12 text-center">{item.qty.toFixed(2)}</span>
-                          <button type="button" className="!px-2 !py-1" onClick={() => onAdjustCartQty(item.product_id, 1)}>
-                            +
-                          </button>
-                        </div>
-                      </td>
-                      <td>{item.price.toFixed(2)}</td>
-                      <td>{item.discount.toFixed(2)}</td>
-                      <td>{(item.qty * Math.max(0, item.price - item.discount)).toFixed(2)}</td>
-                      <td>
-                        <button type="button" className="danger" onClick={() => onRemoveFromCart(item.product_id)}>
-                          Remove
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
