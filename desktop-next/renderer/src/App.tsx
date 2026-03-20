@@ -55,18 +55,12 @@ export default function App() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const { activeTab, setActiveTab } = useShellStore();
   const {
-    searchText,
-    selectedProductId,
-    addQty,
     paymentMode,
     paymentMethod,
     paidAmount,
     customerName,
     customerContact,
     cart,
-    setSearchText,
-    setSelectedProductId,
-    setAddQty,
     setPaymentMode,
     setPaymentMethod,
     setPaidAmount,
@@ -140,18 +134,12 @@ export default function App() {
     await refreshCustomers();
     await refreshSuppliers();
     await refreshExpenses();
-    setSelectedProductId("");
   }
 
   async function refreshProducts() {
-    const response = searchText.trim()
-      ? await posApiClient.searchProducts(searchText.trim(), 50)
-      : await posApiClient.listProducts(50);
+    const response = await posApiClient.listProducts(200);
     if (response.ok) {
       setProducts(response.data);
-      if (!selectedProductId && response.data.length > 0) {
-        setSelectedProductId(response.data[0].barcode_id);
-      }
     }
   }
 
@@ -235,10 +223,6 @@ export default function App() {
     setError(text);
   }
 
-  function getSelectedProduct() {
-    return products.find((product) => product.barcode_id === selectedProductId) || null;
-  }
-
   function appendProductToCart(product: Product, qtyValue: number) {
     const defaultDiscount = Number(product.default_discount_pct || 0);
     const unitDiscount = Number((Number(product.sell_price) * (defaultDiscount / 100)).toFixed(2));
@@ -267,24 +251,6 @@ export default function App() {
           : row,
       );
     });
-  }
-
-  function addSelectedProductToCart() {
-    const product = getSelectedProduct();
-    if (!product) {
-      pushError("Select a product first.");
-      return;
-    }
-
-    const qtyValue = Number(addQty || "0");
-    if (!Number.isFinite(qtyValue) || qtyValue <= 0) {
-      pushError("Add quantity must be a positive number.");
-      return;
-    }
-
-    appendProductToCart(product, qtyValue);
-
-    pushMessage(`${product.name} added to cart.`);
   }
 
   async function addProductToCartById(productId: string, qtyValue: number) {
@@ -325,7 +291,6 @@ export default function App() {
     }
 
     appendProductToCart(product, qtyValue);
-    setSelectedProductId(product.barcode_id);
     pushMessage(`${product.name} added to cart.`);
   }
 
@@ -1087,24 +1052,14 @@ export default function App() {
 
               {activeTab === "billing" ? (
                 <>
-                  <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div className="mb-4 flex items-center justify-between gap-3">
                     <h3 className="text-lg font-semibold">Billing Workflow</h3>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <input
-                        className="w-64 max-w-full"
-                        placeholder="Search products"
-                        value={searchText}
-                        onChange={(event) => setSearchText(event.target.value)}
-                      />
-                      <button type="button" onClick={() => void refreshProducts()}>
-                        Refresh Products
-                      </button>
-                    </div>
+                    <button type="button" onClick={() => void refreshProducts()}>
+                      Refresh Products
+                    </button>
                   </div>
                   <BillingTab
                     products={products}
-                    selectedProductId={selectedProductId}
-                    addQty={addQty}
                     cart={cart}
                     paymentMode={paymentMode}
                     paymentMethod={paymentMethod}
@@ -1116,9 +1071,6 @@ export default function App() {
                     baseTotal={baseTotal}
                     changeDue={changeDue}
                     balanceDue={balanceDue}
-                    onSelectedProductChange={setSelectedProductId}
-                    onAddQtyChange={setAddQty}
-                    onAddToCart={addSelectedProductToCart}
                     onQuickAddProduct={addProductToCartById}
                     onAdjustCartQty={adjustCartQty}
                     onRemoveFromCart={removeFromCart}

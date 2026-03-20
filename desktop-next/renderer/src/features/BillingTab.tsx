@@ -3,8 +3,6 @@ import type { CartItem, Product } from "./types";
 
 type BillingTabProps = {
   products: Product[];
-  selectedProductId: string;
-  addQty: string;
   cart: CartItem[];
   paymentMode: "PAID" | "PARTIAL" | "UNPAID";
   paymentMethod: "CASH" | "CARD";
@@ -16,9 +14,6 @@ type BillingTabProps = {
   baseTotal: number;
   changeDue: number;
   balanceDue: number;
-  onSelectedProductChange: (value: string) => void;
-  onAddQtyChange: (value: string) => void;
-  onAddToCart: () => void;
   onQuickAddProduct: (productId: string, qty: number) => void | Promise<void>;
   onAdjustCartQty: (productId: string, delta: number) => void;
   onRemoveFromCart: (productId: string) => void;
@@ -33,8 +28,6 @@ type BillingTabProps = {
 
 export function BillingTab({
   products,
-  selectedProductId,
-  addQty,
   cart,
   paymentMode,
   paymentMethod,
@@ -46,9 +39,6 @@ export function BillingTab({
   baseTotal,
   changeDue,
   balanceDue,
-  onSelectedProductChange,
-  onAddQtyChange,
-  onAddToCart,
   onQuickAddProduct,
   onAdjustCartQty,
   onRemoveFromCart,
@@ -61,6 +51,7 @@ export function BillingTab({
   onProcessSale,
 }: BillingTabProps) {
   const [scannerInput, setScannerInput] = useState("");
+  const [productNameInput, setProductNameInput] = useState("");
   const [quickQty, setQuickQty] = useState("1");
   const [isCheckoutConfirmOpen, setIsCheckoutConfirmOpen] = useState(false);
   const scannerRef = useRef<HTMLInputElement | null>(null);
@@ -70,11 +61,65 @@ export function BillingTab({
     [cart],
   );
 
-  function handleQuickAdd() {
+  const matchedById = useMemo(() => {
+    const needle = scannerInput.trim().toLowerCase();
+    if (!needle) {
+      return null;
+    }
+    return (
+      products.find((product) => product.barcode_id.toLowerCase() === needle) ||
+      products.find((product) => product.name.toLowerCase() === needle) ||
+      null
+    );
+  }, [products, scannerInput]);
+
+  const nameSuggestions = useMemo(() => {
+    const needle = productNameInput.trim().toLowerCase();
+    if (!needle) {
+      return products.slice(0, 12);
+    }
+    return products
+      .filter((product) => product.name.toLowerCase().includes(needle))
+      .slice(0, 12);
+  }, [products, productNameInput]);
+
+  async function handleQuickAdd() {
+    const resolvedId = scannerInput.trim() || matchedById?.barcode_id || "";
     const qty = Number(quickQty || "0");
-    void onQuickAddProduct(scannerInput, qty);
+    if (!resolvedId || !Number.isFinite(qty) || qty <= 0) {
+      return;
+    }
+    await onQuickAddProduct(resolvedId, qty);
     setScannerInput("");
+    setProductNameInput("");
     setQuickQty("1");
+    scannerRef.current?.focus();
+  }
+
+  function handleBarcodeInput(value: string) {
+    setScannerInput(value);
+    const needle = value.trim().toLowerCase();
+    if (!needle) {
+      return;
+    }
+    const exact =
+      products.find((product) => product.barcode_id.toLowerCase() === needle) ||
+      products.find((product) => product.name.toLowerCase() === needle);
+    if (exact) {
+      setProductNameInput(exact.name);
+    }
+  }
+
+  function handleProductNameInput(value: string) {
+    setProductNameInput(value);
+    const needle = value.trim().toLowerCase();
+    if (!needle) {
+      return;
+    }
+    const exact = products.find((product) => product.name.toLowerCase() === needle);
+    if (exact) {
+      setScannerInput(exact.barcode_id);
+    }
   }
 
   function openCheckoutConfirm() {
@@ -110,24 +155,41 @@ export function BillingTab({
 
   return (
     <section className="space-y-4">
-      <div className="grid gap-4 xl:grid-cols-[1.65fr_minmax(320px,1fr)]">
+      <div className="space-y-4">
         <section className="space-y-4">
           <div className="rounded-2xl border border-border/80 bg-background/45 p-4 md:p-5">
-            <div className="mb-4 grid gap-3 rounded-xl border border-border/70 bg-card/55 p-3 md:grid-cols-[1fr_120px_auto]">
+            <div className="grid gap-3 rounded-xl border border-border/70 bg-card/55 p-3 md:grid-cols-[1fr_1fr_120px_auto]">
               <label className="m-0 text-sm font-medium text-foreground">
-                Scan/Barcode
+                Product ID / Barcode
                 <input
                   ref={scannerRef}
                   value={scannerInput}
                   placeholder="Scan barcode and press Enter"
-                  onChange={(e) => setScannerInput(e.target.value)}
+                  onChange={(e) => handleBarcodeInput(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
-                      handleQuickAdd();
+                      void handleQuickAdd();
                     }
                   }}
                 />
+              </label>
+
+              <label className="m-0 text-sm font-medium text-foreground">
+                Product Name
+                <input
+                  list="billing-product-name-options"
+                  value={productNameInput}
+                  placeholder="Type to search and select"
+                  onChange={(e) => handleProductNameInput(e.target.value)}
+                />
+                <datalist id="billing-product-name-options">
+                  {nameSuggestions.map((product) => (
+                    <option key={product.barcode_id} value={product.name}>
+                      {product.barcode_id} | Rs. {Number(product.sell_price).toFixed(2)} | Stock {Number(product.stock).toFixed(2)}
+                    </option>
+                  ))}
+                </datalist>
               </label>
 
               <label className="m-0 text-sm font-medium text-foreground">
@@ -138,35 +200,13 @@ export function BillingTab({
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
-                      handleQuickAdd();
+                      void handleQuickAdd();
                     }
                   }}
                 />
               </label>
 
-              <button type="button" className="self-end md:min-w-32" onClick={handleQuickAdd}>
-                Quick Add
-              </button>
-            </div>
-
-            <div className="flex flex-col gap-3 md:flex-row md:items-end">
-              <label className="m-0 flex-1 text-sm font-medium text-foreground">
-                Product
-                <select value={selectedProductId} onChange={(e) => onSelectedProductChange(e.target.value)}>
-                  {products.map((product) => (
-                    <option key={product.barcode_id} value={product.barcode_id}>
-                      {product.barcode_id} | {product.name} | Rs. {Number(product.sell_price).toFixed(2)} | Stock {Number(product.stock).toFixed(2)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="m-0 w-full text-sm font-medium text-foreground md:w-36">
-                Qty
-                <input value={addQty} onChange={(e) => onAddQtyChange(e.target.value)} />
-              </label>
-
-              <button type="button" className="md:min-w-36" onClick={onAddToCart}>
+              <button type="button" className="self-end md:min-w-32" onClick={() => void handleQuickAdd()}>
                 Add to Cart
               </button>
             </div>
