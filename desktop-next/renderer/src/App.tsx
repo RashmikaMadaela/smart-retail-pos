@@ -54,6 +54,7 @@ export default function App() {
   const [password, setPassword] = useState("admin123");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [isNoticeFading, setIsNoticeFading] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -268,6 +269,30 @@ export default function App() {
     setMessage("");
     setError(text);
   }
+
+  useEffect(() => {
+    if (!message && !error) {
+      setIsNoticeFading(false);
+      return;
+    }
+
+    setIsNoticeFading(false);
+
+    const fadeTimer = window.setTimeout(() => {
+      setIsNoticeFading(true);
+    }, 3200);
+
+    const clearTimer = window.setTimeout(() => {
+      setMessage("");
+      setError("");
+      setIsNoticeFading(false);
+    }, 3800);
+
+    return () => {
+      window.clearTimeout(fadeTimer);
+      window.clearTimeout(clearTimer);
+    };
+  }, [message, error]);
 
   function appendProductToCart(product: Product, qtyValue: number) {
     const defaultDiscount = Number(product.default_discount_pct || 0);
@@ -1414,8 +1439,28 @@ export default function App() {
               </div>
             </div>
 
-            {message ? <p className="mt-4 rounded-xl border border-emerald-500/45 bg-emerald-500/15 px-3 py-2 text-sm text-emerald-100">{message}</p> : null}
-            {error ? <p className="mt-2 rounded-xl border border-rose-500/45 bg-rose-500/15 px-3 py-2 text-sm text-rose-100">{error}</p> : null}
+            {message ? (
+              <p
+                className={cn(
+                  "mt-4 rounded-xl border border-emerald-500/45 bg-emerald-500/15 px-3 py-2 text-sm text-emerald-100",
+                  "transition-opacity duration-500",
+                  isNoticeFading ? "opacity-0" : "opacity-100",
+                )}
+              >
+                {message}
+              </p>
+            ) : null}
+            {error ? (
+              <p
+                className={cn(
+                  "mt-2 rounded-xl border border-rose-500/45 bg-rose-500/15 px-3 py-2 text-sm text-rose-100",
+                  "transition-opacity duration-500",
+                  isNoticeFading ? "opacity-0" : "opacity-100",
+                )}
+              >
+                {error}
+              </p>
+            ) : null}
           </header>
 
           <section className="rounded-3xl border border-border/80 bg-card/65 p-4 shadow-panel backdrop-blur md:p-5">
