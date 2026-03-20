@@ -1,4 +1,5 @@
 /** @vitest-environment jsdom */
+import "@/i18n";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
 import { SuppliersTab } from "./SuppliersTab";
