@@ -32,6 +32,7 @@ beforeEach(() => {
     createExpense: vi.fn().mockResolvedValue({ ok: true, data: { expense_id: 1 } }),
     exportSaleBillPdf: vi.fn().mockResolvedValue({ ok: true, data: { file_path: "E:/tmp/bill.pdf" } }),
     exportBarcodePdf: vi.fn().mockResolvedValue({ ok: true, data: { file_path: "E:/tmp/barcodes.pdf", labels: 2 } }),
+    printBarcodeTspl: vi.fn().mockResolvedValue({ ok: true, data: { success: true, message: "Labels printed" } }),
     clearInventoryStock: vi.fn().mockResolvedValue({ ok: true, data: { rows_affected: 2 } }),
     clearAllData: vi.fn().mockResolvedValue({ ok: true, data: { rows_affected: 12 } }),
     exportInventoryData: vi.fn().mockResolvedValue({ ok: true, data: { file_path: "E:/tmp/inventory.json", product_count: 2 } }),

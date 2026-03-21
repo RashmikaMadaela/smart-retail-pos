@@ -74,6 +74,11 @@ export const posApiClient = {
       () => window.posApi.exportBarcodePdf(payload) as Promise<ApiResult<{ file_path: string; labels: number; printed: boolean; printer_name: string | null }>>,
       "Unable to export barcode PDF",
     ),
+  printBarcodeTspl: (payload: unknown) =>
+    safeCall(
+      () => window.posApi.printBarcodeTspl(payload) as Promise<ApiResult<{ success: boolean; message: string }>>,
+      "Unable to print TSPL labels",
+    ),
   clearInventoryStock: (role: "SuperAdmin") =>
     safeCall(() => window.posApi.clearInventoryStock(role) as Promise<ApiResult<{ rows_affected: number }>>, "Unable to clear inventory stock"),
   clearAllData: (role: "SuperAdmin") =>

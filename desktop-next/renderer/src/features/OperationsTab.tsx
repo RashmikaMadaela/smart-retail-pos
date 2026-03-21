@@ -97,12 +97,17 @@ export function OperationsTab({ products, expenses, onRefreshExpenses, onCreateE
       <div className="grid gap-4 xl:grid-cols-2">
         <SurfaceCard title={t("operations.barcodeQueue")} subtitle={t("operations.barcodeQueueSubtitle")}>
           <div className="grid gap-3 md:grid-cols-[1fr_120px_auto]">
-            <input
-              placeholder={t("operations.barcodeInput")}
-              value={barcodeInput}
-              onChange={(event) => setBarcodeInput(event.target.value)}
-            />
-            <input value={barcodeQty} onChange={(event) => setBarcodeQty(event.target.value)} placeholder={t("operations.qty")} />
+            <label className="m-0 block text-sm font-medium text-foreground">
+              {t("operations.barcodeInput")}
+              <input
+                value={barcodeInput}
+                onChange={(event) => setBarcodeInput(event.target.value)}
+              />
+            </label>
+            <label className="m-0 block text-sm font-medium text-foreground">
+              {t("operations.qty")}
+              <input value={barcodeQty} onChange={(event) => setBarcodeQty(event.target.value)} />
+            </label>
             <button type="button" onClick={addToQueue}>
               {t("operations.addToQueue")}
             </button>

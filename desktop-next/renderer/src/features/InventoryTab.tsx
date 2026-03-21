@@ -179,12 +179,14 @@ export function InventoryTab({
         description={t("inventory.description")}
         actions={
           <>
-            <input
-              className="w-64 max-w-full"
-              placeholder={t("inventory.search")}
-              value={inventorySearch}
-              onChange={(event) => setInventorySearch(event.target.value)}
-            />
+            <label className="m-0 flex w-64 max-w-full flex-col gap-1 text-sm font-medium text-foreground">
+              {t("inventory.search")}
+              <input
+                className="w-64 max-w-full"
+                value={inventorySearch}
+                onChange={(event) => setInventorySearch(event.target.value)}
+              />
+            </label>
             <label className="m-0 inline-flex items-center gap-2 rounded-xl border border-border/80 px-3 py-2 text-sm text-foreground">
               <input type="checkbox" checked={lowStockOnly} onChange={(event) => setLowStockOnly(event.target.checked)} />
               {t("inventory.lowOnly")}
@@ -199,9 +201,15 @@ export function InventoryTab({
       <SurfaceCard title={t("inventory.addProduct")} subtitle={t("inventory.addProductSubtitle")}>
         {barcodeMatched ? <p className="mb-2 mt-0 text-xs text-sky-200">{t("inventory.barcodeMatched")}</p> : null}
         <div className="grid gap-2 xl:grid-cols-[1.1fr_1.6fr_0.7fr_0.9fr_0.9fr_0.7fr_1fr_auto]">
-          <input placeholder={t("inventory.barcodeOptional")} value={newBarcode} onChange={(event) => setNewBarcode(event.target.value)} />
+          <label className="m-0 block text-sm font-medium text-foreground">
+            {t("inventory.barcodeOptional")}
+            <input value={newBarcode} onChange={(event) => setNewBarcode(event.target.value)} />
+          </label>
           <div className="relative">
-            <input placeholder={t("inventory.productName")} value={newName} onChange={(event) => setNewName(event.target.value)} />
+            <label className="m-0 block text-sm font-medium text-foreground">
+              {t("inventory.productName")}
+              <input value={newName} onChange={(event) => setNewName(event.target.value)} />
+            </label>
             {newName.trim() ? (
               <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto border border-slate-600 bg-slate-900 text-slate-100">
                 {nameSuggestions.length === 0 ? (
@@ -236,36 +244,48 @@ export function InventoryTab({
               </div>
             ) : null}
           </div>
-          <input className="no-spinner" type="number" min="0" step="1" placeholder={t("inventory.qty")} value={newQty} onChange={(event) => setNewQty(event.target.value)} />
-          <input
-            className="no-spinner"
-            type="number"
-            min="0"
-            step="0.01"
-            placeholder={t("inventory.buyPrice")}
-            value={newBuyPrice}
-            onChange={(event) => setNewBuyPrice(event.target.value)}
-          />
-          <input
-            className="no-spinner"
-            type="number"
-            min="0"
-            step="0.01"
-            placeholder={t("inventory.sellPrice")}
-            value={newSellPrice}
-            onChange={(event) => setNewSellPrice(event.target.value)}
-          />
-          <input className="no-spinner" type="number" min="0" max="100" step="0.01" placeholder={t("inventory.discPct")} value={newDiscPct} onChange={(event) => setNewDiscPct(event.target.value)} />
-          <input
-            className="no-spinner"
-            type="number"
-            min="0"
-            max="100"
-            step="0.01"
-            placeholder={t("inventory.cardSurcharge")}
-            value={newCardSurchargePct}
-            onChange={(event) => setNewCardSurchargePct(event.target.value)}
-          />
+          <label className="m-0 block text-sm font-medium text-foreground">
+            {t("inventory.qty")}
+            <input className="no-spinner" type="number" min="0" step="1" value={newQty} onChange={(event) => setNewQty(event.target.value)} />
+          </label>
+          <label className="m-0 block text-sm font-medium text-foreground">
+            {t("inventory.buyPrice")}
+            <input
+              className="no-spinner"
+              type="number"
+              min="0"
+              step="0.01"
+              value={newBuyPrice}
+              onChange={(event) => setNewBuyPrice(event.target.value)}
+            />
+          </label>
+          <label className="m-0 block text-sm font-medium text-foreground">
+            {t("inventory.sellPrice")}
+            <input
+              className="no-spinner"
+              type="number"
+              min="0"
+              step="0.01"
+              value={newSellPrice}
+              onChange={(event) => setNewSellPrice(event.target.value)}
+            />
+          </label>
+          <label className="m-0 block text-sm font-medium text-foreground">
+            {t("inventory.discPct")}
+            <input className="no-spinner" type="number" min="0" max="100" step="0.01" value={newDiscPct} onChange={(event) => setNewDiscPct(event.target.value)} />
+          </label>
+          <label className="m-0 block text-sm font-medium text-foreground">
+            {t("inventory.cardSurcharge")}
+            <input
+              className="no-spinner"
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={newCardSurchargePct}
+              onChange={(event) => setNewCardSurchargePct(event.target.value)}
+            />
+          </label>
           <button type="button" onClick={() => void addProductRow()}>
             {barcodeMatched ? t("inventory.update") : t("inventory.add")}
           </button>
@@ -275,31 +295,35 @@ export function InventoryTab({
       {isSuperAdmin ? (
         <SurfaceCard title={t("inventory.removeProduct")} subtitle={t("inventory.removeSubtitle")}>
           <div className="grid gap-2 xl:grid-cols-[1.1fr_1.6fr_auto]">
-            <input
-              placeholder={t("inventory.barcode")}
-              value={removeBarcode}
-              onChange={(event) => {
-                setRemoveBarcode(event.target.value);
-                if (!event.target.value.trim()) {
-                  setRemoveName("");
-                }
-              }}
-            />
-            <div className="relative">
+            <label className="m-0 block text-sm font-medium text-foreground">
+              {t("inventory.barcode")}
               <input
-                placeholder={t("inventory.productName")}
-                value={removeName}
+                value={removeBarcode}
                 onChange={(event) => {
-                  const nextName = event.target.value;
-                  setRemoveName(nextName);
-                  const exact = products.find((product) => product.name.toLowerCase() === nextName.trim().toLowerCase());
-                  if (exact) {
-                    setRemoveBarcode(exact.barcode_id);
-                  } else if (!nextName.trim()) {
-                    setRemoveBarcode("");
+                  setRemoveBarcode(event.target.value);
+                  if (!event.target.value.trim()) {
+                    setRemoveName("");
                   }
                 }}
               />
+            </label>
+            <div className="relative">
+              <label className="m-0 block text-sm font-medium text-foreground">
+                {t("inventory.productName")}
+                <input
+                  value={removeName}
+                  onChange={(event) => {
+                    const nextName = event.target.value;
+                    setRemoveName(nextName);
+                    const exact = products.find((product) => product.name.toLowerCase() === nextName.trim().toLowerCase());
+                    if (exact) {
+                      setRemoveBarcode(exact.barcode_id);
+                    } else if (!nextName.trim()) {
+                      setRemoveBarcode("");
+                    }
+                  }}
+                />
+              </label>
               {removeName.trim() ? (
                 <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto border border-slate-600 bg-slate-900 text-slate-100">
                   {removeNameSuggestions.length === 0 ? (
@@ -344,11 +368,13 @@ export function InventoryTab({
       {isSuperAdmin ? (
         <SurfaceCard title={t("inventory.superTools")} subtitle={t("inventory.superToolsSubtitle")}>
           <div className="grid gap-3 md:grid-cols-[1fr_auto_auto_auto]">
-            <input
-              placeholder={t("inventory.importPath")}
-              value={importFilePath}
-              onChange={(event) => setImportFilePath(event.target.value)}
-            />
+            <label className="m-0 block text-sm font-medium text-foreground">
+              {t("inventory.importPath")}
+              <input
+                value={importFilePath}
+                onChange={(event) => setImportFilePath(event.target.value)}
+              />
+            </label>
             <button
               type="button"
               onClick={async () => {

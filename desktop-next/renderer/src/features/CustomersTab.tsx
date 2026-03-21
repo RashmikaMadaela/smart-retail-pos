@@ -39,12 +39,14 @@ export function CustomersTab({
         description={t("customers.description")}
         actions={
           <>
-            <input
-              className="w-64 max-w-full"
-              placeholder={t("customers.search")}
-              value={customerSearchText}
-              onChange={(e) => onCustomerSearchChange(e.target.value)}
-            />
+            <label className="m-0 flex w-64 max-w-full flex-col gap-1 text-sm font-medium text-foreground">
+              {t("customers.search")}
+              <input
+                className="w-64 max-w-full"
+                value={customerSearchText}
+                onChange={(e) => onCustomerSearchChange(e.target.value)}
+              />
+            </label>
             <button type="button" onClick={onRefreshCustomers}>
               {t("customers.refresh")}
             </button>

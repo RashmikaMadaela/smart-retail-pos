@@ -25,6 +25,7 @@ import {
 } from "../../backend/services/ledgerService";
 import { createExpense, listExpenses } from "../../backend/services/expenseService";
 import { exportBarcodePdf, exportSaleBillPdf } from "../../backend/services/printService";
+import { printTSPLLabels } from "../../backend/services/tsplPrinterService";
 import { clearAllBusinessData, clearInventoryStock, exportInventoryToJson, importInventoryFromJson } from "../../backend/services/inventoryAdminService";
 
 const loginSchema = z.object({
@@ -209,6 +210,19 @@ const barcodePrintSchema = z.object({
         name: z.string().optional(),
         qty: z.number().positive(),
         sell_price: z.number().nonnegative().optional(),
+      }),
+    )
+    .min(1),
+});
+
+const barcodeTsplSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        product_id: z.string().min(1),
+        name: z.string().min(1),
+        sell_price: z.number().positive(),
+        quantity: z.number().int().positive(),
       }),
     )
     .min(1),
@@ -639,6 +653,33 @@ export function registerIpcHandlers() {
       printed,
       printer_name: printer.printerName || null,
     });
+  });
+
+  ipcMain.handle("print.barcodeTspl", async (event, payload) => {
+    const parsed = barcodeTsplSchema.safeParse(payload);
+    if (!parsed.success) {
+      return fail("Invalid TSPL barcode print payload");
+    }
+
+    try {
+      const printItems = parsed.data.items.map((item) => ({
+        item: {
+          product_id: item.product_id,
+          name: item.name,
+          sell_price: item.sell_price,
+        },
+        quantity: item.quantity,
+      }));
+
+      const result = await printTSPLLabels(printItems);
+      return ok({
+        success: result.success,
+        message: result.message,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return fail(`TSPL printing error: ${message}`);
+    }
   });
 
   ipcMain.handle("inventory.clearStock", async (_event, payload) => {

@@ -32,6 +32,7 @@ declare global {
       createExpense: (payload: unknown) => Promise<{ ok: boolean; data?: any; error?: string }>;
       exportSaleBillPdf: (saleId: number) => Promise<{ ok: boolean; data?: any; error?: string }>;
       exportBarcodePdf: (payload: unknown) => Promise<{ ok: boolean; data?: any; error?: string }>;
+      printBarcodeTspl: (payload: unknown) => Promise<{ ok: boolean; data?: any; error?: string }>;
       clearInventoryStock: (role: "SuperAdmin") => Promise<{ ok: boolean; data?: any; error?: string }>;
       clearAllData: (role: "SuperAdmin") => Promise<{ ok: boolean; data?: any; error?: string }>;
       exportInventoryData: (role: "SuperAdmin") => Promise<{ ok: boolean; data?: any; error?: string }>;

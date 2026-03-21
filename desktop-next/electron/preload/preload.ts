@@ -39,6 +39,7 @@ const api = {
   createExpense: (payload: unknown) => ipcRenderer.invoke("expense.create", payload),
   exportSaleBillPdf: (saleId: number) => ipcRenderer.invoke("print.salePdf", { sale_id: saleId }),
   exportBarcodePdf: (payload: unknown) => ipcRenderer.invoke("print.barcodePdf", payload),
+  printBarcodeTspl: (payload: unknown) => ipcRenderer.invoke("print.barcodeTspl", payload),
   clearInventoryStock: (role: "SuperAdmin") => ipcRenderer.invoke("inventory.clearStock", { role }),
   clearAllData: (role: "SuperAdmin") => ipcRenderer.invoke("inventory.clearAllData", { role }),
   exportInventoryData: (role: "SuperAdmin") => ipcRenderer.invoke("inventory.exportData", { role }),

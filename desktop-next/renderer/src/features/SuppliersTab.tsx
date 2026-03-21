@@ -250,17 +250,21 @@ export function SuppliersTab({
       <SurfaceCard title={t("suppliers.receiveBatch")} subtitle={t("suppliers.receiveBatchSubtitle")}>
         {matchedProduct ? <p className="mb-2 mt-0 text-xs text-sky-200">{t("suppliers.barcodeMatched")}</p> : null}
         <div className="grid gap-2 xl:grid-cols-[1.1fr_1.6fr_0.8fr_1fr_1fr_0.8fr_1fr_auto]">
-          <input
-            placeholder={t("suppliers.barcodeOptional")}
-            value={batchLineDraft.product_id}
-            onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, product_id: e.target.value })}
-          />
-          <div className="relative">
+          <label className="m-0 block text-sm font-medium text-foreground">
+            {t("suppliers.barcodeOptional")}
             <input
-              placeholder={t("suppliers.productName")}
-              value={batchLineDraft.new_item_name || ""}
-              onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, new_item_name: e.target.value, create_new_item: true })}
+              value={batchLineDraft.product_id}
+              onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, product_id: e.target.value })}
             />
+          </label>
+          <div className="relative">
+            <label className="m-0 block text-sm font-medium text-foreground">
+              {t("suppliers.productName")}
+              <input
+                value={batchLineDraft.new_item_name || ""}
+                onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, new_item_name: e.target.value, create_new_item: true })}
+              />
+            </label>
             {(batchLineDraft.new_item_name || "").trim() ? (
               <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto border border-slate-600 bg-slate-900 text-slate-100">
                 {productNameSuggestions.length === 0 ? (
@@ -303,60 +307,70 @@ export function SuppliersTab({
               </div>
             ) : null}
           </div>
-          <input
-            className="no-spinner"
-            type="number"
-            min="0"
-            step="0.01"
-            placeholder={t("suppliers.qty")}
-            value={batchLineDraft.qty_received}
-            onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, qty_received: e.target.value })}
-          />
-          <input
-            className="no-spinner"
-            type="number"
-            min="0"
-            step="0.01"
-            placeholder={t("suppliers.buyPrice")}
-            value={batchLineDraft.new_item_buy_price || batchLineDraft.unit_cost || ""}
-            onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, unit_cost: e.target.value, new_item_buy_price: e.target.value, create_new_item: !matchedProduct })}
-          />
-          <input
-            className="no-spinner"
-            type="number"
-            min="0"
-            step="0.01"
-            placeholder={t("suppliers.sellPrice")}
-            value={batchLineDraft.new_item_sell_price || ""}
-            onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, new_item_sell_price: e.target.value, create_new_item: !matchedProduct })}
-          />
-          <input
-            className="no-spinner"
-            type="number"
-            min="0"
-            max="100"
-            step="0.01"
-            placeholder={t("suppliers.discPct")}
-            value={batchLineDraft.line_discount_pct}
-            onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, line_discount_pct: e.target.value, new_item_default_discount_pct: e.target.value })}
-          />
-          <input
-            className="no-spinner"
-            type="number"
-            min="0"
-            max="100"
-            step="0.01"
-            placeholder={t("suppliers.cardSurcharge")}
-            value={batchLineDraft.new_item_card_surcharge_pct || ""}
-            onChange={(e) =>
-              onBatchLineDraftChange({
-                ...batchLineDraft,
-                new_item_card_surcharge_pct: e.target.value,
-                new_item_card_surcharge_enabled: Number(e.target.value || "0") > 0,
-                create_new_item: !matchedProduct,
-              })
-            }
-          />
+          <label className="m-0 block text-sm font-medium text-foreground">
+            {t("suppliers.qty")}
+            <input
+              className="no-spinner"
+              type="number"
+              min="0"
+              step="0.01"
+              value={batchLineDraft.qty_received}
+              onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, qty_received: e.target.value })}
+            />
+          </label>
+          <label className="m-0 block text-sm font-medium text-foreground">
+            {t("suppliers.buyPrice")}
+            <input
+              className="no-spinner"
+              type="number"
+              min="0"
+              step="0.01"
+              value={batchLineDraft.new_item_buy_price || batchLineDraft.unit_cost || ""}
+              onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, unit_cost: e.target.value, new_item_buy_price: e.target.value, create_new_item: !matchedProduct })}
+            />
+          </label>
+          <label className="m-0 block text-sm font-medium text-foreground">
+            {t("suppliers.sellPrice")}
+            <input
+              className="no-spinner"
+              type="number"
+              min="0"
+              step="0.01"
+              value={batchLineDraft.new_item_sell_price || ""}
+              onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, new_item_sell_price: e.target.value, create_new_item: !matchedProduct })}
+            />
+          </label>
+          <label className="m-0 block text-sm font-medium text-foreground">
+            {t("suppliers.discPct")}
+            <input
+              className="no-spinner"
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={batchLineDraft.line_discount_pct}
+              onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, line_discount_pct: e.target.value, new_item_default_discount_pct: e.target.value })}
+            />
+          </label>
+          <label className="m-0 block text-sm font-medium text-foreground">
+            {t("suppliers.cardSurcharge")}
+            <input
+              className="no-spinner"
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={batchLineDraft.new_item_card_surcharge_pct || ""}
+              onChange={(e) =>
+                onBatchLineDraftChange({
+                  ...batchLineDraft,
+                  new_item_card_surcharge_pct: e.target.value,
+                  new_item_card_surcharge_enabled: Number(e.target.value || "0") > 0,
+                  create_new_item: !matchedProduct,
+                })
+              }
+            />
+          </label>
           <button type="button" onClick={onAddBatchLine}>
             {t("suppliers.addLine")}
           </button>

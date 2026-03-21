@@ -229,6 +229,25 @@ export default function App() {
   }
 
   async function printBarcodePdfNow(items: BarcodePrintItem[]) {
+    // Attempt 1: Try TSPL (raw protocol) printing first
+    const tsplResponse = await posApiClient.printBarcodeTspl({
+      items: items.map((item) => ({
+        product_id: item.product_id,
+        name: item.name,
+        sell_price: Number(item.sell_price),
+        quantity: Number(item.qty),
+      })),
+    });
+
+    if (tsplResponse.ok && tsplResponse.data.success) {
+      pushMessage(t("messages.barcodesPrinted", {
+        printer: "TSPL thermal printer",
+        path: "USB",
+      }));
+      return;
+    }
+
+    // Fallback: Use PDF printing if TSPL fails
     const response = await posApiClient.exportBarcodePdf({
       items: items.map((item) => ({
         product_id: item.product_id,
