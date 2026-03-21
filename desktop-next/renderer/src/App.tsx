@@ -1364,7 +1364,7 @@ export default function App() {
         <aside className="rounded-3xl border border-border/80 bg-card/80 p-4 shadow-panel backdrop-blur">
           <div className="space-y-1 border-b border-border/80 pb-4">
             <img
-              src="/floreopos-logo.png"
+              src="../../build/app logo.png"
               alt="FloreoPOS"
               className="mb-2 h-12 w-auto max-w-[180px] object-contain"
             />

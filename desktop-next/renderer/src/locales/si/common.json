@@ -5,14 +5,14 @@
   },
   "login": {
     "title": "FloreoPOS",
-    "subtitle": "Electron + React මාරුකිරීමේ පද්ධතිය",
+    "subtitle": "ආයුබෝවන්! කරුණාකර ඔබගේ ගිණුමට පිවිසෙන්න.",
     "username": "පරිශීලක නාමය",
     "password": "මුරපදය",
     "submit": "පිවිසෙන්න"
   },
   "shell": {
     "store": "FloreoPOS",
-    "app": "Desktop",
+    "app": "ප්‍රියංකා වෙළඳසැල",
     "center": "වෙළඳසැල් පාලන මධ්‍යස්ථානය",
     "session": "සැසිය",
     "role": "භූමිකාව",

@@ -16,6 +16,7 @@ export function LoginView(props: LoginViewProps) {
   return (
     <main className="login-shell">
       <section className="login-card">
+        <img src="../../../build/app logo.png" alt="FloreoPOS Logo" className="login-logo" />
         <h1>{t("login.title")}</h1>
         <p className="muted">{t("login.subtitle")}</p>
         <form onSubmit={props.onSubmit}>

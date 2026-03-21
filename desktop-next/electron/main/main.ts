@@ -51,6 +51,13 @@ function resolveRendererIndexPath() {
 }
 
 function resolveWindowIconPath() {
+  if (process.platform === "win32") {
+    if (app.isPackaged) {
+      return path.join(process.resourcesPath, "app.asar", "build", "icon.ico");
+    }
+    return path.resolve(process.cwd(), "build", "icon.ico");
+  }
+
   if (app.isPackaged) {
     return path.join(app.getAppPath(), "build", "icon.png");
   }
@@ -86,6 +93,10 @@ function createMainWindow() {
 }
 
 app.whenReady().then(() => {
+  if (process.platform === "win32") {
+    app.setAppUserModelId("com.floreopos.desktop");
+  }
+
   process.env.POS_DB_PATH = resolveDbPath();
   process.env.POS_PRINT_DIR = resolvePrintRootPath();
   process.env.POS_INVENTORY_EXPORT_DIR = resolveInventoryExportRootPath();

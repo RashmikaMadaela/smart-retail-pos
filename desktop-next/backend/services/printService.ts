@@ -28,6 +28,11 @@ function resolvePrintRoot() {
 }
 
 function resolveBillLogoPath() {
+  const explicitStoreLogo = path.resolve(process.cwd(), "renderer", "public", "logo.jpg");
+  if (fs.existsSync(explicitStoreLogo)) {
+    return explicitStoreLogo;
+  }
+
   const explicitBuildLogo = path.resolve(process.cwd(), "build", "app logo.png");
   if (fs.existsSync(explicitBuildLogo)) {
     return explicitBuildLogo;
@@ -39,7 +44,7 @@ function resolveBillLogoPath() {
     path.resolve(moduleDir, "../.."),
   ];
 
-  const filenameCandidates = ["floreopos-logo.png", "app logo.png", "logo.jpeg", "logo.jpg", "logo.png", "logo.webp"];
+  const filenameCandidates = ["logo.jpeg", "logo.jpg", "logo.png", "logo.webp"];
   const bundledLogoCandidates = searchRoots.flatMap((root) => [
     ...filenameCandidates.map((name) => path.resolve(root, "build", name)),
     ...filenameCandidates.map((name) => path.resolve(root, "dist", name)),

@@ -5,14 +5,14 @@
   },
   "login": {
     "title": "FloreoPOS",
-    "subtitle": "Electron + React migration shell",
+    "subtitle": "Welcome back! Please login to your account.",
     "username": "Username",
     "password": "Password",
     "submit": "Login"
   },
   "shell": {
     "store": "FloreoPOS",
-    "app": "Desktop",
+    "app": "Priyanka Stores",
     "center": "Store Control Center",
     "session": "Session",
     "role": "Role",
