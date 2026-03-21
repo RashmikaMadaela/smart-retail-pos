@@ -262,10 +262,6 @@ type PdfPrintOptions = {
   preferBrowserPrint?: boolean;
   landscape?: boolean;
   pageSizeMicrons?: { width: number; height: number };
-  nativeOnly?: boolean;
-  nativeScale?: "noscale" | "shrink" | "fit";
-  nativePaperSize?: string;
-  nativePaperKind?: number;
 };
 
 async function printPdfFile(filePath: string, printerName?: string, options: PdfPrintOptions = {}): Promise<boolean> {
@@ -273,16 +269,9 @@ async function printPdfFile(filePath: string, printerName?: string, options: Pdf
     try {
       await nativePrintPdf(filePath, {
         printer: printerName,
-        orientation: options.landscape ? "landscape" : "portrait",
-        scale: options.nativeScale ?? "noscale",
-        paperSize: options.nativePaperSize,
-        paperKind: options.nativePaperKind,
       });
       return true;
     } catch {
-      if (options.nativeOnly) {
-        return false;
-      }
       // Fall through to BrowserWindow printing as a backup path.
     }
   }
@@ -311,14 +300,21 @@ async function printPdfFile(filePath: string, printerName?: string, options: Pdf
           }
         }, 8000);
 
+        const printOptions: Electron.WebContentsPrintOptions = {
+          silent: true,
+          printBackground: true,
+          landscape: Boolean(options.landscape),
+        };
+        if (deviceName) {
+          printOptions.deviceName = deviceName;
+        }
+        const pageSize = options.pageSizeMicrons;
+        if (pageSize && pageSize.width > 0 && pageSize.height > 0) {
+          printOptions.pageSize = pageSize;
+        }
+
         win.webContents.print(
-          {
-            silent: true,
-            printBackground: true,
-            deviceName,
-            landscape: Boolean(options.landscape),
-            pageSize: options.pageSizeMicrons,
-          },
+          printOptions,
           (success) => {
             if (!settled) {
               settled = true;
@@ -638,27 +634,24 @@ export function registerIpcHandlers() {
     const printer = await resolveConnectedPrinter(event.sender);
     let printed = false;
     if (printer.connected) {
-      // Attempt 1: native Windows print with explicit landscape and no scaling.
+      // Attempt 1: strict landscape + explicit 38x25mm label size.
       printed = await printPdfFile(result.data.file_path, printer.printerName, {
+        preferBrowserPrint: true,
         landscape: true,
-        nativeScale: "noscale",
-        nativeOnly: true,
+        pageSizeMicrons: { width: 38000, height: 25000 },
       });
 
-      // Attempt 2: native Windows print with portrait, still no scaling.
+      // Attempt 2: keep landscape but let driver choose paper size.
       if (!printed) {
         printed = await printPdfFile(result.data.file_path, printer.printerName, {
-          landscape: false,
-          nativeScale: "noscale",
-          nativeOnly: true,
+          preferBrowserPrint: true,
+          landscape: true,
         });
       }
 
-      // Attempt 3: native default options.
+      // Attempt 3: fall back to native print path for maximum compatibility.
       if (!printed) {
-        printed = await printPdfFile(result.data.file_path, printer.printerName, {
-          nativeOnly: true,
-        });
+        printed = await printPdfFile(result.data.file_path, printer.printerName);
       }
     }
 
@@ -685,7 +678,8 @@ export function registerIpcHandlers() {
         quantity: item.quantity,
       }));
 
-      const result = await printTSPLLabels(printItems);
+      const printer = await resolveConnectedPrinter(event.sender);
+      const result = await printTSPLLabels(printItems, 0x0b1f, 0x1004, printer.printerName);
       return ok({
         success: result.success,
         message: result.message,

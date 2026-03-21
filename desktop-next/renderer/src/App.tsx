@@ -229,7 +229,6 @@ export default function App() {
   }
 
   async function printBarcodePdfNow(items: BarcodePrintItem[]) {
-    // Attempt 1: Try TSPL (raw protocol) printing first
     const tsplResponse = await posApiClient.printBarcodeTspl({
       items: items.map((item) => ({
         product_id: item.product_id,
@@ -247,27 +246,11 @@ export default function App() {
       return;
     }
 
-    // Fallback: Use PDF printing if TSPL fails
-    const response = await posApiClient.exportBarcodePdf({
-      items: items.map((item) => ({
-        product_id: item.product_id,
-        name: item.name,
-        qty: Number(item.qty),
-        sell_price: Number(item.sell_price),
-      })),
-    });
-    if (!response.ok) {
-      pushError(response.error || "Barcode PDF export failed.");
-      return;
-    }
-    if (response.data.printed) {
-      pushMessage(t("messages.barcodesPrinted", {
-        printer: response.data.printer_name || "default printer",
-        path: response.data.file_path,
-      }));
-      return;
-    }
-    pushMessage(t("messages.barcodesSaved", { path: response.data.file_path }));
+    const failureReason = tsplResponse.ok
+      ? (tsplResponse.data.message || "TSPL barcode printing failed.")
+      : (tsplResponse.error || "TSPL barcode printing failed.");
+    pushError(failureReason);
+    throw new Error(failureReason);
   }
 
   async function refreshSupplierLedger(supplierId: number) {

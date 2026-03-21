@@ -77,6 +77,8 @@ export function OperationsTab({ products, expenses, onRefreshExpenses, onCreateE
     try {
       await onPrintBarcodes(queue);
       setQueue([]);
+    } catch {
+      // Keep queue untouched so cashier can retry after fixing printer connection.
     } finally {
       setIsPrinting(false);
     }
