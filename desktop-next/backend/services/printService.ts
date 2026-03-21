@@ -213,7 +213,7 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
     setFont(true);
     doc.fontSize(8.4);
     doc.text("භාණ්ඩය", horizontalPadding, y, { width: usableWidth * 0.33 });
-    doc.text("විකුණුම් මිල", unitSellX, y, { width: usableWidth * 0.21, align: "right" });
+    doc.text("සඳහන් මිල", unitSellX, y, { width: usableWidth * 0.21, align: "right" });
     doc.text("අපේ මිල", unitDiscountedX, y, { width: usableWidth * 0.17, align: "right" });
     doc.text("ප්‍ර.", qtyX, y, { width: usableWidth * 0.11, align: "right" });
     doc.text("මුළු", totalX, y, { width: usableWidth * 0.14, align: "right" });
@@ -253,7 +253,7 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
 
     const totalSaved = Number(payload.sale.discount || 0) + itemLevelSavings;
 
-    drawAmountRow("මුළු බිල් මුදල", Number(payload.sale.total).toFixed(2), y, true);
+    drawAmountRow("මුල් එකතුව", Number(payload.sale.subtotal).toFixed(2), y);
     y += lineHeight;
     drawAmountRow("ඉතිරි කළ මුදල", totalSaved.toFixed(2), y);
     y += lineHeight;
@@ -261,7 +261,7 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
       drawAmountRow("කාඩ් අමතර ගාස්තු", surchargeTotal.toFixed(2), y);
       y += lineHeight;
     }
-    drawAmountRow("මුල් එකතුව", Number(payload.sale.subtotal).toFixed(2), y);
+    drawAmountRow("මුළු බිල් මුදල", Number(payload.sale.total).toFixed(2), y, true);
     y += lineHeight + 4;
 
     drawDivider(y);
@@ -270,12 +270,15 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
     const paid = Number(payload.sale.paid_amount || 0);
     const cardPaid = String(payload.sale.payment_method || "").toUpperCase() === "CARD" ? paid : 0;
     const cashPaid = String(payload.sale.payment_method || "").toUpperCase() === "CASH" ? paid : 0;
+    const changeAmount = Number((paid - Number(payload.sale.subtotal || 0)).toFixed(2));
 
     drawAmountRow("ගෙවීම්", "", y, true);
     y += lineHeight;
     drawAmountRow("මුදල්", cashPaid.toFixed(2), y);
     y += lineHeight;
     drawAmountRow("කාඩ්", cardPaid.toFixed(2), y);
+    y += lineHeight;
+    drawAmountRow("ඉතුරු මුදල්", changeAmount.toFixed(2), y);
     y += lineHeight + 4;
 
     drawDivider(y);
@@ -302,7 +305,7 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
     y += lineHeight;
     setFont();
     doc.fontSize(8.5).fillColor("#4b4b4b").text(
-      process.env.POS_BILL_FOOTER || "FloreoPOS මගින් බලගන්වයි",
+      process.env.POS_BILL_FOOTER || "Software by FloreoPOS - www.floreopos.com",
       horizontalPadding,
       y,
       { width: usableWidth, align: "center" },
