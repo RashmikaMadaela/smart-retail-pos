@@ -255,7 +255,7 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
 
     drawAmountRow("මුල් එකතුව", Number(payload.sale.subtotal).toFixed(2), y);
     y += lineHeight;
-    drawAmountRow("ඉතිරි කළ මුදල", totalSaved.toFixed(2), y);
+    drawAmountRow("ඔබ ලැබූ ලාභය", totalSaved.toFixed(2), y);
     y += lineHeight;
     if (surchargeTotal > 0) {
       drawAmountRow("කාඩ් අමතර ගාස්තු", surchargeTotal.toFixed(2), y);
@@ -270,7 +270,7 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
     const paid = Number(payload.sale.paid_amount || 0);
     const cardPaid = String(payload.sale.payment_method || "").toUpperCase() === "CARD" ? paid : 0;
     const cashPaid = String(payload.sale.payment_method || "").toUpperCase() === "CASH" ? paid : 0;
-    const changeAmount = Number((paid - Number(payload.sale.subtotal || 0)).toFixed(2));
+    const changeAmount = Number((paid - Number(payload.sale.total || 0)).toFixed(2));
 
     drawAmountRow("ගෙවීම්", "", y, true);
     y += lineHeight;
