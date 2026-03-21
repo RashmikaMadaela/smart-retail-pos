@@ -6,6 +6,8 @@ import bwipjs from "bwip-js";
 import { getSaleWithItems } from "./salesService";
 import type { ServiceResult } from "../types";
 
+const moduleDir = typeof __dirname === "string" ? __dirname : process.cwd();
+
 type BarcodePdfItem = {
   product_id: string;
   name?: string;
@@ -26,14 +28,20 @@ function resolvePrintRoot() {
 }
 
 function resolveBillLogoPath() {
+  const explicitBuildLogo = path.resolve(process.cwd(), "build", "app logo.png");
+  if (fs.existsSync(explicitBuildLogo)) {
+    return explicitBuildLogo;
+  }
+
   const searchRoots = [
     process.cwd(),
-    path.resolve(__dirname, ".."),
-    path.resolve(__dirname, "../.."),
+    path.resolve(moduleDir, ".."),
+    path.resolve(moduleDir, "../.."),
   ];
 
-  const filenameCandidates = ["logo.jpeg", "logo.jpg", "logo.png", "logo.webp"];
+  const filenameCandidates = ["floreopos-logo.png", "app logo.png", "logo.jpeg", "logo.jpg", "logo.png", "logo.webp"];
   const bundledLogoCandidates = searchRoots.flatMap((root) => [
+    ...filenameCandidates.map((name) => path.resolve(root, "build", name)),
     ...filenameCandidates.map((name) => path.resolve(root, "dist", name)),
     ...filenameCandidates.map((name) => path.resolve(root, "renderer/public", name)),
   ]);
@@ -49,6 +57,23 @@ function resolveBillLogoPath() {
   }
 
   return null;
+}
+
+function resolveBillFontPath() {
+  const envFontPath = process.env.POS_BILL_FONT_PATH;
+  if (envFontPath && fs.existsSync(envFontPath)) {
+    return envFontPath;
+  }
+
+  const candidates = [
+    "C:/Windows/Fonts/Nirmala.ttf",
+    "C:/Windows/Fonts/iskpota.ttf",
+    "/usr/share/fonts/truetype/noto/NotoSansSinhala-Regular.ttf",
+    "/usr/share/fonts/opentype/noto/NotoSansSinhala-Regular.ttf",
+    "/Library/Fonts/NotoSansSinhala-Regular.ttf",
+  ];
+
+  return candidates.find((fontPath) => fs.existsSync(fontPath)) || null;
 }
 
 async function ensureDir(dirPath: string) {
@@ -86,6 +111,18 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
     const estimatedHeight = Math.max(520, 300 + payload.items.length * 30);
 
     const doc = new PDFDocument({ size: [pageWidth, estimatedHeight], margin: 0 });
+    const billFontPath = resolveBillFontPath();
+    if (billFontPath) {
+      doc.registerFont("BillSinhala", billFontPath);
+    }
+
+    const setFont = (bold = false) => {
+      if (billFontPath) {
+        doc.font("BillSinhala");
+        return;
+      }
+      doc.font(bold ? "Helvetica-Bold" : "Helvetica");
+    };
 
     const drawDivider = (y: number) => {
       doc
@@ -97,7 +134,8 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
     };
 
     const drawAmountRow = (label: string, value: string, y: number, bold = false) => {
-      doc.font(bold ? "Helvetica-Bold" : "Helvetica").fontSize(bold ? 11 : 10);
+      setFont(bold);
+      doc.fontSize(bold ? 11 : 10);
       doc.fillColor("#111111").text(label, horizontalPadding, y, { width: usableWidth * 0.58, align: "left" });
       doc.text(value, horizontalPadding + usableWidth * 0.58, y, { width: usableWidth * 0.42, align: "right" });
     };
@@ -106,10 +144,10 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
     const logoPath = resolveBillLogoPath();
     if (logoPath) {
       try {
-        const logoWidth = Math.min(usableWidth * 0.76, 150);
+        const logoWidth = Math.min(usableWidth * 0.96, 190);
         const x = (pageWidth - logoWidth) / 2;
-        doc.image(logoPath, x, y, { fit: [logoWidth, 86], align: "center" });
-        y += 92;
+        doc.image(logoPath, x, y, { fit: [logoWidth, 96], align: "center" });
+        y += 102;
       } catch {
         // Ignore logo rendering errors and continue with text receipt.
       }
@@ -118,63 +156,107 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
     drawDivider(y);
     y += 6;
 
-    doc.font("Helvetica-Bold").fontSize(10).text("INV NO", horizontalPadding, y, { width: usableWidth * 0.32 });
-    doc.font("Helvetica").fontSize(10).text(String(payload.sale.id), horizontalPadding + usableWidth * 0.35, y, {
-      width: usableWidth * 0.22,
+    const metaLabelLeftX = horizontalPadding;
+    const metaValueLeftX = horizontalPadding + usableWidth * 0.34;
+    const metaLabelRightX = horizontalPadding + usableWidth * 0.62;
+    const metaValueRightX = horizontalPadding + usableWidth * 0.80;
+
+    setFont(true);
+    doc.fontSize(10).text("බිල් අංකය", metaLabelLeftX, y, { width: usableWidth * 0.30, lineBreak: false });
+    setFont();
+    doc.fontSize(10).text(String(payload.sale.id), metaValueLeftX, y, {
+      width: usableWidth * 0.24,
       align: "left",
+      lineBreak: false,
     });
-    doc.font("Helvetica-Bold").text("TIME", horizontalPadding + usableWidth * 0.58, y, { width: usableWidth * 0.18 });
-    doc.font("Helvetica").text(String(payload.sale.timestamp).slice(11, 16), horizontalPadding + usableWidth * 0.78, y, {
-      width: usableWidth * 0.22,
+    setFont(true);
+    doc.text("වේලාව", metaLabelRightX, y, { width: usableWidth * 0.17, lineBreak: false });
+    setFont();
+    doc.text(String(payload.sale.timestamp).slice(11, 16), metaValueRightX, y, {
+      width: usableWidth * 0.20,
       align: "right",
+      lineBreak: false,
     });
     y += lineHeight;
 
-    doc.font("Helvetica-Bold").text("DATE", horizontalPadding, y, { width: usableWidth * 0.32 });
-    doc.font("Helvetica").text(String(payload.sale.timestamp).slice(0, 10), horizontalPadding + usableWidth * 0.35, y, {
-      width: usableWidth * 0.22,
+    setFont(true);
+    doc.text("දිනය", metaLabelLeftX, y, { width: usableWidth * 0.30, lineBreak: false });
+    setFont();
+    doc.text(String(payload.sale.timestamp).slice(0, 10), metaValueLeftX, y, {
+      width: usableWidth * 0.24,
       align: "left",
+      lineBreak: false,
     });
-    doc.font("Helvetica-Bold").text("BY", horizontalPadding + usableWidth * 0.58, y, { width: usableWidth * 0.18 });
-    doc.font("Helvetica").text(payload.sale.cashier || "admin", horizontalPadding + usableWidth * 0.78, y, {
-      width: usableWidth * 0.22,
+    setFont(true);
+    doc.text("කැෂියර්", metaLabelRightX, y, { width: usableWidth * 0.17, lineBreak: false });
+    setFont();
+    doc.text(payload.sale.cashier || "admin", metaValueRightX, y, {
+      width: usableWidth * 0.20,
       align: "right",
+      lineBreak: false,
     });
     y += lineHeight + 4;
 
     drawDivider(y);
     y += 6;
 
-    doc.font("Helvetica-Bold").fontSize(9.5);
-    doc.text("ITEM", horizontalPadding, y, { width: usableWidth * 0.44 });
-    doc.text("QTY", horizontalPadding + usableWidth * 0.45, y, { width: usableWidth * 0.14, align: "right" });
-    doc.text("DIS", horizontalPadding + usableWidth * 0.61, y, { width: usableWidth * 0.14, align: "right" });
-    doc.text("TOTAL", horizontalPadding + usableWidth * 0.77, y, { width: usableWidth * 0.23, align: "right" });
+    const unitSellX = horizontalPadding + usableWidth * 0.34;
+    const unitDiscountedX = horizontalPadding + usableWidth * 0.56;
+    const qtyX = horizontalPadding + usableWidth * 0.74;
+    const totalX = horizontalPadding + usableWidth * 0.86;
+
+    setFont(true);
+    doc.fontSize(8.4);
+    doc.text("භාණ්ඩය", horizontalPadding, y, { width: usableWidth * 0.33 });
+    doc.text("විකුණුම් මිල", unitSellX, y, { width: usableWidth * 0.21, align: "right" });
+    doc.text("අපේ මිල", unitDiscountedX, y, { width: usableWidth * 0.17, align: "right" });
+    doc.text("ප්‍ර.", qtyX, y, { width: usableWidth * 0.11, align: "right" });
+    doc.text("මුළු", totalX, y, { width: usableWidth * 0.14, align: "right" });
     y += lineHeight;
     drawDivider(y);
     y += 6;
 
+    const itemLevelSavings = payload.items.reduce(
+      (sum, item) => sum + Number(item.item_discount || 0) * Number(item.qty || 0),
+      0,
+    );
+    const surchargeTotal = payload.items.reduce(
+      (sum, item) => sum + Number(item.applied_surcharge || 0) * Number(item.qty || 0),
+      0,
+    );
+
     for (const item of payload.items) {
       const name = item.name || item.product_id;
-      const lineTotal = Number(item.qty) * Math.max(0, Number(item.sold_at_price) - Number(item.item_discount));
+      const sellUnitPrice = Number(item.sold_at_price || 0);
+      const discountedUnitPrice = Math.max(0, sellUnitPrice - Number(item.item_discount || 0));
+      const lineTotal = Number(item.qty) * discountedUnitPrice;
 
-      doc.font("Helvetica-Bold").fontSize(9.5).text(name, horizontalPadding, y, { width: usableWidth });
+      setFont(true);
+      doc.fontSize(9).text(name, horizontalPadding, y, { width: usableWidth });
       y += lineHeight;
-      doc.font("Helvetica").fontSize(10);
-      doc.text(Number(item.qty).toFixed(2), horizontalPadding + usableWidth * 0.45, y, { width: usableWidth * 0.14, align: "right" });
-      doc.text(Number(item.item_discount).toFixed(2), horizontalPadding + usableWidth * 0.61, y, { width: usableWidth * 0.14, align: "right" });
-      doc.text(lineTotal.toFixed(2), horizontalPadding + usableWidth * 0.77, y, { width: usableWidth * 0.23, align: "right" });
+      setFont();
+      doc.fontSize(9.4);
+      doc.text(sellUnitPrice.toFixed(2), unitSellX, y, { width: usableWidth * 0.21, align: "right" });
+      doc.text(discountedUnitPrice.toFixed(2), unitDiscountedX, y, { width: usableWidth * 0.17, align: "right" });
+      doc.text(Number(item.qty).toFixed(2), qtyX, y, { width: usableWidth * 0.11, align: "right" });
+      doc.text(lineTotal.toFixed(2), totalX, y, { width: usableWidth * 0.14, align: "right" });
       y += rowHeight;
     }
 
     drawDivider(y);
     y += 8;
 
-    drawAmountRow("GROSS PRICE", Number(payload.sale.subtotal).toFixed(2), y);
+    const totalSaved = Number(payload.sale.discount || 0) + itemLevelSavings;
+
+    drawAmountRow("මුළු බිල් මුදල", Number(payload.sale.total).toFixed(2), y, true);
     y += lineHeight;
-    drawAmountRow("DISCOUNT", Number(payload.sale.discount).toFixed(2), y);
+    drawAmountRow("ඉතිරි කළ මුදල", totalSaved.toFixed(2), y);
     y += lineHeight;
-    drawAmountRow("TOTAL", Number(payload.sale.total).toFixed(2), y, true);
+    if (surchargeTotal > 0) {
+      drawAmountRow("කාඩ් අමතර ගාස්තු", surchargeTotal.toFixed(2), y);
+      y += lineHeight;
+    }
+    drawAmountRow("මුල් එකතුව", Number(payload.sale.subtotal).toFixed(2), y);
     y += lineHeight + 4;
 
     drawDivider(y);
@@ -184,20 +266,21 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
     const cardPaid = String(payload.sale.payment_method || "").toUpperCase() === "CARD" ? paid : 0;
     const cashPaid = String(payload.sale.payment_method || "").toUpperCase() === "CASH" ? paid : 0;
 
-    drawAmountRow("PAYMENT", "", y, true);
+    drawAmountRow("ගෙවීම්", "", y, true);
     y += lineHeight;
-    drawAmountRow("CASH", cashPaid.toFixed(2), y);
+    drawAmountRow("මුදල්", cashPaid.toFixed(2), y);
     y += lineHeight;
-    drawAmountRow("CARD", cardPaid.toFixed(2), y);
+    drawAmountRow("කාඩ්", cardPaid.toFixed(2), y);
     y += lineHeight + 4;
 
     drawDivider(y);
     y += 8;
-    drawAmountRow("BALANCE", Number(payload.sale.balance_due).toFixed(2), y, true);
+    drawAmountRow("ඉතිරි ගෙවිය යුතු", Number(payload.sale.balance_due).toFixed(2), y, true);
     y += lineHeight + 8;
 
-    doc.font("Helvetica").fontSize(8.5).fillColor("#2a2a2a").text(
-      process.env.POS_BILL_RETURN_POLICY || "ITEMS SOLD ARE NOT RETURNABLE AFTER 03 DAYS.",
+    setFont();
+    doc.fontSize(8.5).fillColor("#2a2a2a").text(
+      process.env.POS_BILL_RETURN_POLICY || "විකුණූ භාණ්ඩ දින 03කට පසු ආපසු භාර නොගනියි.",
       horizontalPadding,
       y,
       { width: usableWidth, align: "center" },
@@ -206,13 +289,15 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
     drawDivider(y);
     y += 10;
 
-    doc.font("Helvetica-Bold").fontSize(10).fillColor("#111111").text("Thank you for your visit", horizontalPadding, y, {
+    setFont(true);
+    doc.fontSize(10).fillColor("#111111").text("ඔබගේ පැමිණීමට ස්තුතියි", horizontalPadding, y, {
       width: usableWidth,
       align: "center",
     });
     y += lineHeight;
-    doc.font("Helvetica").fontSize(8.5).fillColor("#4b4b4b").text(
-      process.env.POS_BILL_FOOTER || "Powered by Smart Retail POS Next",
+    setFont();
+    doc.fontSize(8.5).fillColor("#4b4b4b").text(
+      process.env.POS_BILL_FOOTER || "FloreoPOS මගින් බලගන්වයි",
       horizontalPadding,
       y,
       { width: usableWidth, align: "center" },

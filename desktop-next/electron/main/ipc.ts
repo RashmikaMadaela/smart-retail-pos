@@ -236,15 +236,6 @@ async function resolveConnectedPrinter(webContents: Electron.WebContents): Promi
     if (!printers || printers.length === 0) {
       return { connected: false };
     }
-
-    const preferredPrinter = (process.env.POS_PRINTER_NAME || "").trim();
-    if (preferredPrinter) {
-      const matched = printers.find((printer) => printer.name === preferredPrinter);
-      if (matched) {
-        return { connected: true, printerName: matched.name };
-      }
-    }
-
     const fallback = printers.find((printer) => printer.isDefault) || printers[0];
     return { connected: true, printerName: fallback?.name };
   } catch {

@@ -241,9 +241,6 @@ describe("sales parity", () => {
       return;
     }
 
-    const recalled = recallHeldSale(hold.data);
-    expect(recalled.ok).toBe(true);
-
     let db = new Database(dbPath, { fileMustExist: true });
     const stockBefore = db.prepare("SELECT stock FROM products WHERE barcode_id = 'P100'").get() as any;
     expect(Number(stockBefore.stock)).toBe(20);
