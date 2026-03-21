@@ -1,6 +1,7 @@
 import { BrowserWindow, dialog, ipcMain, shell } from "electron";
 import type { OpenDialogOptions } from "electron";
 import { pathToFileURL } from "node:url";
+import { print as nativePrintPdf } from "pdf-to-printer";
 import { z } from "zod";
 import { login } from "../../backend/services/authService";
 import { createProduct, listProducts, removeProduct, searchProducts } from "../../backend/services/catalogService";
@@ -243,7 +244,24 @@ async function resolveConnectedPrinter(webContents: Electron.WebContents): Promi
   }
 }
 
-async function printPdfFile(filePath: string, printerName?: string): Promise<boolean> {
+type PdfPrintOptions = {
+  preferBrowserPrint?: boolean;
+  landscape?: boolean;
+  pageSizeMicrons?: { width: number; height: number };
+};
+
+async function printPdfFile(filePath: string, printerName?: string, options: PdfPrintOptions = {}): Promise<boolean> {
+  if (process.platform === "win32" && !options.preferBrowserPrint) {
+    try {
+      await nativePrintPdf(filePath, {
+        printer: printerName,
+      });
+      return true;
+    } catch {
+      // Fall through to BrowserWindow printing as a backup path.
+    }
+  }
+
   const win = new BrowserWindow({
     show: false,
     webPreferences: {
@@ -255,19 +273,48 @@ async function printPdfFile(filePath: string, printerName?: string): Promise<boo
     await win.loadURL(pathToFileURL(filePath).toString());
 
     await new Promise<void>((resolve) => {
-      setTimeout(() => resolve(), 250);
+      setTimeout(() => resolve(), 600);
     });
 
-    return await new Promise<boolean>((resolve) => {
-      win.webContents.print(
-        {
-          silent: true,
-          printBackground: true,
-          deviceName: printerName,
-        },
-        (success) => resolve(Boolean(success)),
-      );
-    });
+    const runPrint = (deviceName?: string) =>
+      new Promise<boolean>((resolve) => {
+        let settled = false;
+        const timeout = setTimeout(() => {
+          if (!settled) {
+            settled = true;
+            resolve(false);
+          }
+        }, 8000);
+
+        win.webContents.print(
+          {
+            silent: true,
+            printBackground: true,
+            deviceName,
+            landscape: Boolean(options.landscape),
+            pageSize: options.pageSizeMicrons,
+          },
+          (success) => {
+            if (!settled) {
+              settled = true;
+              clearTimeout(timeout);
+              resolve(Boolean(success));
+            }
+          },
+        );
+      });
+
+    // Prefer the resolved default printer name, then fallback to Electron's implicit default.
+    const firstAttempt = await runPrint(printerName);
+    if (firstAttempt) {
+      return true;
+    }
+
+    if (printerName) {
+      return runPrint(undefined);
+    }
+
+    return false;
   } catch {
     return false;
   } finally {
@@ -564,7 +611,28 @@ export function registerIpcHandlers() {
     }
 
     const printer = await resolveConnectedPrinter(event.sender);
-    const printed = printer.connected ? await printPdfFile(result.data.file_path, printer.printerName) : false;
+    let printed = false;
+    if (printer.connected) {
+      // Attempt 1: strict landscape + explicit 38x25mm label size.
+      printed = await printPdfFile(result.data.file_path, printer.printerName, {
+        preferBrowserPrint: true,
+        landscape: true,
+        pageSizeMicrons: { width: 38000, height: 25000 },
+      });
+
+      // Attempt 2: keep landscape but let driver choose paper size.
+      if (!printed) {
+        printed = await printPdfFile(result.data.file_path, printer.printerName, {
+          preferBrowserPrint: true,
+          landscape: true,
+        });
+      }
+
+      // Attempt 3: fall back to native print path for maximum compatibility.
+      if (!printed) {
+        printed = await printPdfFile(result.data.file_path, printer.printerName);
+      }
+    }
 
     return ok({
       ...result.data,
