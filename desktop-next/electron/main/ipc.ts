@@ -262,6 +262,10 @@ type PdfPrintOptions = {
   preferBrowserPrint?: boolean;
   landscape?: boolean;
   pageSizeMicrons?: { width: number; height: number };
+  nativeOnly?: boolean;
+  nativeScale?: "noscale" | "shrink" | "fit";
+  nativePaperSize?: string;
+  nativePaperKind?: number;
 };
 
 async function printPdfFile(filePath: string, printerName?: string, options: PdfPrintOptions = {}): Promise<boolean> {
@@ -269,9 +273,16 @@ async function printPdfFile(filePath: string, printerName?: string, options: Pdf
     try {
       await nativePrintPdf(filePath, {
         printer: printerName,
+        orientation: options.landscape ? "landscape" : "portrait",
+        scale: options.nativeScale ?? "noscale",
+        paperSize: options.nativePaperSize,
+        paperKind: options.nativePaperKind,
       });
       return true;
     } catch {
+      if (options.nativeOnly) {
+        return false;
+      }
       // Fall through to BrowserWindow printing as a backup path.
     }
   }
@@ -627,24 +638,27 @@ export function registerIpcHandlers() {
     const printer = await resolveConnectedPrinter(event.sender);
     let printed = false;
     if (printer.connected) {
-      // Attempt 1: strict landscape + explicit 38x25mm label size.
+      // Attempt 1: native Windows print with explicit landscape and no scaling.
       printed = await printPdfFile(result.data.file_path, printer.printerName, {
-        preferBrowserPrint: true,
         landscape: true,
-        pageSizeMicrons: { width: 38000, height: 25000 },
+        nativeScale: "noscale",
+        nativeOnly: true,
       });
 
-      // Attempt 2: keep landscape but let driver choose paper size.
+      // Attempt 2: native Windows print with portrait, still no scaling.
       if (!printed) {
         printed = await printPdfFile(result.data.file_path, printer.printerName, {
-          preferBrowserPrint: true,
-          landscape: true,
+          landscape: false,
+          nativeScale: "noscale",
+          nativeOnly: true,
         });
       }
 
-      // Attempt 3: fall back to native print path for maximum compatibility.
+      // Attempt 3: native default options.
       if (!printed) {
-        printed = await printPdfFile(result.data.file_path, printer.printerName);
+        printed = await printPdfFile(result.data.file_path, printer.printerName, {
+          nativeOnly: true,
+        });
       }
     }
 
