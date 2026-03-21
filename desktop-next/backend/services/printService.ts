@@ -111,9 +111,9 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
     const pageWidth = mmToPt(80);
     const horizontalPadding = 10;
     const usableWidth = pageWidth - horizontalPadding * 2;
-    const lineHeight = 14;
-    const rowHeight = 16;
-    const estimatedHeight = Math.max(520, 300 + payload.items.length * 30);
+    const lineHeight = 15;
+    const rowHeight = 18;
+    const estimatedHeight = Math.max(560, 340 + payload.items.length * 34);
 
     const doc = new PDFDocument({ size: [pageWidth, estimatedHeight], margin: 0 });
     const billFontPath = resolveBillFontPath();
@@ -129,27 +129,56 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
       doc.font(bold ? "Helvetica-Bold" : "Helvetica");
     };
 
+    const receiptColor = "#000000";
+
     const drawDivider = (y: number) => {
       doc
         .moveTo(horizontalPadding, y)
         .lineTo(pageWidth - horizontalPadding, y)
-        .lineWidth(0.6)
-        .strokeColor("#8b8b8b")
+        .lineWidth(0.9)
+        .strokeColor(receiptColor)
         .stroke();
     };
 
     const drawAmountRow = (label: string, value: string, y: number, bold = false) => {
       setFont(bold);
-      doc.fontSize(bold ? 11 : 10);
-      doc.fillColor("#111111").text(label, horizontalPadding, y, { width: usableWidth * 0.58, align: "left" });
+      doc.fontSize(bold ? 11.8 : 10.8);
+      doc.fillColor(receiptColor).text(label, horizontalPadding, y, { width: usableWidth * 0.58, align: "left" });
       doc.text(value, horizontalPadding + usableWidth * 0.58, y, { width: usableWidth * 0.42, align: "right" });
+    };
+
+    const drawMetaField = (
+      text: string,
+      x: number,
+      yPos: number,
+      width: number,
+      align: "left" | "right" = "left",
+      bold = false,
+    ) => {
+      setFont(bold);
+      let size = 10.2;
+      const minSize = 7.6;
+      while (size > minSize) {
+        doc.fontSize(size);
+        if (doc.widthOfString(text) <= width) {
+          break;
+        }
+        size -= 0.4;
+      }
+
+      doc.fontSize(size).fillColor(receiptColor).text(text, x, yPos, {
+        width,
+        height: lineHeight,
+        align,
+        lineBreak: false,
+      });
     };
 
     let y = 12;
     const logoPath = resolveBillLogoPath();
     if (logoPath) {
       try {
-        const logoWidth = Math.min(usableWidth * 0.96, 190);
+        const logoWidth = Math.min(usableWidth * 1, 240);
         const x = (pageWidth - logoWidth) / 2;
         doc.image(logoPath, x, y, { fit: [logoWidth, 96], align: "center" });
         y += 102;
@@ -162,44 +191,20 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
     y += 6;
 
     const metaLabelLeftX = horizontalPadding;
-    const metaValueLeftX = horizontalPadding + usableWidth * 0.34;
-    const metaLabelRightX = horizontalPadding + usableWidth * 0.62;
-    const metaValueRightX = horizontalPadding + usableWidth * 0.80;
+    const metaValueLeftX = horizontalPadding + usableWidth * 0.26;
+    const metaLabelRightX = horizontalPadding + usableWidth * 0.56;
+    const metaValueRightX = horizontalPadding + usableWidth * 0.72;
 
-    setFont(true);
-    doc.fontSize(10).text("බිල් අංකය", metaLabelLeftX, y, { width: usableWidth * 0.30, lineBreak: false });
-    setFont();
-    doc.fontSize(10).text(String(payload.sale.id), metaValueLeftX, y, {
-      width: usableWidth * 0.24,
-      align: "left",
-      lineBreak: false,
-    });
-    setFont(true);
-    doc.text("වේලාව", metaLabelRightX, y, { width: usableWidth * 0.17, lineBreak: false });
-    setFont();
-    doc.text(String(payload.sale.timestamp).slice(11, 16), metaValueRightX, y, {
-      width: usableWidth * 0.20,
-      align: "right",
-      lineBreak: false,
-    });
+    drawMetaField("බිල් අංකය", metaLabelLeftX, y, usableWidth * 0.24, "left", true);
+    drawMetaField(String(payload.sale.id), metaValueLeftX, y, usableWidth * 0.28, "left", false);
+    drawMetaField("වේලාව", metaLabelRightX, y, usableWidth * 0.14, "left", true);
+    drawMetaField(String(payload.sale.timestamp).slice(11, 16), metaValueRightX, y, usableWidth * 0.28, "right", false);
     y += lineHeight;
 
-    setFont(true);
-    doc.text("දිනය", metaLabelLeftX, y, { width: usableWidth * 0.30, lineBreak: false });
-    setFont();
-    doc.text(String(payload.sale.timestamp).slice(0, 10), metaValueLeftX, y, {
-      width: usableWidth * 0.24,
-      align: "left",
-      lineBreak: false,
-    });
-    setFont(true);
-    doc.text("කැෂියර්", metaLabelRightX, y, { width: usableWidth * 0.17, lineBreak: false });
-    setFont();
-    doc.text(payload.sale.cashier || "admin", metaValueRightX, y, {
-      width: usableWidth * 0.20,
-      align: "right",
-      lineBreak: false,
-    });
+    drawMetaField("දිනය", metaLabelLeftX, y, usableWidth * 0.24, "left", true);
+    drawMetaField(String(payload.sale.timestamp).slice(0, 10), metaValueLeftX, y, usableWidth * 0.28, "left", false);
+    drawMetaField("කැෂියර්", metaLabelRightX, y, usableWidth * 0.14, "left", true);
+    drawMetaField(payload.sale.cashier || "admin", metaValueRightX, y, usableWidth * 0.28, "right", false);
     y += lineHeight + 4;
 
     drawDivider(y);
@@ -211,7 +216,7 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
     const totalX = horizontalPadding + usableWidth * 0.86;
 
     setFont(true);
-    doc.fontSize(8.4);
+    doc.fontSize(9.2);
     doc.text("භාණ්ඩය", horizontalPadding, y, { width: usableWidth * 0.33 });
     doc.text("සඳහන් මිල", unitSellX, y, { width: usableWidth * 0.21, align: "right" });
     doc.text("අපේ මිල", unitDiscountedX, y, { width: usableWidth * 0.17, align: "right" });
@@ -221,10 +226,6 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
     drawDivider(y);
     y += 6;
 
-    const itemLevelSavings = payload.items.reduce(
-      (sum, item) => sum + Number(item.item_discount || 0) * Number(item.qty || 0),
-      0,
-    );
     const surchargeTotal = payload.items.reduce(
       (sum, item) => sum + Number(item.applied_surcharge || 0) * Number(item.qty || 0),
       0,
@@ -237,10 +238,10 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
       const lineTotal = Number(item.qty) * discountedUnitPrice;
 
       setFont(true);
-      doc.fontSize(9).text(name, horizontalPadding, y, { width: usableWidth });
+      doc.fontSize(10).text(name, horizontalPadding, y, { width: usableWidth });
       y += lineHeight;
       setFont();
-      doc.fontSize(9.4);
+      doc.fontSize(10.2);
       doc.text(sellUnitPrice.toFixed(2), unitSellX, y, { width: usableWidth * 0.21, align: "right" });
       doc.text(discountedUnitPrice.toFixed(2), unitDiscountedX, y, { width: usableWidth * 0.17, align: "right" });
       doc.text(Number(item.qty).toFixed(2), qtyX, y, { width: usableWidth * 0.11, align: "right" });
@@ -251,7 +252,7 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
     drawDivider(y);
     y += 8;
 
-    const totalSaved = Number(payload.sale.discount || 0) + itemLevelSavings;
+    const totalSaved = Number(payload.sale.discount || 0);
 
     drawAmountRow("මුල් එකතුව", Number(payload.sale.subtotal).toFixed(2), y);
     y += lineHeight;
@@ -283,11 +284,11 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
 
     drawDivider(y);
     y += 8;
-    drawAmountRow("ඉතිරි ගෙවිය යුතු", Number(payload.sale.balance_due).toFixed(2), y, true);
+    drawAmountRow("ඉතිරි ණය මුදල", Number(payload.sale.balance_due).toFixed(2), y, true);
     y += lineHeight + 8;
 
     setFont();
-    doc.fontSize(8.5).fillColor("#2a2a2a").text(
+    doc.fontSize(9).fillColor(receiptColor).text(
       process.env.POS_BILL_RETURN_POLICY || "විකුණූ භාණ්ඩ දින 03කට පසු ආපසු භාර නොගනියි.",
       horizontalPadding,
       y,
@@ -298,13 +299,13 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
     y += 10;
 
     setFont(true);
-    doc.fontSize(10).fillColor("#111111").text("ඔබගේ පැමිණීමට ස්තුතියි", horizontalPadding, y, {
+    doc.fontSize(11).fillColor(receiptColor).text("ඔබගේ පැමිණීමට ස්තුතියි", horizontalPadding, y, {
       width: usableWidth,
       align: "center",
     });
     y += lineHeight;
     setFont();
-    doc.fontSize(8.5).fillColor("#4b4b4b").text(
+    doc.fontSize(9).fillColor(receiptColor).text(
       process.env.POS_BILL_FOOTER || "Software by FloreoPOS - www.floreopos.com",
       horizontalPadding,
       y,
