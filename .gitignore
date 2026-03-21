@@ -15,4 +15,8 @@ env/
 
 # Test receipts and logs
 *.txt
-*.log
+*.log*
+*.pdf
+
+# Generated print artifacts
+printouts/
