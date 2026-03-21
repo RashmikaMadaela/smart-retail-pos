@@ -45,11 +45,12 @@ describe("BillingTab", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add to Cart" }));
     fireEvent.click(screen.getByRole("button", { name: "Remove" }));
     fireEvent.click(screen.getByRole("button", { name: "Checkout" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirm Checkout" }));
+    fireEvent.click(screen.getByRole("button", { name: "Print & Checkout" }));
 
     expect(onQuickAddProduct).toHaveBeenCalledWith("P001", 1);
     expect(onRemoveFromCart).toHaveBeenCalledWith("P001");
     expect(onAdjustCartQty).not.toHaveBeenCalled();
     expect(onProcessSale).toHaveBeenCalledTimes(1);
+    expect(onProcessSale).toHaveBeenCalledWith(true);
   });
 });

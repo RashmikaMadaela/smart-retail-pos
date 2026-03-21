@@ -471,7 +471,7 @@ export default function App() {
   const changeDue = Math.max(0, Number((paidValue - finalTotal).toFixed(2)));
   const balanceDue = Math.max(0, Number((finalTotal - paidValue).toFixed(2)));
 
-  async function processCheckout() {
+  async function processCheckout(withPrint = true) {
     if (!user) {
       return;
     }
@@ -534,19 +534,21 @@ export default function App() {
     }
 
     pushMessage(`Checkout successful. Sale ID: ${response.data.sale_id}`);
-    const printResult = await posApiClient.exportSaleBillPdf(response.data.sale_id);
-    if (printResult.ok) {
-      if (printResult.data.printed) {
-        pushMessage(t("messages.receiptPrinted", {
-          saleId: response.data.sale_id,
-          printer: printResult.data.printer_name || "default printer",
-          path: printResult.data.file_path,
-        }));
-      } else {
-        pushMessage(t("messages.receiptSaved", {
-          saleId: response.data.sale_id,
-          path: printResult.data.file_path,
-        }));
+    if (withPrint) {
+      const printResult = await posApiClient.exportSaleBillPdf(response.data.sale_id);
+      if (printResult.ok) {
+        if (printResult.data.printed) {
+          pushMessage(t("messages.receiptPrinted", {
+            saleId: response.data.sale_id,
+            printer: printResult.data.printer_name || "default printer",
+            path: printResult.data.file_path,
+          }));
+        } else {
+          pushMessage(t("messages.receiptSaved", {
+            saleId: response.data.sale_id,
+            path: printResult.data.file_path,
+          }));
+        }
       }
     }
     clearCart();

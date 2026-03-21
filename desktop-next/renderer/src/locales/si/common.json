@@ -162,7 +162,9 @@
     "auto": "ස්වයංක්‍රීය",
     "mode": "මාදිලිය",
     "cancel": "අවලංගු කරන්න",
-    "confirmCheckout": "Checkout තහවුරු කරන්න"
+    "confirmCheckout": "Checkout තහවුරු කරන්න",
+    "printAndCheckout": "මුද්‍රණය සමග Checkout",
+    "checkoutWithoutPrint": "මුද්‍රණය නැතිව Checkout"
   },
   "customers": {
     "title": "පාරිභෝගික ලෙජරය",

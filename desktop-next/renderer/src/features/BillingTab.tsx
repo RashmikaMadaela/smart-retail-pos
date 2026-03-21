@@ -27,7 +27,7 @@ type BillingTabProps = {
   onCustomerNameChange: (value: string) => void;
   onCustomerContactChange: (value: string) => void;
   onHoldSale: () => void;
-  onProcessSale: () => void;
+  onProcessSale: (withPrint: boolean) => void;
 };
 
 export function BillingTab({
@@ -135,9 +135,9 @@ export function BillingTab({
     setIsCheckoutConfirmOpen(true);
   }
 
-  function confirmCheckout() {
+  function confirmCheckout(withPrint: boolean) {
     setIsCheckoutConfirmOpen(false);
-    onProcessSale();
+    onProcessSale(withPrint);
   }
 
   useEffect(() => {
@@ -484,8 +484,11 @@ export function BillingTab({
               <button type="button" className="!bg-slate-600 !text-white" onClick={() => setIsCheckoutConfirmOpen(false)}>
                 {t("billing.cancel")}
               </button>
-              <button type="button" className="!bg-emerald-500 !text-slate-900" onClick={confirmCheckout}>
-                {t("billing.confirmCheckout")}
+              <button type="button" className="!bg-slate-700 !text-white" onClick={() => confirmCheckout(false)}>
+                {t("billing.checkoutWithoutPrint")}
+              </button>
+              <button type="button" className="!bg-emerald-500 !text-slate-900" onClick={() => confirmCheckout(true)}>
+                {t("billing.printAndCheckout")}
               </button>
             </div>
           </div>

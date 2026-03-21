@@ -162,7 +162,9 @@
     "auto": "Auto",
     "mode": "Mode",
     "cancel": "Cancel",
-    "confirmCheckout": "Confirm Checkout"
+    "confirmCheckout": "Confirm Checkout",
+    "printAndCheckout": "Print & Checkout",
+    "checkoutWithoutPrint": "Checkout Without Print"
   },
   "customers": {
     "title": "Customer Ledger",
