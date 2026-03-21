@@ -22,6 +22,7 @@ type BillingState = {
   setPaidAmount: (value: string) => void;
   setCustomerName: (value: string) => void;
   setCustomerContact: (value: string) => void;
+  resetCheckoutFields: () => void;
   setCart: (rows: CartItem[] | ((prev: CartItem[]) => CartItem[])) => void;
   clearCart: () => void;
 };
@@ -44,6 +45,14 @@ export const useBillingStore = create<BillingState>((set) => ({
   setPaidAmount: (paidAmount) => set({ paidAmount }),
   setCustomerName: (customerName) => set({ customerName }),
   setCustomerContact: (customerContact) => set({ customerContact }),
+  resetCheckoutFields: () =>
+    set({
+      paymentMode: "PAID",
+      paymentMethod: "CASH",
+      paidAmount: "",
+      customerName: "",
+      customerContact: "",
+    }),
   setCart: (rows) =>
     set((state) => ({
       cart: typeof rows === "function" ? rows(state.cart) : rows,

@@ -35,8 +35,8 @@ export function createExpense(description: string, amount: number, category: str
   const result = db
     .prepare(
       `
-      INSERT INTO expenses (description, amount, category)
-      VALUES (?, ?, ?)
+      INSERT INTO expenses (description, amount, date, category)
+      VALUES (?, ?, datetime('now','localtime'), ?)
       `,
     )
     .run(description.trim(), amount, category.trim() || "General");

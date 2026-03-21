@@ -1181,7 +1181,7 @@ def complete_held_sale(
                     balance_due = ?,
                     payment_status = ?,
                     payment_method = ?,
-                    timestamp = CURRENT_TIMESTAMP
+                    timestamp = datetime('now','localtime')
                 WHERE id = ?
                 """,
                 (
@@ -1433,7 +1433,7 @@ def get_dead_stock(days: int = 30) -> List[Dict]:
                 JOIN sales s ON s.id = si.sale_id
                 WHERE si.product_id = p.barcode_id
                   AND s.status = 'COMPLETED'
-                  AND s.timestamp >= datetime('now', ?)
+                                    AND s.timestamp >= datetime('now', 'localtime', ?)
             )
             ORDER BY p.name ASC
             """,

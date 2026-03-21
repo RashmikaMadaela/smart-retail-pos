@@ -47,7 +47,7 @@ function buildSchema(db: Database.Database) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       supplier_id INTEGER NOT NULL,
       reference_no TEXT,
-      received_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      received_at DATETIME DEFAULT (datetime('now','localtime')),
       total_cost REAL NOT NULL,
       paid_amount REAL DEFAULT 0.0,
       balance_due REAL DEFAULT 0.0,
@@ -72,7 +72,7 @@ function buildSchema(db: Database.Database) {
       supplier_id INTEGER NOT NULL,
       batch_id INTEGER,
       amount REAL NOT NULL,
-      paid_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      paid_at DATETIME DEFAULT (datetime('now','localtime')),
       method TEXT DEFAULT 'CASH',
       note TEXT,
       FOREIGN KEY(supplier_id) REFERENCES suppliers(id),
@@ -90,7 +90,7 @@ function buildSchema(db: Database.Database) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       cashier_id INTEGER,
       customer_id INTEGER,
-      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+      timestamp DATETIME DEFAULT (datetime('now','localtime')),
       subtotal REAL NOT NULL,
       discount REAL DEFAULT 0.0,
       total REAL NOT NULL,
@@ -119,7 +119,7 @@ function buildSchema(db: Database.Database) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       description TEXT NOT NULL,
       amount REAL NOT NULL,
-      date DATETIME DEFAULT CURRENT_TIMESTAMP,
+      date DATETIME DEFAULT (datetime('now','localtime')),
       category TEXT DEFAULT 'General'
     );
   `);

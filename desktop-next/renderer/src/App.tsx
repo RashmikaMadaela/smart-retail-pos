@@ -71,6 +71,7 @@ export default function App() {
     setPaidAmount,
     setCustomerName,
     setCustomerContact,
+    resetCheckoutFields,
     setCart,
     clearCart,
   } = useBillingStore();
@@ -80,6 +81,7 @@ export default function App() {
 
   const [customerSearchText, setCustomerSearchText] = useState("");
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [billingCustomerSuggestions, setBillingCustomerSuggestions] = useState<Customer[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [customerLedger, setCustomerLedger] = useState<CustomerLedger | null>(null);
   const [customerPayment, setCustomerPayment] = useState("");
@@ -295,6 +297,34 @@ export default function App() {
       window.clearTimeout(clearTimer);
     };
   }, [message, error]);
+
+  useEffect(() => {
+    if (!user || paymentMode === "PAID") {
+      setBillingCustomerSuggestions([]);
+      return;
+    }
+
+    const needle = customerName.trim();
+    if (!needle) {
+      setBillingCustomerSuggestions([]);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        const response = await posApiClient.searchCustomers({ search_text: needle, limit: 12 });
+        if (!cancelled && response.ok) {
+          setBillingCustomerSuggestions(response.data);
+        }
+      })();
+    }, 160);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [user, paymentMode, customerName]);
 
   function appendProductToCart(product: Product, qtyValue: number) {
     const defaultDiscount = Number(product.default_discount_pct || 0);
@@ -554,7 +584,7 @@ export default function App() {
       }
     }
     clearCart();
-    setPaidAmount("");
+    resetCheckoutFields();
     await refreshProducts();
     await refreshSummary();
     await refreshHeldSales(user.id);
@@ -691,6 +721,7 @@ export default function App() {
       }
     }
     clearCart();
+    resetCheckoutFields();
     setSelectedHeldId(null);
     await refreshHeldSales(user?.id);
     await refreshProducts();
@@ -1545,6 +1576,11 @@ export default function App() {
                     onPaidAmountChange={setPaidAmount}
                     onCustomerNameChange={setCustomerName}
                     onCustomerContactChange={setCustomerContact}
+                    customerSuggestions={billingCustomerSuggestions}
+                    onCustomerSuggestionSelect={(customer) => {
+                      setCustomerName(customer.name || "");
+                      setCustomerContact(customer.contact || "");
+                    }}
                     onHoldSale={holdCurrentBill}
                     onProcessSale={processCheckout}
                   />

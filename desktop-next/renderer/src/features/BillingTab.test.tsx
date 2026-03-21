@@ -36,6 +36,8 @@ describe("BillingTab", () => {
         onPaidAmountChange={vi.fn()}
         onCustomerNameChange={vi.fn()}
         onCustomerContactChange={vi.fn()}
+        customerSuggestions={[]}
+        onCustomerSuggestionSelect={vi.fn()}
         onHoldSale={vi.fn()}
         onProcessSale={onProcessSale}
       />,

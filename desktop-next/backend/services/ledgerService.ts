@@ -437,8 +437,8 @@ export function receiveSupplierBatch(
       const batchResult = db
         .prepare(
           `
-          INSERT INTO supplier_batches (supplier_id, reference_no, total_cost, paid_amount, balance_due, status)
-          VALUES (?, ?, ?, ?, ?, ?)
+          INSERT INTO supplier_batches (supplier_id, reference_no, received_at, total_cost, paid_amount, balance_due, status)
+          VALUES (?, ?, datetime('now','localtime'), ?, ?, ?, ?)
           `,
         )
         .run(
@@ -475,8 +475,8 @@ export function receiveSupplierBatch(
       if (Number(paidAmount) > 0) {
         db.prepare(
           `
-          INSERT INTO supplier_payments (supplier_id, batch_id, amount, method, note)
-          VALUES (?, ?, ?, 'CASH', 'Initial payment at receiving')
+          INSERT INTO supplier_payments (supplier_id, batch_id, amount, paid_at, method, note)
+          VALUES (?, ?, ?, datetime('now','localtime'), 'CASH', 'Initial payment at receiving')
           `,
         ).run(Number(supplierId), batchId, Number(paidAmount));
       }
@@ -554,7 +554,7 @@ export function recordSupplierPayment(
         Number(batchId),
       );
       db.prepare(
-        "INSERT INTO supplier_payments (supplier_id, batch_id, amount, method, note) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO supplier_payments (supplier_id, batch_id, amount, paid_at, method, note) VALUES (?, ?, ?, datetime('now','localtime'), ?, ?)",
       ).run(Number(supplierId), Number(batchId), applied, (method || "CASH").toUpperCase(), (note || "").trim());
 
       db.prepare("UPDATE suppliers SET total_outstanding = MAX(total_outstanding - ?, 0) WHERE id = ?").run(

@@ -211,9 +211,9 @@ export function processSale(input: ProcessSaleInput): ServiceResult<number> {
       const insertSale = db.prepare(
         `
         INSERT INTO sales (
-          cashier_id, customer_id, subtotal, discount, total, status,
+          cashier_id, customer_id, timestamp, subtotal, discount, total, status,
           paid_amount, balance_due, payment_status, payment_method
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, datetime('now','localtime'), ?, ?, ?, ?, ?, ?, ?, ?)
         `,
       );
 
@@ -458,7 +458,7 @@ export function completeHeldSale(input: CompleteHeldSaleInput): ServiceResult<st
           balance_due = ?,
           payment_status = ?,
           payment_method = ?,
-          timestamp = CURRENT_TIMESTAMP
+          timestamp = datetime('now','localtime')
         WHERE id = ?
         `,
       ).run(
@@ -527,7 +527,7 @@ export function voidHeldSale(saleId: number): ServiceResult<string> {
       return { ok: false, error: "Only held sales can be voided." };
     }
     
-    db.prepare("UPDATE sales SET status = 'VOID', timestamp = CURRENT_TIMESTAMP WHERE id = ?").run(Number(saleId));
+    db.prepare("UPDATE sales SET status = 'VOID', timestamp = datetime('now','localtime') WHERE id = ?").run(Number(saleId));
     
     return { ok: true, data: "Held sale voided successfully." };
   } catch (err) {

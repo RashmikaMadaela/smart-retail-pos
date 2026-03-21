@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { CartItem, Product } from "./types";
+import type { CartItem, Customer, Product } from "./types";
 
 type BillingTabProps = {
   products: Product[];
@@ -26,6 +26,8 @@ type BillingTabProps = {
   onPaidAmountChange: (value: string) => void;
   onCustomerNameChange: (value: string) => void;
   onCustomerContactChange: (value: string) => void;
+  customerSuggestions: Customer[];
+  onCustomerSuggestionSelect: (customer: Customer) => void;
   onHoldSale: () => void;
   onProcessSale: (withPrint: boolean) => void;
 };
@@ -54,6 +56,8 @@ export function BillingTab({
   onPaidAmountChange,
   onCustomerNameChange,
   onCustomerContactChange,
+  customerSuggestions,
+  onCustomerSuggestionSelect,
   onHoldSale,
   onProcessSale,
 }: BillingTabProps) {
@@ -63,6 +67,7 @@ export function BillingTab({
   const [quickQty, setQuickQty] = useState("1");
   const [discountDrafts, setDiscountDrafts] = useState<Record<string, { percent: string; amount: string }>>({});
   const [isCheckoutConfirmOpen, setIsCheckoutConfirmOpen] = useState(false);
+  const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
   const scannerRef = useRef<HTMLInputElement | null>(null);
 
   const itemCount = useMemo(
@@ -418,7 +423,52 @@ export function BillingTab({
               <>
                 <label className="m-0 text-sm font-medium text-foreground">
                   {t("billing.customerName")}
-                  <input value={customerName} onChange={(e) => onCustomerNameChange(e.target.value)} />
+                  <div className="relative">
+                    <input
+                      value={customerName}
+                      onChange={(e) => {
+                        onCustomerNameChange(e.target.value);
+                        setShowCustomerSuggestions(true);
+                      }}
+                      onFocus={() => setShowCustomerSuggestions(true)}
+                      onBlur={() => {
+                        window.setTimeout(() => setShowCustomerSuggestions(false), 120);
+                      }}
+                    />
+                    {showCustomerSuggestions && customerName.trim() ? (
+                      <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto border border-slate-600 bg-slate-900 text-slate-100">
+                        {customerSuggestions.length === 0 ? (
+                          <p className="m-0 px-3 py-2 text-sm text-slate-300">{t("billing.noMatching")}</p>
+                        ) : (
+                          customerSuggestions.map((customer) => (
+                            <div
+                              key={customer.id}
+                              role="button"
+                              tabIndex={0}
+                              className="flex w-full flex-col items-start gap-0.5 border-0 border-b border-slate-700 bg-slate-900 px-3 py-2 text-left text-[15px] text-slate-100 hover:bg-slate-800 focus:bg-slate-800"
+                              onMouseDown={(event) => {
+                                event.preventDefault();
+                                onCustomerSuggestionSelect(customer);
+                                setShowCustomerSuggestions(false);
+                              }}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter" || event.key === " ") {
+                                  event.preventDefault();
+                                  onCustomerSuggestionSelect(customer);
+                                  setShowCustomerSuggestions(false);
+                                }
+                              }}
+                            >
+                              <span className="font-semibold text-slate-100">{customer.name}</span>
+                              <span className="text-sm text-slate-300">
+                                {customer.contact || "-"}
+                              </span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
                 </label>
 
                 <label className="m-0 text-sm font-medium text-foreground">
