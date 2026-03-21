@@ -4,15 +4,15 @@
     "sinhala": "සිං"
   },
   "login": {
-    "title": "Smart Retail POS Next",
+    "title": "FloreoPOS",
     "subtitle": "Electron + React මාරුකිරීමේ පද්ධතිය",
     "username": "පරිශීලක නාමය",
     "password": "මුරපදය",
     "submit": "පිවිසෙන්න"
   },
   "shell": {
-    "store": "Smart Retail",
-    "app": "POS Next",
+    "store": "FloreoPOS",
+    "app": "Desktop",
     "center": "වෙළඳසැල් පාලන මධ්‍යස්ථානය",
     "session": "සැසිය",
     "role": "භූමිකාව",

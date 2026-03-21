@@ -1,7 +1,7 @@
 {
-  "name": "smart-retail-pos-desktop-next",
+  "name": "floreopos-desktop-next",
   "version": "0.1.0",
-  "description": "Electron + React migration shell for Smart Retail POS",
+  "description": "Electron + React desktop app for FloreoPOS",
   "author": "Rashmika Madela",
   "license": "UNLICENSED",
   "homepage": "https://github.com/RashmikaMadaela/smart-retail-pos",
@@ -31,8 +31,8 @@
     "test": "vitest run"
   },
   "build": {
-    "appId": "com.smartretail.posnext",
-    "productName": "Smart Retail POS Next",
+    "appId": "com.floreopos.desktop",
+    "productName": "FloreoPOS",
     "directories": {
       "output": "release"
     },
@@ -57,7 +57,7 @@
       "target": [
         "nsis"
       ],
-      "artifactName": "SmartRetailPOSNext-${version}-${arch}-${env.BUILD_TARGET}.${ext}"
+      "artifactName": "FloreoPOS-${version}-${arch}-${env.BUILD_TARGET}.${ext}"
     },
     "nsis": {
       "installerIcon": "build/icon.ico",

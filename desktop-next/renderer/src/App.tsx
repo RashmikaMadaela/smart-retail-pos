@@ -1363,6 +1363,11 @@ export default function App() {
       <div className="mx-auto grid max-w-[1600px] gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
         <aside className="rounded-3xl border border-border/80 bg-card/80 p-4 shadow-panel backdrop-blur">
           <div className="space-y-1 border-b border-border/80 pb-4">
+            <img
+              src="/floreopos-logo.png"
+              alt="FloreoPOS"
+              className="mb-2 h-12 w-auto max-w-[180px] object-contain"
+            />
             <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">{t("shell.store")}</p>
             <h1 className="text-2xl font-semibold">{t("shell.app")}</h1>
             <p className="text-sm text-muted-foreground">{t("shell.center")}</p>

@@ -4,15 +4,15 @@
     "sinhala": "සිං"
   },
   "login": {
-    "title": "Smart Retail POS Next",
+    "title": "FloreoPOS",
     "subtitle": "Electron + React migration shell",
     "username": "Username",
     "password": "Password",
     "submit": "Login"
   },
   "shell": {
-    "store": "Smart Retail",
-    "app": "POS Next",
+    "store": "FloreoPOS",
+    "app": "Desktop",
     "center": "Store Control Center",
     "session": "Session",
     "role": "Role",
