@@ -42,15 +42,6 @@
       "build/icon.png",
       "package.json"
     ],
-    "extraResources": [
-      {
-        "from": "../database",
-        "to": "database",
-        "filter": [
-          "pos.db"
-        ]
-      }
-    ],
     "win": {
       "signAndEditExecutable": false,
       "icon": "build/icon.ico",

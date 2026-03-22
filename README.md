@@ -44,8 +44,7 @@ Offline-first desktop retail POS & local ERP application. Modern TypeScript/Elec
 
 1. **Install dependencies:**
    ```bash
-   cd desktop-next
-   npm install
+   npm run install:app
    ```
 
 2. **Run in development mode:**
@@ -67,10 +66,16 @@ Offline-first desktop retail POS & local ERP application. Modern TypeScript/Elec
 ### Building for Production
 
 ```bash
-cd desktop-next
 npm run build     # Outputs to dist/
-npm run package   # Creates distributable installer
+npm run dist      # Creates distributable installers
 ```
+
+### Database Initialization Behavior
+
+- On first run, the app creates `database/pos.db` automatically if it does not exist.
+- On every run, schema initialization is idempotent (`CREATE TABLE IF NOT EXISTS` + column guards).
+- Seeded required admin user is ensured safely with `INSERT OR IGNORE`.
+- `database/pos.db` is intentionally ignored in git as a runtime artifact.
 
 ## 📁 Project Structure
 

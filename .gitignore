@@ -19,14 +19,14 @@ build/
 .DS_Store
 Thumbs.db
 
-# Dynamic artifacts (generated at runtime, keep in git history but not workspace)
-printouts/            # Receipt output folder
-/receipts/           # Generated receipt PDFs
+# Dynamic artifacts (generated at runtime)
+printouts/
+/receipts/
 *.log
 
-# Database instance (local dev only, KEEP in git history but not working files)
-# Uncomment below to exclude database from git - not recommended for shared dev:
-# /database/pos.db
+# Database runtime artifacts
+/database/pos.db
+/database/__pycache__/
 
 # Testing artifacts  
 coverage/
