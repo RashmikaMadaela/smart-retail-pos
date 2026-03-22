@@ -1,22 +1,41 @@
-# Python cache files
-__pycache__/
-*.py[cod]
-*$py.class
+# Node modules
+node_modules/
+dist/
+build/
 
-# Virtual Environments
-venv/
+# Development environment
 .venv/
-env/
 .env
+.env.local
+.env.*.local
 
-# Database files
-*.db
-*.sqlite3
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
 
-# Test receipts and logs
-*.txt
-*.log*
-*.pdf
+# OS
+.DS_Store
+Thumbs.db
 
-# Generated print artifacts
-printouts/
+# Dynamic artifacts (generated at runtime, keep in git history but not workspace)
+printouts/            # Receipt output folder
+/receipts/           # Generated receipt PDFs
+*.log
+
+# Database instance (local dev only, KEEP in git history but not working files)
+# Uncomment below to exclude database from git - not recommended for shared dev:
+# /database/pos.db
+
+# Testing artifacts  
+coverage/
+.nyc_output/
+
+# Build output
+*.tsbuildinfo
+
+# Electron builds
+dist/
+dist-electron/
+release/
