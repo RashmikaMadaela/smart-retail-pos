@@ -25,7 +25,7 @@ describe("InventoryTab", () => {
       />,
     );
 
-    fireEvent.change(screen.getByPlaceholderText("Search ID or product name"), {
+    fireEvent.change(screen.getByLabelText("Search ID or product name"), {
       target: { value: "yog" },
     });
 

@@ -18,8 +18,8 @@ describe("OperationsTab", () => {
       />,
     );
 
-    fireEvent.change(screen.getByPlaceholderText("Barcode/Product ID"), { target: { value: "P001" } });
-    fireEvent.change(screen.getByPlaceholderText("Qty"), { target: { value: "2" } });
+    fireEvent.change(screen.getByLabelText("Barcode/Product ID"), { target: { value: "P001" } });
+    fireEvent.change(screen.getByLabelText("Qty"), { target: { value: "2" } });
     fireEvent.click(screen.getByRole("button", { name: "Add to Queue" }));
     expect(screen.getByText("Milk")).toBeTruthy();
 
