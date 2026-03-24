@@ -75,7 +75,11 @@ function resolveWindowIconPath() {
   const projectRoot = resolveProjectRoot();
   if (process.platform === "win32") {
     if (app.isPackaged) {
-      return path.join(process.resourcesPath, "app.asar", "build", "icon.ico");
+      const resourceIcon = path.join(process.resourcesPath, "build", "icon.ico");
+      if (fs.existsSync(resourceIcon)) {
+        return resourceIcon;
+      }
+      return path.join(app.getAppPath(), "build", "icon.ico");
     }
     return path.join(projectRoot, "build", "icon.ico");
   }

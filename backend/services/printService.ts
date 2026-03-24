@@ -42,10 +42,11 @@ function resolveBillLogoPath() {
     process.cwd(),
     path.resolve(moduleDir, ".."),
     path.resolve(moduleDir, "../.."),
+    typeof process.resourcesPath === "string" ? process.resourcesPath : "",
   ];
 
   const filenameCandidates = ["logo.jpeg", "logo.jpg", "logo.png", "logo.webp"];
-  const bundledLogoCandidates = searchRoots.flatMap((root) => [
+  const bundledLogoCandidates = searchRoots.filter(Boolean).flatMap((root) => [
     ...filenameCandidates.map((name) => path.resolve(root, "build", name)),
     ...filenameCandidates.map((name) => path.resolve(root, "dist", name)),
     ...filenameCandidates.map((name) => path.resolve(root, "renderer/public", name)),

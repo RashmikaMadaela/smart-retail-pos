@@ -39,8 +39,23 @@
     "files": [
       "dist/**",
       "dist-electron/**",
+      "build/icon.ico",
       "build/icon.png",
+      "build/icon-square.png",
+      "build/app logo.png",
       "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "build",
+        "to": "build",
+        "filter": [
+          "icon.ico",
+          "icon.png",
+          "icon-square.png",
+          "app logo.png"
+        ]
+      }
     ],
     "win": {
       "signAndEditExecutable": false,
