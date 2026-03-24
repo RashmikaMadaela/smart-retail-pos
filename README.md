@@ -29,8 +29,6 @@ npm install
 npm run dev
 ```
 
-If port `5173` is already in use, the dev runner automatically picks the next free local port and launches Electron with the matching URL.
-
 ### Type Check
 
 ```bash
