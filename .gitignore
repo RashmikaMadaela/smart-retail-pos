@@ -1,7 +1,8 @@
 # Node modules
 node_modules/
 dist/
-build/
+dist-electron/
+release/
 
 # Development environment
 .venv/
@@ -22,11 +23,11 @@ Thumbs.db
 # Dynamic artifacts (generated at runtime)
 printouts/
 /receipts/
+/inventory_exports/
 *.log
 
 # Database runtime artifacts
-/database/pos.db
-/database/__pycache__/
+/backend/db/pos.db
 
 # Testing artifacts  
 coverage/
@@ -34,8 +35,3 @@ coverage/
 
 # Build output
 *.tsbuildinfo
-
-# Electron builds
-dist/
-dist-electron/
-release/

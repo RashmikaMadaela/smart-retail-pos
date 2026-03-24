@@ -8,15 +8,12 @@ function resolveDefaultDbPath() {
   const candidates = [cwd, path.resolve(cwd, "..")];
 
   for (const candidate of candidates) {
-    if (fs.existsSync(path.join(candidate, "desktop-next")) && fs.existsSync(path.join(candidate, "database"))) {
-      return path.join(candidate, "database", "pos.db");
-    }
-    if (fs.existsSync(path.join(candidate, "backend")) && fs.existsSync(path.join(path.resolve(candidate, ".."), "database"))) {
-      return path.join(path.resolve(candidate, ".."), "database", "pos.db");
+    if (fs.existsSync(path.join(candidate, "backend")) && fs.existsSync(path.join(candidate, "electron"))) {
+      return path.join(candidate, "backend", "db", "pos.db");
     }
   }
 
-  return path.resolve(cwd, "database", "pos.db");
+  return path.resolve(cwd, "backend", "db", "pos.db");
 }
 
 let activeDbPathOverride: string | null = null;

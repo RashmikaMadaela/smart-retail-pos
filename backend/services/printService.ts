@@ -24,7 +24,7 @@ function nowStamp() {
 }
 
 function resolvePrintRoot() {
-  return process.env.POS_PRINT_DIR || path.resolve(process.cwd(), "../printouts");
+  return process.env.POS_PRINT_DIR || path.resolve(process.cwd(), "printouts");
 }
 
 function resolveBillLogoPath() {

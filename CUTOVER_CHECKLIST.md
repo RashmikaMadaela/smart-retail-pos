@@ -10,8 +10,8 @@
 
 ## 2. Environment and Data
 
-- [x] Confirm source database exists at `database/pos.db`
-- [x] Validate packaged app can read bundled DB from `resources/database/pos.db`
+- [x] Confirm development database location at `backend/db/pos.db`
+- [x] Validate packaged app can initialize/read DB at `%USERPROFILE%/Documents/SmartRetailPOSNext/database/pos.db`
 - [ ] Set explicit `POS_DB_PATH` for production if custom DB location is required
 
 ## 3. Critical Workflow UAT
@@ -25,7 +25,7 @@
 ## 4. Rollback Readiness
 
 - [ ] Keep current Python desktop app installer available
-- [ ] Keep backup of the latest known-good `database/pos.db`
+- [ ] Keep backup of the latest known-good `backend/db/pos.db`
 - [ ] Document revert trigger conditions and responsible owner
 
 ## 5. Go-Live Signoff

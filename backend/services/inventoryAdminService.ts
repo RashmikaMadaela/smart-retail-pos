@@ -11,7 +11,7 @@ type InventoryExportPayload = {
 };
 
 function resolveInventoryExportDir() {
-  return process.env.POS_INVENTORY_EXPORT_DIR || path.resolve(process.cwd(), "../inventory_exports");
+  return process.env.POS_INVENTORY_EXPORT_DIR || path.resolve(process.cwd(), "inventory_exports");
 }
 
 function nowStamp() {

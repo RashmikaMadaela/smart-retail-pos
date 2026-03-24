@@ -4,27 +4,19 @@ import path from "node:path";
 import { registerIpcHandlers } from "./ipc";
 import { ensureSuperAdminUser } from "../../backend/services/authService";
 
-function resolveDevRoots() {
+function resolveProjectRoot() {
   const cwd = process.cwd();
-
-  if (fs.existsSync(path.join(cwd, "desktop-next", "package.json"))) {
-    return {
-      repoRoot: cwd,
-      desktopRoot: path.join(cwd, "desktop-next"),
-    };
-  }
+  const parent = path.resolve(cwd, "..");
 
   if (fs.existsSync(path.join(cwd, "package.json")) && fs.existsSync(path.join(cwd, "electron"))) {
-    return {
-      repoRoot: path.resolve(cwd, ".."),
-      desktopRoot: cwd,
-    };
+    return cwd;
   }
 
-  return {
-    repoRoot: path.resolve(cwd, ".."),
-    desktopRoot: cwd,
-  };
+  if (fs.existsSync(path.join(parent, "package.json")) && fs.existsSync(path.join(parent, "electron"))) {
+    return parent;
+  }
+
+  return cwd;
 }
 
 function resolveDbPath() {
@@ -34,8 +26,8 @@ function resolveDbPath() {
   if (app.isPackaged) {
     return path.join(app.getPath("documents"), "SmartRetailPOSNext", "database", "pos.db");
   }
-  const { repoRoot } = resolveDevRoots();
-  return path.join(repoRoot, "database", "pos.db");
+  const projectRoot = resolveProjectRoot();
+  return path.join(projectRoot, "backend", "db", "pos.db");
 }
 
 function resolvePrintRootPath() {
@@ -45,8 +37,8 @@ function resolvePrintRootPath() {
   if (app.isPackaged) {
     return path.join(app.getPath("documents"), "SmartRetailPOSNext", "printouts");
   }
-  const { repoRoot } = resolveDevRoots();
-  return path.join(repoRoot, "printouts");
+  const projectRoot = resolveProjectRoot();
+  return path.join(projectRoot, "printouts");
 }
 
 function resolveInventoryExportRootPath() {
@@ -56,42 +48,42 @@ function resolveInventoryExportRootPath() {
   if (app.isPackaged) {
     return path.join(app.getPath("documents"), "SmartRetailPOSNext", "inventory_exports");
   }
-  const { repoRoot } = resolveDevRoots();
-  return path.join(repoRoot, "inventory_exports");
+  const projectRoot = resolveProjectRoot();
+  return path.join(projectRoot, "inventory_exports");
 }
 
 function resolvePreloadPath() {
-  const { desktopRoot } = resolveDevRoots();
+  const projectRoot = resolveProjectRoot();
   if (process.env.VITE_DEV_SERVER_URL) {
-    return path.join(desktopRoot, "dist-electron", "preload.cjs");
+    return path.join(projectRoot, "dist-electron", "preload.cjs");
   }
   if (app.isPackaged) {
     return path.join(app.getAppPath(), "dist-electron", "preload.cjs");
   }
-  return path.join(desktopRoot, "dist-electron", "preload.cjs");
+  return path.join(projectRoot, "dist-electron", "preload.cjs");
 }
 
 function resolveRendererIndexPath() {
-  const { desktopRoot } = resolveDevRoots();
+  const projectRoot = resolveProjectRoot();
   if (app.isPackaged) {
     return path.join(app.getAppPath(), "dist", "index.html");
   }
-  return path.join(desktopRoot, "dist", "index.html");
+  return path.join(projectRoot, "dist", "index.html");
 }
 
 function resolveWindowIconPath() {
-  const { desktopRoot } = resolveDevRoots();
+  const projectRoot = resolveProjectRoot();
   if (process.platform === "win32") {
     if (app.isPackaged) {
       return path.join(process.resourcesPath, "app.asar", "build", "icon.ico");
     }
-    return path.join(desktopRoot, "build", "icon.ico");
+    return path.join(projectRoot, "build", "icon.ico");
   }
 
   if (app.isPackaged) {
     return path.join(app.getAppPath(), "build", "icon.png");
   }
-  return path.join(desktopRoot, "build", "icon.png");
+  return path.join(projectRoot, "build", "icon.png");
 }
 
 function createMainWindow() {
