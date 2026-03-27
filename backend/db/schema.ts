@@ -111,6 +111,7 @@ export function initializeDatabaseSchema(db: Database.Database) {
       qty REAL NOT NULL,
       sold_at_price REAL NOT NULL,
       item_discount REAL DEFAULT 0.0,
+      cogs_unit_cost REAL,
       applied_surcharge REAL DEFAULT 0.0,
       FOREIGN KEY(sale_id) REFERENCES sales(id),
       FOREIGN KEY(product_id) REFERENCES products(barcode_id)
@@ -129,6 +130,7 @@ export function initializeDatabaseSchema(db: Database.Database) {
   ensureColumn(db, "sales", "balance_due", "REAL DEFAULT 0.0");
   ensureColumn(db, "sales", "payment_status", "TEXT DEFAULT 'PAID'");
   ensureColumn(db, "sales", "payment_method", "TEXT DEFAULT 'CASH'");
+  ensureColumn(db, "sale_items", "cogs_unit_cost", "REAL");
   ensureColumn(db, "sale_items", "applied_surcharge", "REAL DEFAULT 0.0");
   ensureColumn(db, "expenses", "category", "TEXT DEFAULT 'General'");
   ensureColumn(db, "products", "default_discount_pct", "REAL DEFAULT 0.0");

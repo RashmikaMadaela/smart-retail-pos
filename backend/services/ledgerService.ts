@@ -331,14 +331,23 @@ export function receiveSupplierBatch(
         throw new Error("Supplier not found.");
       }
 
-      const normalizedItems: Array<SupplierBatchInput & { product_id: string; line_total: number }> = [];
+      const normalizedItems: Array<SupplierBatchInput & { product_id: string; line_total: number; effective_unit_cost: number }> = [];
       let totalCost = 0;
+
+      const selectProduct = db.prepare(
+        `
+        SELECT barcode_id, stock, buy_price, sell_price, default_discount_pct, card_surcharge_enabled, card_surcharge_pct
+        FROM products
+        WHERE barcode_id = ?
+        `,
+      );
 
       for (const item of items) {
         let productId = (item.product_id || "").trim();
         const qty = Number(item.qty_received || 0);
         const unitCost = Number(item.unit_cost || 0);
         const lineDiscountPct = Number(item.line_discount_pct || 0);
+        const existingProductUpdate = item.existing_product_update;
         const newProduct = item.new_product;
 
         if (!productId && newProduct) {
@@ -355,9 +364,17 @@ export function receiveSupplierBatch(
           throw new Error(`Line discount percent cannot exceed 100 for ${productId}.`);
         }
 
-        const productExists = db
-          .prepare("SELECT barcode_id FROM products WHERE barcode_id = ?")
-          .get(productId);
+        const productExists = selectProduct.get(productId) as
+          | {
+              barcode_id: string;
+              stock: number;
+              buy_price: number;
+              sell_price: number;
+              default_discount_pct: number;
+              card_surcharge_enabled: number;
+              card_surcharge_pct: number;
+            }
+          | undefined;
 
         if (!productExists) {
           if (!newProduct) {
@@ -407,9 +424,30 @@ export function receiveSupplierBatch(
           );
         }
 
+        if (existingProductUpdate) {
+          if (existingProductUpdate.sell_price != null) {
+            positive(Number(existingProductUpdate.sell_price), `Sell price for ${productId}`);
+          }
+          if (existingProductUpdate.default_discount_pct != null) {
+            const discount = Number(existingProductUpdate.default_discount_pct);
+            nonNegative(discount, `Default discount percent for ${productId}`);
+            if (discount > 100) {
+              throw new Error(`Default discount percent cannot exceed 100 for ${productId}.`);
+            }
+          }
+          if (existingProductUpdate.card_surcharge_pct != null) {
+            const surcharge = Number(existingProductUpdate.card_surcharge_pct);
+            nonNegative(surcharge, `Card surcharge percent for ${productId}`);
+            if (surcharge > 100) {
+              throw new Error(`Card surcharge percent cannot exceed 100 for ${productId}.`);
+            }
+          }
+        }
+
         const base = qty * unitCost;
         const lineDiscount = base * (lineDiscountPct / 100);
         const lineTotal = Number((base - lineDiscount).toFixed(2));
+        const effectiveUnitCost = Number((unitCost * (1 - lineDiscountPct / 100)).toFixed(6));
         totalCost += lineTotal;
 
         normalizedItems.push({
@@ -417,8 +455,10 @@ export function receiveSupplierBatch(
           qty_received: qty,
           unit_cost: unitCost,
           line_discount_pct: lineDiscountPct,
+          existing_product_update: existingProductUpdate,
           new_product: newProduct,
           line_total: lineTotal,
+          effective_unit_cost: effectiveUnitCost,
         });
       }
 
@@ -459,7 +499,20 @@ export function receiveSupplierBatch(
         `,
       );
 
-      const increaseStock = db.prepare("UPDATE products SET stock = stock + ? WHERE barcode_id = ?");
+      const updateProductFromBatch = db.prepare(
+        `
+        UPDATE products
+        SET
+          stock = ?,
+          buy_price = ?,
+          sell_price = ?,
+          default_discount_pct = ?,
+          card_surcharge_enabled = ?,
+          card_surcharge_pct = ?
+        WHERE barcode_id = ?
+        `,
+      );
+
       for (const item of normalizedItems) {
         insertItem.run(
           batchId,
@@ -469,7 +522,68 @@ export function receiveSupplierBatch(
           item.line_discount_pct,
           item.line_total,
         );
-        increaseStock.run(item.qty_received, item.product_id);
+
+        const product = selectProduct.get(item.product_id) as
+          | {
+              barcode_id: string;
+              stock: number;
+              buy_price: number;
+              sell_price: number;
+              default_discount_pct: number;
+              card_surcharge_enabled: number;
+              card_surcharge_pct: number;
+            }
+          | undefined;
+
+        if (!product) {
+          throw new Error(`Product not found during stock update: ${item.product_id}`);
+        }
+
+        const oldStock = Number(product.stock || 0);
+        const oldBuyPrice = Number(product.buy_price || 0);
+        const receiptQty = Number(item.qty_received || 0);
+        const newStock = Number((oldStock + receiptQty).toFixed(6));
+        const weightedBuyPrice =
+          newStock <= 0
+            ? Number(item.effective_unit_cost || 0)
+            : Number((((oldStock * oldBuyPrice) + (receiptQty * Number(item.effective_unit_cost || 0))) / newStock).toFixed(6));
+
+        let nextSellPrice = Number(product.sell_price || 0);
+        let nextDefaultDiscountPct = Number(product.default_discount_pct || 0);
+        let nextCardSurchargeEnabled = Number(product.card_surcharge_enabled || 0) > 0 ? 1 : 0;
+        let nextCardSurchargePct = Number(product.card_surcharge_pct || 0);
+
+        const update = item.existing_product_update;
+        if (update) {
+          if (update.sell_price != null) {
+            nextSellPrice = Number(update.sell_price);
+          }
+          if (update.default_discount_pct != null) {
+            nextDefaultDiscountPct = Number(update.default_discount_pct);
+          }
+          if (update.card_surcharge_enabled != null) {
+            nextCardSurchargeEnabled = update.card_surcharge_enabled ? 1 : 0;
+            if (!update.card_surcharge_enabled && update.card_surcharge_pct == null) {
+              nextCardSurchargePct = 0;
+            }
+          }
+          if (update.card_surcharge_pct != null) {
+            nextCardSurchargePct = Number(update.card_surcharge_pct);
+            if (update.card_surcharge_enabled == null) {
+              nextCardSurchargeEnabled = nextCardSurchargePct > 0 ? 1 : 0;
+            }
+          }
+        }
+
+        updateProductFromBatch.run(
+          newStock,
+          weightedBuyPrice,
+          nextSellPrice,
+          nextDefaultDiscountPct,
+          nextCardSurchargeEnabled,
+          nextCardSurchargePct,
+          item.product_id,
+        );
       }
 
       if (Number(paidAmount) > 0) {

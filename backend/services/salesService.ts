@@ -233,19 +233,23 @@ export function processSale(input: ProcessSaleInput): ServiceResult<number> {
       const saleId = Number(result.lastInsertRowid);
       const insertItem = db.prepare(
         `
-        INSERT INTO sale_items (sale_id, product_id, qty, sold_at_price, item_discount, applied_surcharge)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO sale_items (sale_id, product_id, qty, sold_at_price, item_discount, cogs_unit_cost, applied_surcharge)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         `,
       );
       const deductStock = db.prepare("UPDATE products SET stock = stock - ? WHERE barcode_id = ?");
+      const selectCogsUnitCost = db.prepare("SELECT buy_price FROM products WHERE barcode_id = ?");
 
       for (const item of normalizedItems) {
+        const productCostRow = selectCogsUnitCost.get(item.product_id) as { buy_price: number } | undefined;
+        const cogsUnitCost = Number(productCostRow?.buy_price || 0);
         insertItem.run(
           saleId,
           item.product_id,
           item.qty,
           item.price,
           item.discount,
+          cogsUnitCost,
           Number(item.applied_surcharge || 0),
         );
         if (status === "COMPLETED") {
@@ -477,19 +481,23 @@ export function completeHeldSale(input: CompleteHeldSaleInput): ServiceResult<st
 
       const insertItem = db.prepare(
         `
-        INSERT INTO sale_items (sale_id, product_id, qty, sold_at_price, item_discount, applied_surcharge)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO sale_items (sale_id, product_id, qty, sold_at_price, item_discount, cogs_unit_cost, applied_surcharge)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         `,
       );
       const deductStock = db.prepare("UPDATE products SET stock = stock - ? WHERE barcode_id = ?");
+      const selectCogsUnitCost = db.prepare("SELECT buy_price FROM products WHERE barcode_id = ?");
 
       for (const item of normalizedItems) {
+        const productCostRow = selectCogsUnitCost.get(item.product_id) as { buy_price: number } | undefined;
+        const cogsUnitCost = Number(productCostRow?.buy_price || 0);
         insertItem.run(
           Number(input.sale_id),
           item.product_id,
           item.qty,
           item.price,
           item.discount,
+          cogsUnitCost,
           Number(item.applied_surcharge || 0),
         );
         deductStock.run(item.qty, item.product_id);

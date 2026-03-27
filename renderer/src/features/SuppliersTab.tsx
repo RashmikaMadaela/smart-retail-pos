@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { BatchLineDraft, Product, Supplier, SupplierLedger } from "./types";
 import { SurfaceCard } from "@/components/ui/SurfaceCard";
@@ -73,6 +73,7 @@ export function SuppliersTab({
   const [editingSupplierId, setEditingSupplierId] = useState<number | null>(null);
   const [editSupplierName, setEditSupplierName] = useState("");
   const [editSupplierContact, setEditSupplierContact] = useState("");
+  const lastMatchedProductIdRef = useRef<string | null>(null);
 
   const matchedProduct = useMemo(() => {
     const barcode = (batchLineDraft.product_id || "").trim().toLowerCase();
@@ -94,8 +95,12 @@ export function SuppliersTab({
 
   useEffect(() => {
     if (!matchedProduct) {
+      lastMatchedProductIdRef.current = null;
       return;
     }
+
+    const productChanged = lastMatchedProductIdRef.current !== matchedProduct.barcode_id;
+    lastMatchedProductIdRef.current = matchedProduct.barcode_id;
 
     const buyPrice = String(Number(matchedProduct.buy_price || 0));
     const sellPrice = String(Number(matchedProduct.sell_price || 0));
@@ -107,14 +112,16 @@ export function SuppliersTab({
     const nextDraft: BatchLineDraft = {
       ...batchLineDraft,
       create_new_item: false,
-      new_item_name: matchedProduct.name || "",
-      new_item_buy_price: buyPrice,
-      new_item_sell_price: sellPrice,
-      new_item_default_discount_pct: discPct,
-      new_item_card_surcharge_enabled: Number(matchedProduct.card_surcharge_enabled || 0) > 0,
-      new_item_card_surcharge_pct: surchargePct,
-      unit_cost: batchLineDraft.unit_cost || buyPrice,
-      line_discount_pct: batchLineDraft.line_discount_pct || discPct,
+      new_item_name: productChanged ? matchedProduct.name || "" : batchLineDraft.new_item_name || matchedProduct.name || "",
+      new_item_buy_price: productChanged ? buyPrice : batchLineDraft.new_item_buy_price || buyPrice,
+      new_item_sell_price: productChanged ? sellPrice : batchLineDraft.new_item_sell_price || sellPrice,
+      new_item_default_discount_pct: productChanged ? discPct : batchLineDraft.new_item_default_discount_pct || discPct,
+      new_item_card_surcharge_enabled: productChanged
+        ? Number(matchedProduct.card_surcharge_enabled || 0) > 0
+        : Boolean(batchLineDraft.new_item_card_surcharge_enabled),
+      new_item_card_surcharge_pct: productChanged ? surchargePct : batchLineDraft.new_item_card_surcharge_pct || surchargePct,
+      unit_cost: productChanged ? buyPrice : batchLineDraft.unit_cost || buyPrice,
+      line_discount_pct: productChanged ? discPct : batchLineDraft.line_discount_pct || discPct,
     };
 
     const isSame =

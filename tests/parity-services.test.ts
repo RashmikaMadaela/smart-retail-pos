@@ -6,6 +6,7 @@ import Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { resetDbConnection, setDbPathForTests } from "../backend/db/sqlite";
 import { createOrGetCustomer, createSupplier, recordCustomerPayment, receiveSupplierBatch, recordSupplierPayment, getSupplierLedger } from "../backend/services/ledgerService";
+import { getFinancialSummary } from "../backend/services/reportService";
 import { completeHeldSale, holdSale, processSale, recallHeldSale } from "../backend/services/salesService";
 
 let testDir = "";
@@ -110,6 +111,7 @@ function buildSchema(db: Database.Database) {
       qty REAL NOT NULL,
       sold_at_price REAL NOT NULL,
       item_discount REAL DEFAULT 0.0,
+      cogs_unit_cost REAL,
       applied_surcharge REAL DEFAULT 0.0,
       FOREIGN KEY(sale_id) REFERENCES sales(id),
       FOREIGN KEY(product_id) REFERENCES products(barcode_id)
@@ -260,6 +262,43 @@ describe("sales parity", () => {
     db.close();
     expect(Number(stockAfter.stock)).toBe(18);
   });
+
+  test("financial summary keeps historical COGS stable after later higher-cost receipt", () => {
+    const sale = processSale({
+      cashier_id: 2,
+      customer_id: null,
+      cart_items: [{ product_id: "P100", qty: 1, price: 100, discount: 0 }],
+      subtotal: 100,
+      global_discount: 0,
+      total_amount: 100,
+      status: "COMPLETED",
+      paid_amount: 100,
+      payment_status: "PAID",
+      payment_method: "CASH",
+    });
+    expect(sale.ok).toBe(true);
+
+    const before = getFinancialSummary();
+    expect(Number(before.cogs.toFixed(2))).toBe(80);
+
+    const supplier = createSupplier("Cost Shift Supplier", "0775555555", 0, "");
+    expect(supplier.ok).toBe(true);
+
+    const db = new Database(dbPath, { fileMustExist: true });
+    const supplierId = (db.prepare("SELECT id FROM suppliers WHERE name = 'Cost Shift Supplier'").get() as any).id as number;
+    db.close();
+
+    const batch = receiveSupplierBatch(
+      supplierId,
+      "B-COST-1",
+      [{ product_id: "P100", qty_received: 10, unit_cost: 200, line_discount_pct: 0 }],
+      0,
+    );
+    expect(batch.ok).toBe(true);
+
+    const after = getFinancialSummary();
+    expect(Number(after.cogs.toFixed(2))).toBe(80);
+  });
 });
 
 describe("ledger parity", () => {
@@ -342,5 +381,50 @@ describe("ledger parity", () => {
     expect(Number(ledger.batches[0].balance_due)).toBe(100);
     expect(ledger.batches[0].status).toBe("PARTIAL");
     expect(ledger.payments.length).toBe(2);
+  });
+
+  test("supplier receive updates existing product using weighted-average buy and immediate sell update", () => {
+    const supplier = createSupplier("Price Update Supplier", "0777777777", 0, "");
+    expect(supplier.ok).toBe(true);
+
+    const db1 = new Database(dbPath, { fileMustExist: true });
+    const supplierId = (db1.prepare("SELECT id FROM suppliers WHERE name = 'Price Update Supplier'").get() as any).id as number;
+    db1.close();
+
+    const batch = receiveSupplierBatch(
+      supplierId,
+      "B-WAC-1",
+      [
+        {
+          product_id: "P100",
+          qty_received: 10,
+          unit_cost: 120,
+          line_discount_pct: 0,
+          existing_product_update: {
+            sell_price: 140,
+            default_discount_pct: 5,
+            card_surcharge_enabled: true,
+            card_surcharge_pct: 2,
+          },
+        },
+      ],
+      0,
+    );
+    expect(batch.ok).toBe(true);
+
+    const db2 = new Database(dbPath, { fileMustExist: true });
+    const product = db2
+      .prepare(
+        "SELECT stock, buy_price, sell_price, default_discount_pct, card_surcharge_enabled, card_surcharge_pct FROM products WHERE barcode_id = 'P100'",
+      )
+      .get() as any;
+    db2.close();
+
+    expect(Number(product.stock.toFixed(2))).toBe(30);
+    expect(Number(product.buy_price.toFixed(4))).toBe(Number((((20 * 80) + (10 * 120)) / 30).toFixed(4)));
+    expect(Number(product.sell_price)).toBe(140);
+    expect(Number(product.default_discount_pct)).toBe(5);
+    expect(Number(product.card_surcharge_enabled)).toBe(1);
+    expect(Number(product.card_surcharge_pct)).toBe(2);
   });
 });

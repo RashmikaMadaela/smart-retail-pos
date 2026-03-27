@@ -96,4 +96,120 @@ describe("SuppliersTab", () => {
     expect(onAddBatchLine).toHaveBeenCalledTimes(1);
     expect(onReceiveSupplierBatch).toHaveBeenCalledTimes(1);
   });
+
+  test("does not overwrite edited matched-product pricing fields", () => {
+    const onBatchLineDraftChange = vi.fn();
+    const products = [
+      {
+        barcode_id: "P001",
+        name: "Demo Product",
+        buy_price: 100,
+        sell_price: 200,
+        stock: 5,
+        default_discount_pct: 2,
+        card_surcharge_enabled: 0,
+        card_surcharge_pct: 0,
+      },
+    ];
+
+    const { rerender } = render(
+      <SuppliersTab
+        products={products}
+        supplierName=""
+        supplierContact=""
+        suppliers={[]}
+        selectedSupplierId={null}
+        batchReference="INV-001"
+        batchPaid="0"
+        batchLineDraft={{
+          product_id: "P001",
+          qty_received: "2",
+          unit_cost: "",
+          line_discount_pct: "0",
+          create_new_item: false,
+          new_item_name: "",
+          new_item_buy_price: "",
+          new_item_sell_price: "",
+          new_item_default_discount_pct: "",
+          new_item_card_surcharge_enabled: false,
+          new_item_card_surcharge_pct: "",
+        }}
+        batchLines={[]}
+        selectedSupplierBatchId={null}
+        supplierPayAmount=""
+        supplierPayMethod="CASH"
+        supplierPayNote=""
+        supplierLedger={{ supplier: null, batches: [], payments: [] }}
+        onRefreshSuppliers={vi.fn()}
+        onSupplierNameChange={vi.fn()}
+        onSupplierContactChange={vi.fn()}
+        onCreateSupplier={vi.fn()}
+        onUpdateSupplier={vi.fn()}
+        onSelectSupplier={vi.fn()}
+        onBatchReferenceChange={vi.fn()}
+        onBatchPaidChange={vi.fn()}
+        onBatchLineDraftChange={onBatchLineDraftChange}
+        onAddBatchLine={vi.fn()}
+        onReceiveSupplierBatch={vi.fn()}
+        onSelectSupplierBatch={vi.fn()}
+        onSupplierPayAmountChange={vi.fn()}
+        onSupplierPayMethodChange={vi.fn()}
+        onSupplierPayNoteChange={vi.fn()}
+        onApplySupplierPayment={vi.fn()}
+      />,
+    );
+
+    expect(onBatchLineDraftChange).toHaveBeenCalledTimes(1);
+
+    onBatchLineDraftChange.mockClear();
+
+    rerender(
+      <SuppliersTab
+        products={products}
+        supplierName=""
+        supplierContact=""
+        suppliers={[]}
+        selectedSupplierId={null}
+        batchReference="INV-001"
+        batchPaid="0"
+        batchLineDraft={{
+          product_id: "P001",
+          qty_received: "2",
+          unit_cost: "130",
+          line_discount_pct: "3",
+          create_new_item: false,
+          new_item_name: "Demo Product",
+          new_item_buy_price: "130",
+          new_item_sell_price: "260",
+          new_item_default_discount_pct: "3",
+          new_item_card_surcharge_enabled: false,
+          new_item_card_surcharge_pct: "0",
+        }}
+        batchLines={[]}
+        selectedSupplierBatchId={null}
+        supplierPayAmount=""
+        supplierPayMethod="CASH"
+        supplierPayNote=""
+        supplierLedger={{ supplier: null, batches: [], payments: [] }}
+        onRefreshSuppliers={vi.fn()}
+        onSupplierNameChange={vi.fn()}
+        onSupplierContactChange={vi.fn()}
+        onCreateSupplier={vi.fn()}
+        onUpdateSupplier={vi.fn()}
+        onSelectSupplier={vi.fn()}
+        onBatchReferenceChange={vi.fn()}
+        onBatchPaidChange={vi.fn()}
+        onBatchLineDraftChange={onBatchLineDraftChange}
+        onAddBatchLine={vi.fn()}
+        onReceiveSupplierBatch={vi.fn()}
+        onSelectSupplierBatch={vi.fn()}
+        onSupplierPayAmountChange={vi.fn()}
+        onSupplierPayMethodChange={vi.fn()}
+        onSupplierPayNoteChange={vi.fn()}
+        onApplySupplierPayment={vi.fn()}
+      />,
+    );
+
+    expect(onBatchLineDraftChange).not.toHaveBeenCalled();
+  });
 });

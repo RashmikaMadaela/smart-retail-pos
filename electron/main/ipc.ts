@@ -157,6 +157,14 @@ const receiveBatchSchema = z.object({
         qty_received: z.number().positive(),
         unit_cost: z.number().nonnegative(),
         line_discount_pct: z.number().nonnegative().max(100),
+        existing_product_update: z
+          .object({
+            sell_price: z.number().positive().optional(),
+            default_discount_pct: z.number().nonnegative().max(100).optional(),
+            card_surcharge_enabled: z.boolean().optional(),
+            card_surcharge_pct: z.number().nonnegative().max(100).optional(),
+          })
+          .optional(),
         new_product: z
           .object({
             barcode_id: z.string().optional(),

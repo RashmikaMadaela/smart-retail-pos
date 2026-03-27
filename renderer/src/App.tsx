@@ -857,8 +857,31 @@ export default function App() {
     const qty = Number(batchLineDraft.qty_received);
     const cost = Number(batchLineDraft.unit_cost);
     const disc = Number(batchLineDraft.line_discount_pct || "0");
+    const sellPrice = Number(batchLineDraft.new_item_sell_price || (matchedProduct ? String(matchedProduct.sell_price || 0) : "0"));
+    const defaultDiscount = Number(
+      batchLineDraft.new_item_default_discount_pct ||
+        (matchedProduct ? String(matchedProduct.default_discount_pct || 0) : batchLineDraft.line_discount_pct || "0"),
+    );
+    const surchargePct = Number(
+      batchLineDraft.new_item_card_surcharge_pct ||
+        (matchedProduct && Number(matchedProduct.card_surcharge_enabled || 0) > 0
+          ? String(matchedProduct.card_surcharge_pct || 0)
+          : "0"),
+    );
     if (!Number.isFinite(qty) || qty <= 0 || !Number.isFinite(cost) || cost < 0 || !Number.isFinite(disc) || disc < 0) {
       pushError("Batch line values are invalid.");
+      return;
+    }
+    if (!Number.isFinite(sellPrice) || sellPrice <= 0) {
+      pushError("Sell price is invalid.");
+      return;
+    }
+    if (!Number.isFinite(defaultDiscount) || defaultDiscount < 0 || defaultDiscount > 100) {
+      pushError("Default discount % must be between 0 and 100.");
+      return;
+    }
+    if (!Number.isFinite(surchargePct) || surchargePct < 0 || surchargePct > 100) {
+      pushError("Card surcharge % must be between 0 and 100.");
       return;
     }
 
@@ -893,6 +916,13 @@ export default function App() {
         ...batchLineDraft,
         create_new_item: createNewItem,
         product_id: normalizedProductId,
+        unit_cost: String(cost),
+        line_discount_pct: String(disc),
+        new_item_buy_price: String(Number(batchLineDraft.new_item_buy_price || batchLineDraft.unit_cost || "0")),
+        new_item_sell_price: String(sellPrice),
+        new_item_default_discount_pct: String(defaultDiscount),
+        new_item_card_surcharge_enabled: surchargePct > 0,
+        new_item_card_surcharge_pct: String(surchargePct),
       },
     ]);
     setBatchLineDraft({
@@ -931,24 +961,39 @@ export default function App() {
       supplier_id: selectedSupplierId,
       reference_no: batchReference.trim(),
       paid_amount: paid,
-      items: batchLines.map((line) => ({
-        product_id: line.product_id.trim(),
-        qty_received: Number(line.qty_received),
-        unit_cost: Number(line.unit_cost),
-        line_discount_pct: Number(line.line_discount_pct || "0"),
-        new_product: line.create_new_item
-          ? {
-              barcode_id: line.product_id.trim(),
-              name: (line.new_item_name || "").trim(),
-              buy_price: Number(line.new_item_buy_price || line.unit_cost || "0"),
-              sell_price: Number(line.new_item_sell_price || "0"),
-              default_discount_pct: Number(line.new_item_default_discount_pct || "0"),
-              card_surcharge_enabled: Boolean(line.new_item_card_surcharge_enabled),
-              card_surcharge_pct: Number(line.new_item_card_surcharge_pct || "0"),
-              min_stock: 0,
-            }
-          : undefined,
-      })),
+      items: batchLines.map((line) => {
+        const sellPrice = Number(line.new_item_sell_price || "0");
+        const defaultDiscountPct = Number(line.new_item_default_discount_pct || line.line_discount_pct || "0");
+        const surchargePct = Number(line.new_item_card_surcharge_pct || "0");
+        const surchargeEnabled = Boolean(line.new_item_card_surcharge_enabled) || surchargePct > 0;
+
+        return {
+          product_id: line.product_id.trim(),
+          qty_received: Number(line.qty_received),
+          unit_cost: Number(line.unit_cost),
+          line_discount_pct: Number(line.line_discount_pct || "0"),
+          new_product: line.create_new_item
+            ? {
+                barcode_id: line.product_id.trim(),
+                name: (line.new_item_name || "").trim(),
+                buy_price: Number(line.new_item_buy_price || line.unit_cost || "0"),
+                sell_price: sellPrice,
+                default_discount_pct: defaultDiscountPct,
+                card_surcharge_enabled: surchargeEnabled,
+                card_surcharge_pct: surchargePct,
+                min_stock: 0,
+              }
+            : undefined,
+          existing_product_update: line.create_new_item
+            ? undefined
+            : {
+                sell_price: sellPrice,
+                default_discount_pct: defaultDiscountPct,
+                card_surcharge_enabled: surchargeEnabled,
+                card_surcharge_pct: surchargePct,
+              },
+        };
+      }),
     });
 
     if (!response.ok) {
