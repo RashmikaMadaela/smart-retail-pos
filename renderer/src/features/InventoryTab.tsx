@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { Product } from "./types";
+import type { InventoryStats, Product, ProductPageResult } from "./types";
 import { SurfaceCard } from "@/components/ui/SurfaceCard";
 import { ToolbarCard } from "@/components/ui/ToolbarCard";
 
 type InventoryTabProps = {
   products: Product[];
+  inventoryStats?: InventoryStats;
   onRefreshProducts: () => void;
+  onQueryProductsPage?: (payload: { searchText?: string; lowStockOnly?: boolean; limit?: number; offset?: number }) => Promise<ProductPageResult>;
   onCreateProduct: (payload: {
     barcode_id?: string;
     name: string;
@@ -27,7 +29,9 @@ type InventoryTabProps = {
 
 export function InventoryTab({
   products,
+  inventoryStats,
   onRefreshProducts,
+  onQueryProductsPage,
   onCreateProduct,
   onRemoveProduct,
   isSuperAdmin,
@@ -51,6 +55,45 @@ export function InventoryTab({
   const [barcodeMatched, setBarcodeMatched] = useState(false);
   const [removeBarcode, setRemoveBarcode] = useState("");
   const [removeName, setRemoveName] = useState("");
+  const [pageSize, setPageSize] = useState(50);
+  const [pageOffset, setPageOffset] = useState(0);
+  const [pageTotal, setPageTotal] = useState(0);
+  const [pageItems, setPageItems] = useState<Product[]>([]);
+  const [isPageLoading, setIsPageLoading] = useState(false);
+  const [queryNonce, setQueryNonce] = useState(0);
+
+  useEffect(() => {
+    setPageOffset(0);
+  }, [inventorySearch, lowStockOnly, pageSize]);
+
+  useEffect(() => {
+    if (!onQueryProductsPage) {
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        setIsPageLoading(true);
+        const page = await onQueryProductsPage({
+          searchText: inventorySearch.trim() || undefined,
+          lowStockOnly,
+          limit: pageSize,
+          offset: pageOffset,
+        });
+        if (!cancelled) {
+          setPageItems(page.items);
+          setPageTotal(page.total);
+          setIsPageLoading(false);
+        }
+      })();
+    }, 180);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [inventorySearch, lowStockOnly, pageSize, pageOffset, onQueryProductsPage, queryNonce]);
 
   useEffect(() => {
     const normalizedBarcode = newBarcode.trim().toLowerCase();
@@ -99,11 +142,16 @@ export function InventoryTab({
     setNewDiscPct("");
     setNewCardSurchargePct("");
     setBarcodeMatched(false);
+    setQueryNonce((value) => value + 1);
   }
 
   const filtered = useMemo(() => {
+    if (onQueryProductsPage) {
+      return pageItems;
+    }
     const keyword = inventorySearch.trim().toLowerCase();
-    return products.filter((product) => {
+    const source = products;
+    return source.filter((product) => {
       const matchesKeyword =
         !keyword ||
         product.barcode_id.toLowerCase().includes(keyword) ||
@@ -111,7 +159,7 @@ export function InventoryTab({
       const matchesLowStock = !lowStockOnly || Number(product.stock) <= 5;
       return matchesKeyword && matchesLowStock;
     });
-  }, [products, inventorySearch, lowStockOnly]);
+  }, [products, inventorySearch, lowStockOnly, onQueryProductsPage, pageItems]);
 
   const nameSuggestions = useMemo(() => {
     const needle = newName.trim().toLowerCase();
@@ -167,10 +215,17 @@ export function InventoryTab({
 
     setRemoveBarcode("");
     setRemoveName("");
+    setQueryNonce((value) => value + 1);
   }
 
-  const outOfStockCount = products.filter((p) => Number(p.stock) <= 0).length;
-  const lowStockCount = products.filter((p) => Number(p.stock) > 0 && Number(p.stock) <= 5).length;
+  const currentStart = pageTotal === 0 ? 0 : pageOffset + 1;
+  const currentEnd = pageTotal === 0 ? 0 : Math.min(pageOffset + filtered.length, pageTotal);
+  const canGoPrev = pageOffset > 0 && !isPageLoading;
+  const canGoNext = pageOffset + pageSize < pageTotal && !isPageLoading;
+
+  const outOfStockCount = inventoryStats?.outOfStock ?? products.filter((p) => Number(p.stock) <= 0).length;
+  const lowStockCount = inventoryStats?.lowStock ?? products.filter((p) => Number(p.stock) > 0 && Number(p.stock) <= 5).length;
+  const totalProductsCount = inventoryStats?.total ?? products.length;
 
   return (
     <section className="space-y-4">
@@ -191,7 +246,13 @@ export function InventoryTab({
               <input type="checkbox" checked={lowStockOnly} onChange={(event) => setLowStockOnly(event.target.checked)} />
               {t("inventory.lowOnly")}
             </label>
-            <button type="button" onClick={onRefreshProducts}>
+            <button
+              type="button"
+              onClick={() => {
+                onRefreshProducts();
+                setQueryNonce((value) => value + 1);
+              }}
+            >
               {t("inventory.refresh")}
             </button>
           </>
@@ -406,7 +467,7 @@ export function InventoryTab({
 
       <div className="grid gap-3 sm:grid-cols-3">
         <SurfaceCard title={t("inventory.totalProducts")} contentClassName="pt-3">
-          <p className="m-0 text-2xl font-semibold text-foreground">{products.length}</p>
+          <p className="m-0 text-2xl font-semibold text-foreground">{totalProductsCount}</p>
         </SurfaceCard>
         <SurfaceCard title={t("inventory.lowStock")} contentClassName="pt-3">
           <p className="m-0 text-2xl font-semibold text-amber-300">{lowStockCount}</p>
@@ -417,6 +478,30 @@ export function InventoryTab({
       </div>
 
       <SurfaceCard title={t("inventory.products")} className="overflow-hidden" contentClassName="p-0">
+        {onQueryProductsPage ? (
+          <div className="flex items-center justify-between gap-3 border-b border-border/80 px-4 py-2 text-sm text-muted-foreground">
+            <p className="m-0">Showing {currentStart}-{currentEnd} of {pageTotal}</p>
+            <div className="flex items-center gap-2">
+              <label className="m-0 inline-flex items-center gap-2">
+                Page size
+                <select
+                  value={pageSize}
+                  onChange={(event) => setPageSize(Number(event.target.value) || 50)}
+                >
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </label>
+              <button type="button" disabled={!canGoPrev} onClick={() => setPageOffset((value) => Math.max(0, value - pageSize))}>
+                Prev
+              </button>
+              <button type="button" disabled={!canGoNext} onClick={() => setPageOffset((value) => value + pageSize)}>
+                Next
+              </button>
+            </div>
+          </div>
+        ) : null}
         <table className="m-0">
           <thead>
             <tr>
@@ -434,7 +519,7 @@ export function InventoryTab({
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
-                  {t("inventory.noMatch")}
+                  {isPageLoading ? "Loading..." : t("inventory.noMatch")}
                 </td>
               </tr>
             ) : (

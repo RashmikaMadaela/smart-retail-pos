@@ -3,7 +3,7 @@ import { BarChart3, Boxes, HandCoins, LayoutDashboard, LogOut, PauseCircle, Rece
 import { useTranslation } from "react-i18next";
 import { LoginView } from "./features/LoginView";
 import type { BarcodePrintItem } from "./features/OperationsTab";
-import type { ActiveTab, BatchLineDraft, Customer, CustomerLedger, Expense, HeldSale, Product, Summary, Supplier, SupplierBatch, SupplierLedger } from "./features/types";
+import type { ActiveTab, BatchLineDraft, Customer, CustomerLedger, Expense, HeldSale, InventoryStats, Product, ProductPageResult, Summary, Supplier, SupplierBatch, SupplierLedger } from "./features/types";
 import { cn } from "./lib/utils";
 import { posApiClient } from "./lib/posApiClient";
 import { useBillingStore } from "./store/useBillingStore";
@@ -46,6 +46,9 @@ const OperationsTab = lazy(async () => {
   return { default: module.OperationsTab };
 });
 
+const PRODUCT_BOOTSTRAP_LIMIT = 200;
+const BILLING_REMOTE_SEARCH_LIMIT = 200;
+
 export default function App() {
   const { t } = useTranslation();
   const { locale, setLocale } = useLocaleStore();
@@ -56,6 +59,7 @@ export default function App() {
   const [message, setMessage] = useState("");
   const [isNoticeFading, setIsNoticeFading] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
+  const [inventoryStats, setInventoryStats] = useState<InventoryStats>({ total: 0, lowStock: 0, outOfStock: 0 });
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
   const { activeTab, setActiveTab } = useShellStore();
@@ -144,11 +148,36 @@ export default function App() {
   }
 
   async function refreshProducts() {
-    const response = await posApiClient.listProducts(200);
-    if (response.ok) {
-      setProducts(response.data);
+    const [productsResponse, statsResponse] = await Promise.all([
+      posApiClient.listProducts(PRODUCT_BOOTSTRAP_LIMIT),
+      posApiClient.getInventoryStats(),
+    ]);
+
+    if (productsResponse.ok) {
+      setProducts(productsResponse.data);
+    }
+    if (statsResponse.ok) {
+      setInventoryStats(statsResponse.data);
     }
   }
+
+    async function queryInventoryProductsPage(payload: {
+      searchText?: string;
+      lowStockOnly?: boolean;
+      limit?: number;
+      offset?: number;
+    }): Promise<ProductPageResult> {
+      const response = await posApiClient.queryProductsPage(payload);
+      if (response.ok) {
+        return response.data as ProductPageResult;
+      }
+      return {
+        items: [],
+        total: 0,
+        limit: payload.limit ?? 50,
+        offset: payload.offset ?? 0,
+      };
+    }
 
   async function createInventoryProductNow(payload: {
     barcode_id?: string;
@@ -372,7 +401,7 @@ export default function App() {
     );
 
     if (!product) {
-      const remote = await posApiClient.searchProducts(normalizedId, 10);
+      const remote = await posApiClient.searchProducts(normalizedId, BILLING_REMOTE_SEARCH_LIMIT);
       if (remote.ok) {
         const exactMatch = remote.data.find(
           (x: Product) => x.barcode_id.toLowerCase() === normalizedId.toLowerCase() || x.name.toLowerCase() === normalizedId.toLowerCase(),
@@ -1647,7 +1676,9 @@ export default function App() {
               {activeTab === "inventory" ? (
                 <InventoryTab
                   products={products}
+                  inventoryStats={inventoryStats}
                   onRefreshProducts={() => void refreshProducts()}
+                  onQueryProductsPage={queryInventoryProductsPage}
                   onCreateProduct={(payload) => createInventoryProductNow(payload)}
                   onRemoveProduct={(payload) => removeInventoryProductNow(payload)}
                   isSuperAdmin={isSuperAdmin}

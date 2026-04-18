@@ -9,6 +9,19 @@ export type Product = {
   card_surcharge_enabled?: number;
 };
 
+export type InventoryStats = {
+  total: number;
+  lowStock: number;
+  outOfStock: number;
+};
+
+export type ProductPageResult = {
+  items: Product[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
 export type Summary = {
   gross_sales: number;
   cogs: number;

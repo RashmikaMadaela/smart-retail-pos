@@ -4,7 +4,7 @@ import path from "node:path";
 import Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { resetDbConnection, setDbPathForTests } from "../backend/db/sqlite";
-import { createProduct, searchProducts } from "../backend/services/catalogService";
+import { createProduct, getInventoryStats, listProducts, queryProductsPage, searchProducts } from "../backend/services/catalogService";
 import { processSale } from "../backend/services/salesService";
 
 let testDir = "";
@@ -275,5 +275,54 @@ describe("catalog service", () => {
     const results = searchProducts("B123", 10);
     expect(results.length).toBe(1);
     expect(results[0].barcode_id).toBe("B123456");
+  });
+
+  test("listProducts can return items beyond the first 200 alphabetical rows", () => {
+    for (let index = 1; index <= 250; index += 1) {
+      createProduct({
+        barcode_id: `P-${index.toString().padStart(4, "0")}`,
+        name: `Product ${index.toString().padStart(4, "0")}`,
+        qty: 10,
+        buy_price: 10,
+        sell_price: 20,
+      });
+    }
+
+    const all = listProducts(1000);
+    expect(all).toHaveLength(250);
+    expect(all[249].name).toBe("Product 0250");
+    expect(all.some((product) => product.name === "Product 0201")).toBe(true);
+  });
+
+  test("getInventoryStats returns totals independent from list limits", () => {
+    createProduct({ barcode_id: "A-1", name: "Healthy", qty: 20, buy_price: 10, sell_price: 12 });
+    createProduct({ barcode_id: "A-2", name: "Low", qty: 3, buy_price: 10, sell_price: 12 });
+    createProduct({ barcode_id: "A-3", name: "Out", qty: 0, buy_price: 10, sell_price: 12 });
+
+    const stats = getInventoryStats();
+    expect(stats.total).toBe(3);
+    expect(stats.lowStock).toBe(1);
+    expect(stats.outOfStock).toBe(1);
+  });
+
+  test("queryProductsPage paginates and filters by search + low stock", () => {
+    createProduct({ barcode_id: "P-001", name: "Alpha", qty: 10, buy_price: 10, sell_price: 12 });
+    createProduct({ barcode_id: "P-002", name: "Beta", qty: 4, buy_price: 10, sell_price: 12 });
+    createProduct({ barcode_id: "P-003", name: "Gamma", qty: 0, buy_price: 10, sell_price: 12 });
+
+    const page1 = queryProductsPage({ limit: 2, offset: 0 });
+    expect(page1.total).toBe(3);
+    expect(page1.items).toHaveLength(2);
+
+    const page2 = queryProductsPage({ limit: 2, offset: 2 });
+    expect(page2.items).toHaveLength(1);
+
+    const searched = queryProductsPage({ searchText: "bet", limit: 10, offset: 0 });
+    expect(searched.total).toBe(1);
+    expect(searched.items[0].name).toBe("Beta");
+
+    const lowOnly = queryProductsPage({ lowStockOnly: true, limit: 10, offset: 0 });
+    expect(lowOnly.total).toBe(2);
+    expect(lowOnly.items.map((item) => item.name).sort()).toEqual(["Beta", "Gamma"]);
   });
 });

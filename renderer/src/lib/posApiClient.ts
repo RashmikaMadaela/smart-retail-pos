@@ -1,5 +1,18 @@
 type ApiResult<T> = { ok: true; data: T } | { ok: false; error?: string };
 
+type InventoryStats = {
+  total: number;
+  lowStock: number;
+  outOfStock: number;
+};
+
+type ProductPageResult = {
+  items: any[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
 async function safeCall<T>(fn: () => Promise<ApiResult<T>>, fallback: string): Promise<ApiResult<T>> {
   try {
     return await fn();
@@ -14,9 +27,13 @@ export const posApiClient = {
       () => window.posApi.login(username, password) as Promise<ApiResult<{ id: number; username: string; role: "Admin" | "Cashier" | "SuperAdmin" }>>,
       "Unable to contact auth service",
     ),
-  listProducts: (limit = 50) => safeCall(() => window.posApi.listProducts(limit) as Promise<ApiResult<any[]>>, "Unable to load products"),
-  searchProducts: (searchText: string, limit = 50) =>
+  listProducts: (limit = 1000) => safeCall(() => window.posApi.listProducts(limit) as Promise<ApiResult<any[]>>, "Unable to load products"),
+  searchProducts: (searchText: string, limit = 200) =>
     safeCall(() => window.posApi.searchProducts(searchText, limit) as Promise<ApiResult<any[]>>, "Unable to search products"),
+  getInventoryStats: () =>
+    safeCall(() => window.posApi.getInventoryStats() as Promise<ApiResult<InventoryStats>>, "Unable to load inventory stats"),
+  queryProductsPage: (payload: { searchText?: string; lowStockOnly?: boolean; limit?: number; offset?: number }) =>
+    safeCall(() => window.posApi.queryProductsPage(payload) as Promise<ApiResult<ProductPageResult>>, "Unable to query product page"),
   createProduct: (payload: unknown) =>
     safeCall(() => window.posApi.createProduct(payload) as Promise<ApiResult<{ barcode_id: string; action: "created" | "updated" }>>, "Unable to create product"),
   removeProduct: (payload: { barcode_id: string }) =>

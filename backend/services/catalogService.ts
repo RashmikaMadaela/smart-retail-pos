@@ -11,6 +11,26 @@ export type CreateProductInput = {
   card_surcharge_pct?: number;
 };
 
+export type InventoryStats = {
+  total: number;
+  lowStock: number;
+  outOfStock: number;
+};
+
+export type ProductPageQuery = {
+  searchText?: string;
+  lowStockOnly?: boolean;
+  limit: number;
+  offset: number;
+};
+
+export type ProductPageResult = {
+  items: Product[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
 function nextPriyankaStoreBarcode(): string {
   const db = getDb();
   const rows = db
@@ -53,6 +73,68 @@ export function searchProducts(searchText: string, limit: number): Product[] {
       `,
     )
     .all(pattern, pattern, limit) as Product[];
+}
+
+export function getInventoryStats(): InventoryStats {
+  const db = getDb();
+  const row = db
+    .prepare(
+      `
+      SELECT
+        COUNT(*) AS total,
+        SUM(CASE WHEN stock <= 0 THEN 1 ELSE 0 END) AS out_of_stock,
+        SUM(CASE WHEN stock > 0 AND stock <= 5 THEN 1 ELSE 0 END) AS low_stock
+      FROM products
+      `,
+    )
+    .get() as { total: number; out_of_stock: number | null; low_stock: number | null };
+
+  return {
+    total: Number(row.total || 0),
+    lowStock: Number(row.low_stock || 0),
+    outOfStock: Number(row.out_of_stock || 0),
+  };
+}
+
+export function queryProductsPage(query: ProductPageQuery): ProductPageResult {
+  const db = getDb();
+  const trimmedSearch = (query.searchText || "").trim();
+  const hasSearch = trimmedSearch.length > 0;
+  const where: string[] = [];
+  const params: Array<string | number> = [];
+
+  if (hasSearch) {
+    where.push("(name LIKE ? OR barcode_id LIKE ?)");
+    const pattern = `%${trimmedSearch}%`;
+    params.push(pattern, pattern);
+  }
+  if (query.lowStockOnly) {
+    where.push("stock <= 5");
+  }
+
+  const whereClause = where.length > 0 ? `WHERE ${where.join(" AND ")}` : "";
+  const totalRow = db
+    .prepare(`SELECT COUNT(*) AS total FROM products ${whereClause}`)
+    .get(...params) as { total: number };
+
+  const items = db
+    .prepare(
+      `
+      SELECT *
+      FROM products
+      ${whereClause}
+      ORDER BY name ASC
+      LIMIT ? OFFSET ?
+      `,
+    )
+    .all(...params, query.limit, query.offset) as Product[];
+
+  return {
+    items,
+    total: Number(totalRow.total || 0),
+    limit: query.limit,
+    offset: query.offset,
+  };
 }
 
 export function createProduct(input: CreateProductInput): { barcode_id: string; action: "created" | "updated" } {

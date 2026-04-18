@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 import { print as nativePrintPdf } from "pdf-to-printer";
 import { z } from "zod";
 import { login } from "../../backend/services/authService";
-import { createProduct, listProducts, removeProduct, searchProducts } from "../../backend/services/catalogService";
+import { createProduct, getInventoryStats, listProducts, queryProductsPage, removeProduct, searchProducts } from "../../backend/services/catalogService";
 import { getFinancialSummary } from "../../backend/services/reportService";
 import { completeHeldSale, holdSale, listHeldSales, processSale, recallHeldSale, voidHeldSale } from "../../backend/services/salesService";
 import {
@@ -35,11 +35,18 @@ const loginSchema = z.object({
 
 const searchSchema = z.object({
   searchText: z.string(),
-  limit: z.number().int().positive().max(200).optional(),
+  limit: z.number().int().positive().max(1000).optional(),
 });
 
 const listSchema = z.object({
   limit: z.number().int().positive().max(1000).optional(),
+});
+
+const pageQuerySchema = z.object({
+  searchText: z.string().optional(),
+  lowStockOnly: z.boolean().optional(),
+  limit: z.number().int().positive().max(200).optional(),
+  offset: z.number().int().nonnegative().max(1_000_000).optional(),
 });
 
 const createProductSchema = z.object({
@@ -368,7 +375,7 @@ export function registerIpcHandlers() {
     if (!parsed.success) {
       return fail("Invalid list payload");
     }
-    return ok(listProducts(parsed.data.limit ?? 200));
+    return ok(listProducts(parsed.data.limit ?? 1000));
   });
 
   ipcMain.handle("catalog.searchProducts", async (_event, payload) => {
@@ -376,7 +383,26 @@ export function registerIpcHandlers() {
     if (!parsed.success) {
       return fail("Invalid search payload");
     }
-    return ok(searchProducts(parsed.data.searchText, parsed.data.limit ?? 25));
+    return ok(searchProducts(parsed.data.searchText, parsed.data.limit ?? 200));
+  });
+
+  ipcMain.handle("catalog.getInventoryStats", async () => {
+    return ok(getInventoryStats());
+  });
+
+  ipcMain.handle("catalog.queryProductsPage", async (_event, payload) => {
+    const parsed = pageQuerySchema.safeParse(payload ?? {});
+    if (!parsed.success) {
+      return fail("Invalid queryProductsPage payload");
+    }
+    return ok(
+      queryProductsPage({
+        searchText: parsed.data.searchText,
+        lowStockOnly: parsed.data.lowStockOnly,
+        limit: parsed.data.limit ?? 50,
+        offset: parsed.data.offset ?? 0,
+      }),
+    );
   });
 
   ipcMain.handle("catalog.createProduct", async (_event, payload) => {
