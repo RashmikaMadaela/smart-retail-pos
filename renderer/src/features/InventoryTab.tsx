@@ -9,6 +9,7 @@ type InventoryTabProps = {
   inventoryStats?: InventoryStats;
   onRefreshProducts: () => void;
   onQueryProductsPage?: (payload: { searchText?: string; lowStockOnly?: boolean; limit?: number; offset?: number }) => Promise<ProductPageResult>;
+  onSearchProducts?: (searchText: string, limit?: number) => Promise<Product[]>;
   onCreateProduct: (payload: {
     barcode_id?: string;
     name: string;
@@ -32,6 +33,7 @@ export function InventoryTab({
   inventoryStats,
   onRefreshProducts,
   onQueryProductsPage,
+  onSearchProducts,
   onCreateProduct,
   onRemoveProduct,
   isSuperAdmin,
@@ -61,6 +63,9 @@ export function InventoryTab({
   const [pageItems, setPageItems] = useState<Product[]>([]);
   const [isPageLoading, setIsPageLoading] = useState(false);
   const [queryNonce, setQueryNonce] = useState(0);
+  const [remoteBarcodeMatchedProduct, setRemoteBarcodeMatchedProduct] = useState<Product | null>(null);
+  const [remoteAddSuggestions, setRemoteAddSuggestions] = useState<Product[] | null>(null);
+  const [remoteRemoveSuggestions, setRemoteRemoveSuggestions] = useState<Product[] | null>(null);
 
   useEffect(() => {
     setPageOffset(0);
@@ -102,7 +107,7 @@ export function InventoryTab({
       return;
     }
 
-    const match = products.find((product) => product.barcode_id.trim().toLowerCase() === normalizedBarcode);
+    const match = products.find((product) => product.barcode_id.trim().toLowerCase() === normalizedBarcode) || remoteBarcodeMatchedProduct;
     if (!match) {
       setBarcodeMatched(false);
       return;
@@ -116,7 +121,32 @@ export function InventoryTab({
     setNewDiscPct(String(Number(match.default_discount_pct || 0)));
     const surchargePct = Number(match.card_surcharge_enabled || 0) > 0 ? Number(match.card_surcharge_pct || 0) : 0;
     setNewCardSurchargePct(String(surchargePct));
-  }, [newBarcode, products]);
+  }, [newBarcode, products, remoteBarcodeMatchedProduct]);
+
+  useEffect(() => {
+    const normalizedBarcode = newBarcode.trim();
+    if (!normalizedBarcode || !onSearchProducts) {
+      setRemoteBarcodeMatchedProduct(null);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        const rows = await onSearchProducts(normalizedBarcode, 12);
+        if (cancelled) {
+          return;
+        }
+        const exact = rows.find((product) => product.barcode_id.trim().toLowerCase() === normalizedBarcode.toLowerCase());
+        setRemoteBarcodeMatchedProduct(exact || null);
+      })();
+    }, 150);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [newBarcode, onSearchProducts]);
 
   async function addProductRow() {
     const payload = {
@@ -162,6 +192,9 @@ export function InventoryTab({
   }, [products, inventorySearch, lowStockOnly, onQueryProductsPage, pageItems]);
 
   const nameSuggestions = useMemo(() => {
+    if (remoteAddSuggestions) {
+      return remoteAddSuggestions;
+    }
     const needle = newName.trim().toLowerCase();
     if (!needle) {
       return products.slice(0, 12);
@@ -169,9 +202,12 @@ export function InventoryTab({
     return products
       .filter((product) => product.name.toLowerCase().includes(needle))
       .slice(0, 12);
-  }, [products, newName]);
+  }, [products, newName, remoteAddSuggestions]);
 
   const removeNameSuggestions = useMemo(() => {
+    if (remoteRemoveSuggestions) {
+      return remoteRemoveSuggestions;
+    }
     const needle = removeName.trim().toLowerCase();
     if (!needle) {
       return products.slice(0, 12);
@@ -179,7 +215,53 @@ export function InventoryTab({
     return products
       .filter((product) => product.name.toLowerCase().includes(needle))
       .slice(0, 12);
-  }, [products, removeName]);
+  }, [products, removeName, remoteRemoveSuggestions]);
+
+  useEffect(() => {
+    const needle = newName.trim();
+    if (!needle || !onSearchProducts) {
+      setRemoteAddSuggestions(null);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        const rows = await onSearchProducts(needle, 12);
+        if (!cancelled) {
+          setRemoteAddSuggestions(rows);
+        }
+      })();
+    }, 180);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [newName, onSearchProducts]);
+
+  useEffect(() => {
+    const needle = removeName.trim();
+    if (!needle || !onSearchProducts) {
+      setRemoteRemoveSuggestions(null);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        const rows = await onSearchProducts(needle, 12);
+        if (!cancelled) {
+          setRemoteRemoveSuggestions(rows);
+        }
+      })();
+    }, 180);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [removeName, onSearchProducts]);
 
   useEffect(() => {
     const normalizedBarcode = removeBarcode.trim().toLowerCase();

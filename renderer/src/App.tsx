@@ -179,6 +179,14 @@ export default function App() {
       };
     }
 
+    async function searchProductsForLookup(searchText: string, limit = 20): Promise<Product[]> {
+      const response = await posApiClient.searchProducts(searchText, limit);
+      if (response.ok) {
+        return response.data;
+      }
+      return [];
+    }
+
   async function createInventoryProductNow(payload: {
     barcode_id?: string;
     name: string;
@@ -1655,6 +1663,7 @@ export default function App() {
                       setCustomerName(customer.name || "");
                       setCustomerContact(customer.contact || "");
                     }}
+                      onSearchProducts={searchProductsForLookup}
                     onHoldSale={holdCurrentBill}
                     onProcessSale={processCheckout}
                   />
@@ -1679,6 +1688,7 @@ export default function App() {
                   inventoryStats={inventoryStats}
                   onRefreshProducts={() => void refreshProducts()}
                   onQueryProductsPage={queryInventoryProductsPage}
+                  onSearchProducts={searchProductsForLookup}
                   onCreateProduct={(payload) => createInventoryProductNow(payload)}
                   onRemoveProduct={(payload) => removeInventoryProductNow(payload)}
                   isSuperAdmin={isSuperAdmin}
@@ -1725,6 +1735,7 @@ export default function App() {
                   supplierPayMethod={supplierPayMethod}
                   supplierPayNote={supplierPayNote}
                   supplierLedger={supplierLedger}
+                  onSearchProducts={searchProductsForLookup}
                   onRefreshSuppliers={() => void refreshSuppliers()}
                   onSupplierNameChange={setSupplierName}
                   onSupplierContactChange={setSupplierContact}

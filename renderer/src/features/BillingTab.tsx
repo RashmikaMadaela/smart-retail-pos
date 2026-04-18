@@ -28,6 +28,7 @@ type BillingTabProps = {
   onCustomerContactChange: (value: string) => void;
   customerSuggestions: Customer[];
   onCustomerSuggestionSelect: (customer: Customer) => void;
+  onSearchProducts?: (searchText: string, limit?: number) => Promise<Product[]>;
   onHoldSale: () => void;
   onProcessSale: (withPrint: boolean) => void;
 };
@@ -58,6 +59,7 @@ export function BillingTab({
   onCustomerContactChange,
   customerSuggestions,
   onCustomerSuggestionSelect,
+  onSearchProducts,
   onHoldSale,
   onProcessSale,
 }: BillingTabProps) {
@@ -68,6 +70,8 @@ export function BillingTab({
   const [discountDrafts, setDiscountDrafts] = useState<Record<string, { percent: string; amount: string }>>({});
   const [isCheckoutConfirmOpen, setIsCheckoutConfirmOpen] = useState(false);
   const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
+  const [remoteNameSuggestions, setRemoteNameSuggestions] = useState<Product[] | null>(null);
+  const [remoteMatchedById, setRemoteMatchedById] = useState<Product | null>(null);
   const scannerRef = useRef<HTMLInputElement | null>(null);
 
   const itemCount = useMemo(
@@ -78,16 +82,20 @@ export function BillingTab({
   const matchedById = useMemo(() => {
     const needle = scannerInput.trim().toLowerCase();
     if (!needle) {
-      return null;
+      return remoteMatchedById;
     }
-    return (
+    const localMatch = (
       products.find((product) => product.barcode_id.toLowerCase() === needle) ||
       products.find((product) => product.name.toLowerCase() === needle) ||
       null
     );
-  }, [products, scannerInput]);
+    return localMatch || remoteMatchedById;
+  }, [products, scannerInput, remoteMatchedById]);
 
   const nameSuggestions = useMemo(() => {
+    if (remoteNameSuggestions) {
+      return remoteNameSuggestions;
+    }
     const needle = productNameInput.trim().toLowerCase();
     if (!needle) {
       return products.slice(0, 12);
@@ -95,7 +103,58 @@ export function BillingTab({
     return products
       .filter((product) => product.name.toLowerCase().includes(needle))
       .slice(0, 12);
-  }, [products, productNameInput]);
+  }, [products, productNameInput, remoteNameSuggestions]);
+
+  useEffect(() => {
+    const needle = productNameInput.trim();
+    if (!needle || !onSearchProducts) {
+      setRemoteNameSuggestions(null);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        const rows = await onSearchProducts(needle, 12);
+        if (!cancelled) {
+          setRemoteNameSuggestions(rows);
+        }
+      })();
+    }, 180);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [productNameInput, onSearchProducts]);
+
+  useEffect(() => {
+    const needle = scannerInput.trim();
+    if (!needle || !onSearchProducts) {
+      setRemoteMatchedById(null);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        const rows = await onSearchProducts(needle, 12);
+        if (cancelled) {
+          return;
+        }
+        const exact = rows.find(
+          (product) =>
+            product.barcode_id.toLowerCase() === needle.toLowerCase() || product.name.toLowerCase() === needle.toLowerCase(),
+        );
+        setRemoteMatchedById(exact || null);
+      })();
+    }, 150);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [scannerInput, onSearchProducts]);
 
   async function handleQuickAdd() {
     const resolvedId = scannerInput.trim() || matchedById?.barcode_id || "";

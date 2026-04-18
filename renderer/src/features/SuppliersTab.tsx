@@ -19,6 +19,7 @@ type SuppliersTabProps = {
   supplierPayMethod: string;
   supplierPayNote: string;
   supplierLedger: SupplierLedger | null;
+  onSearchProducts?: (searchText: string, limit?: number) => Promise<Product[]>;
   onRefreshSuppliers: () => void;
   onSupplierNameChange: (value: string) => void;
   onSupplierContactChange: (value: string) => void;
@@ -52,6 +53,7 @@ export function SuppliersTab({
   supplierPayMethod,
   supplierPayNote,
   supplierLedger,
+  onSearchProducts,
   onRefreshSuppliers,
   onSupplierNameChange,
   onSupplierContactChange,
@@ -73,6 +75,8 @@ export function SuppliersTab({
   const [editingSupplierId, setEditingSupplierId] = useState<number | null>(null);
   const [editSupplierName, setEditSupplierName] = useState("");
   const [editSupplierContact, setEditSupplierContact] = useState("");
+  const [remoteMatchedProduct, setRemoteMatchedProduct] = useState<Product | null>(null);
+  const [remoteProductSuggestions, setRemoteProductSuggestions] = useState<Product[] | null>(null);
   const lastMatchedProductIdRef = useRef<string | null>(null);
 
   const matchedProduct = useMemo(() => {
@@ -80,10 +84,13 @@ export function SuppliersTab({
     if (!barcode) {
       return null;
     }
-    return products.find((product) => product.barcode_id.trim().toLowerCase() === barcode) || null;
-  }, [products, batchLineDraft.product_id]);
+    return products.find((product) => product.barcode_id.trim().toLowerCase() === barcode) || remoteMatchedProduct || null;
+  }, [products, batchLineDraft.product_id, remoteMatchedProduct]);
 
   const productNameSuggestions = useMemo(() => {
+    if (remoteProductSuggestions) {
+      return remoteProductSuggestions;
+    }
     const needle = (batchLineDraft.new_item_name || "").trim().toLowerCase();
     if (!needle) {
       return products.slice(0, 12);
@@ -91,7 +98,55 @@ export function SuppliersTab({
     return products
       .filter((product) => product.name.toLowerCase().includes(needle))
       .slice(0, 12);
-  }, [products, batchLineDraft.new_item_name]);
+  }, [products, batchLineDraft.new_item_name, remoteProductSuggestions]);
+
+  useEffect(() => {
+    const barcode = (batchLineDraft.product_id || "").trim();
+    if (!barcode || !onSearchProducts) {
+      setRemoteMatchedProduct(null);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        const rows = await onSearchProducts(barcode, 12);
+        if (cancelled) {
+          return;
+        }
+        const exact = rows.find((product) => product.barcode_id.trim().toLowerCase() === barcode.toLowerCase());
+        setRemoteMatchedProduct(exact || null);
+      })();
+    }, 150);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [batchLineDraft.product_id, onSearchProducts]);
+
+  useEffect(() => {
+    const needle = (batchLineDraft.new_item_name || "").trim();
+    if (!needle || !onSearchProducts) {
+      setRemoteProductSuggestions(null);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        const rows = await onSearchProducts(needle, 12);
+        if (!cancelled) {
+          setRemoteProductSuggestions(rows);
+        }
+      })();
+    }, 180);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [batchLineDraft.new_item_name, onSearchProducts]);
 
   useEffect(() => {
     if (!matchedProduct) {
