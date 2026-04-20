@@ -151,4 +151,91 @@ describe("BillingTab", () => {
     expect(scope.getByText("200.00")).toBeTruthy();
     expect(onUpdateCartDiscount).not.toHaveBeenCalled();
   });
+
+  test("shows warning and blocks adding when stock is zero", () => {
+    const onQuickAddProduct = vi.fn();
+
+    const view = render(
+      <BillingTab
+        products={[{ id: 1, barcode_id: "P001", name: "Milk", sell_price: 250, stock: 0 }]}
+        cart={[]}
+        paymentMode="PAID"
+        paymentMethod="CASH"
+        paidAmount=""
+        customerName=""
+        customerContact=""
+        subTotal={0}
+        lineDiscountTotal={0}
+        baseTotal={0}
+        cardSurchargeTotal={0}
+        totalAmount={0}
+        changeDue={0}
+        balanceDue={0}
+        onQuickAddProduct={onQuickAddProduct}
+        onUpdateCartDiscount={vi.fn()}
+        onAdjustCartQty={vi.fn()}
+        onRemoveFromCart={vi.fn()}
+        onPaymentModeChange={vi.fn()}
+        onPaymentMethodChange={vi.fn()}
+        onPaidAmountChange={vi.fn()}
+        onCustomerNameChange={vi.fn()}
+        onCustomerContactChange={vi.fn()}
+        customerSuggestions={[]}
+        onCustomerSuggestionSelect={vi.fn()}
+        onHoldSale={vi.fn()}
+        onProcessSale={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(within(view.container).getByLabelText("Product ID / Barcode"), { target: { value: "P001" } });
+    fireEvent.click(within(view.container).getByRole("button", { name: "Add to Cart" }));
+
+    expect(within(view.container).getByRole("dialog", { name: "Stock Warning" })).toBeTruthy();
+    expect(within(view.container).getByText("There is no stock. Update stock before billing.")).toBeTruthy();
+    expect(onQuickAddProduct).not.toHaveBeenCalled();
+  });
+
+  test("shows warning and blocks adding when qty exceeds stock", () => {
+    const onQuickAddProduct = vi.fn();
+
+    const view = render(
+      <BillingTab
+        products={[{ id: 1, barcode_id: "P001", name: "Milk", sell_price: 250, stock: 2 }]}
+        cart={[]}
+        paymentMode="PAID"
+        paymentMethod="CASH"
+        paidAmount=""
+        customerName=""
+        customerContact=""
+        subTotal={0}
+        lineDiscountTotal={0}
+        baseTotal={0}
+        cardSurchargeTotal={0}
+        totalAmount={0}
+        changeDue={0}
+        balanceDue={0}
+        onQuickAddProduct={onQuickAddProduct}
+        onUpdateCartDiscount={vi.fn()}
+        onAdjustCartQty={vi.fn()}
+        onRemoveFromCart={vi.fn()}
+        onPaymentModeChange={vi.fn()}
+        onPaymentMethodChange={vi.fn()}
+        onPaidAmountChange={vi.fn()}
+        onCustomerNameChange={vi.fn()}
+        onCustomerContactChange={vi.fn()}
+        customerSuggestions={[]}
+        onCustomerSuggestionSelect={vi.fn()}
+        onHoldSale={vi.fn()}
+        onProcessSale={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(within(view.container).getByLabelText("Product ID / Barcode"), { target: { value: "P001" } });
+    fireEvent.change(within(view.container).getByLabelText("Qty"), { target: { value: "3" } });
+    fireEvent.click(within(view.container).getByRole("button", { name: "Add to Cart" }));
+
+    expect(within(view.container).getByRole("dialog", { name: "Stock Warning" })).toBeTruthy();
+    expect(within(view.container).getByText("Insufficient stock. Available: 2.00. Update stock before billing.")).toBeTruthy();
+    expect(onQuickAddProduct).not.toHaveBeenCalled();
+  });
 });

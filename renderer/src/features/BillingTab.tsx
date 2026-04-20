@@ -77,6 +77,7 @@ export function BillingTab({
   const [remoteMatchedById, setRemoteMatchedById] = useState<Product | null>(null);
   const [variantModalState, setVariantModalState] = useState<{ barcode: string; qty: number; options: Product[] } | null>(null);
   const [variantModalIndex, setVariantModalIndex] = useState(0);
+  const [stockWarningMessage, setStockWarningMessage] = useState<string | null>(null);
   const scannerRef = useRef<HTMLInputElement | null>(null);
   const variantFirstButtonRef = useRef<HTMLButtonElement | null>(null);
 
@@ -190,6 +191,14 @@ export function BillingTab({
     }
 
     if (candidates.length === 1) {
+      if (Number(candidates[0].stock) <= 0) {
+        setStockWarningMessage(t("billing.zeroStockWarning"));
+        return;
+      }
+      if (qty > Number(candidates[0].stock)) {
+        setStockWarningMessage(t("billing.insufficientStockWarning", { available: Number(candidates[0].stock).toFixed(2) }));
+        return;
+      }
       await onQuickAddProduct(resolvedId, qty, Number(candidates[0].id));
     } else {
       await onQuickAddProduct(resolvedId, qty);
@@ -202,6 +211,14 @@ export function BillingTab({
 
   async function handleVariantSelect(variant: Product) {
     if (!variantModalState) {
+      return;
+    }
+    if (Number(variant.stock) <= 0) {
+      setStockWarningMessage(t("billing.zeroStockWarning"));
+      return;
+    }
+    if (variantModalState.qty > Number(variant.stock)) {
+      setStockWarningMessage(t("billing.insufficientStockWarning", { available: Number(variant.stock).toFixed(2) }));
       return;
     }
     await onQuickAddProduct(variantModalState.barcode, variantModalState.qty, Number(variant.id));
@@ -743,6 +760,39 @@ export function BillingTab({
                 }}
               >
                 {t("billing.cancel")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {stockWarningMessage ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("billing.stockWarningTitle")}
+          onKeyDown={(event) => {
+            if (event.key === "Escape" || event.key === "Enter") {
+              event.preventDefault();
+              setStockWarningMessage(null);
+              scannerRef.current?.focus();
+            }
+          }}
+        >
+          <div className="w-full max-w-md rounded-2xl border border-border/80 bg-card p-5 shadow-panel">
+            <h4 className="m-0 text-lg font-semibold text-foreground">{t("billing.stockWarningTitle")}</h4>
+            <p className="mt-2 text-sm text-muted-foreground">{stockWarningMessage}</p>
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                className="!bg-slate-600 !text-white"
+                onClick={() => {
+                  setStockWarningMessage(null);
+                  scannerRef.current?.focus();
+                }}
+              >
+                {t("billing.ok")}
               </button>
             </div>
           </div>
