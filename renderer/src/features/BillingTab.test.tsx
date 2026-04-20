@@ -103,4 +103,52 @@ describe("BillingTab", () => {
 
     expect(onQuickAddProduct).toHaveBeenCalledWith("P001", 1, 12);
   });
+
+  test("locks discounts and ignores line discount in UNPAID mode", () => {
+    const onUpdateCartDiscount = vi.fn();
+
+    const view = render(
+      <BillingTab
+        products={[{ id: 1, barcode_id: "P001", name: "Milk", sell_price: 100, stock: 10 }]}
+        cart={[{ product_id: 1, barcode_id: "P001", name: "Milk", qty: 2, price: 100, discount: 20 }]}
+        paymentMode="UNPAID"
+        paymentMethod="CASH"
+        paidAmount=""
+        customerName=""
+        customerContact=""
+        subTotal={200}
+        lineDiscountTotal={0}
+        baseTotal={200}
+        cardSurchargeTotal={0}
+        totalAmount={200}
+        changeDue={0}
+        balanceDue={200}
+        onQuickAddProduct={vi.fn()}
+        onUpdateCartDiscount={onUpdateCartDiscount}
+        onAdjustCartQty={vi.fn()}
+        onRemoveFromCart={vi.fn()}
+        onPaymentModeChange={vi.fn()}
+        onPaymentMethodChange={vi.fn()}
+        onPaidAmountChange={vi.fn()}
+        onCustomerNameChange={vi.fn()}
+        onCustomerContactChange={vi.fn()}
+        customerSuggestions={[]}
+        onCustomerSuggestionSelect={vi.fn()}
+        onHoldSale={vi.fn()}
+        onProcessSale={vi.fn()}
+      />,
+    );
+
+    const row = within(view.container).getByText("Milk").closest("tr");
+    expect(row).toBeTruthy();
+    const scope = within(row as HTMLElement);
+
+    const discountInputs = scope.getAllByRole("textbox");
+    expect(discountInputs).toHaveLength(2);
+    expect((discountInputs[0] as HTMLInputElement).disabled).toBe(true);
+    expect((discountInputs[1] as HTMLInputElement).disabled).toBe(true);
+
+    expect(scope.getByText("200.00")).toBeTruthy();
+    expect(onUpdateCartDiscount).not.toHaveBeenCalled();
+  });
 });

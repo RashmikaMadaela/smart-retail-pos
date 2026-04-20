@@ -477,6 +477,10 @@ export default function App() {
   }
 
   function updateCartDiscount(productId: number, mode: "percent" | "amount", rawValue: string) {
+    if (paymentMode === "UNPAID") {
+      return;
+    }
+
     const parsed = Number(rawValue || "0");
     const safeValue = Number.isFinite(parsed) ? parsed : 0;
 
@@ -503,6 +507,24 @@ export default function App() {
     );
   }
 
+  useEffect(() => {
+    if (paymentMode !== "UNPAID") {
+      return;
+    }
+
+    setCart((prev) => {
+      let changed = false;
+      const next = prev.map((row) => {
+        if (Number(row.discount || 0) <= 0) {
+          return row;
+        }
+        changed = true;
+        return { ...row, discount: 0 };
+      });
+      return changed ? next : prev;
+    });
+  }, [paymentMode]);
+
   const subTotal = useMemo(
     () =>
       cart.reduce((acc, item) => {
@@ -515,10 +537,11 @@ export default function App() {
   const lineDiscountTotal = useMemo(
     () =>
       cart.reduce((acc, item) => {
-        const lineDisc = Number(item.qty) * Number(item.discount);
+        const itemDiscount = paymentMode === "UNPAID" ? 0 : Number(item.discount);
+        const lineDisc = Number(item.qty) * itemDiscount;
         return acc + lineDisc;
       }, 0),
-    [cart],
+    [cart, paymentMode],
   );
 
   const baseTotal = Math.max(0, Number((subTotal - lineDiscountTotal).toFixed(2)));
@@ -537,12 +560,13 @@ export default function App() {
       if (!Number.isFinite(pct) || pct <= 0) {
         return acc;
       }
-      const lineBase = Number(item.qty) * Math.max(0, Number(item.price) - Number(item.discount));
+      const itemDiscount = paymentMode === "UNPAID" ? 0 : Number(item.discount);
+      const lineBase = Number(item.qty) * Math.max(0, Number(item.price) - itemDiscount);
       return acc + lineBase * (pct / 100);
     }, 0);
 
     return Number(surcharge.toFixed(2));
-  }, [cart, products, paymentMethod]);
+  }, [cart, products, paymentMethod, paymentMode]);
 
   const finalTotal = Number((baseTotal + cardSurchargeTotal).toFixed(2));
 
@@ -609,7 +633,7 @@ export default function App() {
         scanned_barcode: row.scanned_barcode || row.barcode_id,
         qty: row.qty,
         price: row.price,
-        discount: row.discount,
+        discount: paymentMode === "UNPAID" ? 0 : row.discount,
       })),
       subtotal: Number(subTotal.toFixed(2)),
       global_discount: Number(lineDiscountTotal.toFixed(2)),
@@ -668,7 +692,7 @@ export default function App() {
         scanned_barcode: row.scanned_barcode || row.barcode_id,
         qty: row.qty,
         price: row.price,
-        discount: row.discount,
+        discount: paymentMode === "UNPAID" ? 0 : row.discount,
       })),
       subtotal: Number(subTotal.toFixed(2)),
       global_discount: Number(lineDiscountTotal.toFixed(2)),
@@ -755,7 +779,7 @@ export default function App() {
         scanned_barcode: row.scanned_barcode || row.barcode_id,
         qty: row.qty,
         price: row.price,
-        discount: row.discount,
+        discount: paymentMode === "UNPAID" ? 0 : row.discount,
       })),
       subtotal: Number(subTotal.toFixed(2)),
       global_discount: Number(lineDiscountTotal.toFixed(2)),

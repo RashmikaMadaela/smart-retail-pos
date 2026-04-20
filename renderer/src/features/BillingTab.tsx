@@ -66,6 +66,7 @@ export function BillingTab({
   onProcessSale,
 }: BillingTabProps) {
   const { t } = useTranslation();
+  const discountsLocked = paymentMode === "UNPAID";
   const [scannerInput, setScannerInput] = useState("");
   const [productNameInput, setProductNameInput] = useState("");
   const [quickQty, setQuickQty] = useState("1");
@@ -407,10 +408,11 @@ export function BillingTab({
                   </tr>
                 ) : (
                   cart.map((item, index) => {
-                    const discountPct = item.price > 0 ? Number(((item.discount / item.price) * 100).toFixed(2)) : 0;
+                    const effectiveDiscount = discountsLocked ? 0 : Number(item.discount);
+                    const discountPct = item.price > 0 ? Number(((effectiveDiscount / item.price) * 100).toFixed(2)) : 0;
                     const draft = discountDrafts[item.product_id] || {
                       percent: discountPct.toFixed(2),
-                      amount: item.discount.toFixed(2),
+                      amount: effectiveDiscount.toFixed(2),
                     };
                     return (
                       <tr key={item.product_id}>
@@ -432,7 +434,11 @@ export function BillingTab({
                           <input
                             className="w-16 min-w-[64px]"
                             value={draft.percent}
+                            disabled={discountsLocked}
                             onChange={(event) => {
+                              if (discountsLocked) {
+                                return;
+                              }
                               const value = event.target.value;
                               setDiscountDrafts((prev) => ({
                                 ...prev,
@@ -443,6 +449,17 @@ export function BillingTab({
                               }));
                             }}
                             onBlur={(event) => {
+                              if (discountsLocked) {
+                                setDiscountDrafts((prev) => ({
+                                  ...prev,
+                                  [item.product_id]: {
+                                    ...(prev[item.product_id] || { percent: "", amount: "" }),
+                                    percent: "0.00",
+                                    amount: "0.00",
+                                  },
+                                }));
+                                return;
+                              }
                               onUpdateCartDiscount(item.product_id, "percent", event.target.value);
                               const clamped = Math.max(0, Math.min(100, Number(event.target.value || "0")));
                               setDiscountDrafts((prev) => ({
@@ -460,7 +477,11 @@ export function BillingTab({
                           <input
                             className="w-16 min-w-[64px]"
                             value={draft.amount}
+                            disabled={discountsLocked}
                             onChange={(event) => {
+                              if (discountsLocked) {
+                                return;
+                              }
                               const value = event.target.value;
                               setDiscountDrafts((prev) => ({
                                 ...prev,
@@ -471,6 +492,17 @@ export function BillingTab({
                               }));
                             }}
                             onBlur={(event) => {
+                              if (discountsLocked) {
+                                setDiscountDrafts((prev) => ({
+                                  ...prev,
+                                  [item.product_id]: {
+                                    ...(prev[item.product_id] || { percent: "", amount: "" }),
+                                    percent: "0.00",
+                                    amount: "0.00",
+                                  },
+                                }));
+                                return;
+                              }
                               onUpdateCartDiscount(item.product_id, "amount", event.target.value);
                               const clamped = Math.max(0, Math.min(item.price, Number(event.target.value || "0")));
                               const percent = item.price > 0 ? Number(((clamped / item.price) * 100).toFixed(2)) : 0;
@@ -485,7 +517,7 @@ export function BillingTab({
                             }}
                           />
                         </td>
-                        <td>{(item.qty * Math.max(0, item.price - item.discount)).toFixed(2)}</td>
+                        <td>{(item.qty * Math.max(0, item.price - effectiveDiscount)).toFixed(2)}</td>
                         <td>
                           <button type="button" className="danger" onClick={() => onRemoveFromCart(item.product_id)}>
                             {t("billing.remove")}
