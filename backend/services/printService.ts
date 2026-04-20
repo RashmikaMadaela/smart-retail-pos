@@ -233,7 +233,7 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
     );
 
     for (const item of payload.items) {
-      const name = item.name || item.product_id;
+      const name = String(item.name || item.product_id);
       const sellUnitPrice = Number(item.sold_at_price || 0);
       const discountedUnitPrice = Math.max(0, sellUnitPrice - Number(item.item_discount || 0));
       const lineTotal = Number(item.qty) * discountedUnitPrice;

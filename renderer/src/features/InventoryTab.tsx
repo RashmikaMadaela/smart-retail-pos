@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { InventoryStats, Product, ProductPageResult } from "./types";
 import { SurfaceCard } from "@/components/ui/SurfaceCard";
@@ -10,7 +10,9 @@ type InventoryTabProps = {
   onRefreshProducts: () => void;
   onQueryProductsPage?: (payload: { searchText?: string; lowStockOnly?: boolean; limit?: number; offset?: number }) => Promise<ProductPageResult>;
   onSearchProducts?: (searchText: string, limit?: number) => Promise<Product[]>;
+  onResolveBarcodeVariants?: (barcode: string) => Promise<Product[]>;
   onCreateProduct: (payload: {
+    id?: number;
     barcode_id?: string;
     name: string;
     qty: number;
@@ -18,7 +20,7 @@ type InventoryTabProps = {
     sell_price: number;
     default_discount_pct?: number;
     card_surcharge_pct?: number;
-  }) => Promise<{ ok: true; barcode_id: string; action: "created" | "updated" } | { ok: false }>;
+  }) => Promise<{ ok: true; product_id: number; barcode_id: string; action: "created" | "updated" } | { ok: false }>;
   onRemoveProduct?: (payload: { barcode_id: string }) => Promise<{ ok: true } | { ok: false }>;
   isSuperAdmin: boolean;
   onClearInventory: () => void;
@@ -34,6 +36,7 @@ export function InventoryTab({
   onRefreshProducts,
   onQueryProductsPage,
   onSearchProducts,
+  onResolveBarcodeVariants,
   onCreateProduct,
   onRemoveProduct,
   isSuperAdmin,
@@ -66,6 +69,20 @@ export function InventoryTab({
   const [remoteBarcodeMatchedProduct, setRemoteBarcodeMatchedProduct] = useState<Product | null>(null);
   const [remoteAddSuggestions, setRemoteAddSuggestions] = useState<Product[] | null>(null);
   const [remoteRemoveSuggestions, setRemoteRemoveSuggestions] = useState<Product[] | null>(null);
+  const [inventoryVariantModalState, setInventoryVariantModalState] = useState<{
+    payload: {
+      barcode_id?: string;
+      name: string;
+      qty: number;
+      buy_price: number;
+      sell_price: number;
+      default_discount_pct?: number;
+      card_surcharge_pct?: number;
+    };
+    options: Product[];
+  } | null>(null);
+  const [inventoryVariantIndex, setInventoryVariantIndex] = useState(0);
+  const inventoryVariantFirstButtonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     setPageOffset(0);
@@ -107,7 +124,13 @@ export function InventoryTab({
       return;
     }
 
-    const match = products.find((product) => product.barcode_id.trim().toLowerCase() === normalizedBarcode) || remoteBarcodeMatchedProduct;
+    const barcodeMatches = products.filter((product) => product.barcode_id.trim().toLowerCase() === normalizedBarcode);
+    if (barcodeMatches.length > 1) {
+      setBarcodeMatched(true);
+      return;
+    }
+
+    const match = barcodeMatches[0] || remoteBarcodeMatchedProduct;
     if (!match) {
       setBarcodeMatched(false);
       return;
@@ -122,6 +145,23 @@ export function InventoryTab({
     const surchargePct = Number(match.card_surcharge_enabled || 0) > 0 ? Number(match.card_surcharge_pct || 0) : 0;
     setNewCardSurchargePct(String(surchargePct));
   }, [newBarcode, products, remoteBarcodeMatchedProduct]);
+
+  useEffect(() => {
+    if (!inventoryVariantModalState) {
+      setInventoryVariantIndex(0);
+      return;
+    }
+    const candidates = inventoryVariantModalState.options;
+    const payloadSell = Number(inventoryVariantModalState.payload.sell_price || 0);
+    const nearestIndex = candidates.findIndex((variant) => Math.abs(Number(variant.sell_price || 0) - payloadSell) < 0.01);
+    setInventoryVariantIndex(nearestIndex >= 0 ? nearestIndex : 0);
+    const timer = window.setTimeout(() => {
+      inventoryVariantFirstButtonRef.current?.focus();
+    }, 0);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [inventoryVariantModalState]);
 
   useEffect(() => {
     const normalizedBarcode = newBarcode.trim();
@@ -148,17 +188,16 @@ export function InventoryTab({
     };
   }, [newBarcode, onSearchProducts]);
 
-  async function addProductRow() {
-    const payload = {
-      barcode_id: newBarcode.trim() || undefined,
-      name: newName.trim(),
-      qty: Number(newQty || "0"),
-      buy_price: Number(newBuyPrice || "0"),
-      sell_price: Number(newSellPrice || "0"),
-      default_discount_pct: Number(newDiscPct || "0"),
-      card_surcharge_pct: Number(newCardSurchargePct || "0"),
-    };
-
+  async function submitAddProduct(payload: {
+    id?: number;
+    barcode_id?: string;
+    name: string;
+    qty: number;
+    buy_price: number;
+    sell_price: number;
+    default_discount_pct?: number;
+    card_surcharge_pct?: number;
+  }) {
     const result = await onCreateProduct(payload);
     if (!result.ok) {
       return;
@@ -172,7 +211,52 @@ export function InventoryTab({
     setNewDiscPct("");
     setNewCardSurchargePct("");
     setBarcodeMatched(false);
+    setInventoryVariantModalState(null);
+    setInventoryVariantIndex(0);
     setQueryNonce((value) => value + 1);
+  }
+
+  async function addProductRow() {
+    const payload = {
+      barcode_id: newBarcode.trim() || undefined,
+      name: newName.trim(),
+      qty: Number(newQty || "0"),
+      buy_price: Number(newBuyPrice || "0"),
+      sell_price: Number(newSellPrice || "0"),
+      default_discount_pct: Number(newDiscPct || "0"),
+      card_surcharge_pct: Number(newCardSurchargePct || "0"),
+    };
+
+    const normalizedBarcode = (payload.barcode_id || "").trim().toLowerCase();
+    if (normalizedBarcode) {
+      const localCandidates = products.filter((product) => product.barcode_id.trim().toLowerCase() === normalizedBarcode);
+      let candidates = localCandidates;
+
+      if (candidates.length <= 1 && onResolveBarcodeVariants) {
+        const remoteCandidates = await onResolveBarcodeVariants(payload.barcode_id || "");
+        if (remoteCandidates.length > 0) {
+          candidates = remoteCandidates;
+        }
+      }
+
+      if (candidates.length > 1) {
+        setInventoryVariantModalState({ payload, options: candidates });
+        return;
+      }
+
+      if (candidates.length === 1) {
+        const existing = candidates[0];
+        if (Math.abs(Number(existing.sell_price || 0) - payload.sell_price) < 0.01) {
+          await submitAddProduct({ ...payload, id: Number(existing.id) });
+          return;
+        }
+
+        setInventoryVariantModalState({ payload, options: candidates });
+        return;
+      }
+    }
+
+    await submitAddProduct(payload);
   }
 
   const filtered = useMemo(() => {
@@ -360,7 +444,7 @@ export function InventoryTab({
                 ) : (
                   nameSuggestions.map((product) => (
                     <div
-                      key={product.barcode_id}
+                      key={`${product.barcode_id}-${product.id}`}
                       role="button"
                       tabIndex={0}
                       className="flex w-full flex-col items-start gap-0.5 border-0 border-b border-slate-700 bg-slate-900 px-3 py-2 text-left text-[15px] text-slate-100 hover:bg-slate-800 focus:bg-slate-800"
@@ -435,6 +519,110 @@ export function InventoryTab({
         </div>
       </SurfaceCard>
 
+      {inventoryVariantModalState ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Inventory variant decision"
+          onKeyDown={(event) => {
+            if (!inventoryVariantModalState || inventoryVariantModalState.options.length === 0) {
+              return;
+            }
+            if (event.key === "Escape") {
+              event.preventDefault();
+              setInventoryVariantModalState(null);
+              setInventoryVariantIndex(0);
+              return;
+            }
+            if (event.key === "ArrowDown") {
+              event.preventDefault();
+              setInventoryVariantIndex((idx) => (idx + 1) % inventoryVariantModalState.options.length);
+              return;
+            }
+            if (event.key === "ArrowUp") {
+              event.preventDefault();
+              setInventoryVariantIndex((idx) => (idx - 1 + inventoryVariantModalState.options.length) % inventoryVariantModalState.options.length);
+              return;
+            }
+            if (event.key === "Enter") {
+              event.preventDefault();
+              const selected = inventoryVariantModalState.options[inventoryVariantIndex] || inventoryVariantModalState.options[0];
+              void submitAddProduct({ ...inventoryVariantModalState.payload, id: Number(selected.id) });
+            }
+          }}
+        >
+          <div className="w-full max-w-3xl rounded-2xl border border-border/80 bg-card p-5 shadow-panel">
+            <h4 className="m-0 text-lg font-semibold text-foreground">Barcode Already Exists</h4>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Choose an existing variant to update, or create a new variant for this barcode.
+            </p>
+            <p className="mb-3 mt-1 text-xs text-muted-foreground">Use Up/Down to choose, Enter to update selected variant, Esc to cancel.</p>
+
+            <div className="max-h-72 overflow-auto rounded-xl border border-border/80 bg-background/40">
+              <table className="m-0">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Buy</th>
+                    <th>Sell</th>
+                    <th>Stock</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {inventoryVariantModalState.options.map((variant, index) => (
+                    <tr key={`${variant.barcode_id}-${variant.id}`} className={index === inventoryVariantIndex ? "bg-cyan-950/35" : undefined}>
+                      <td>{variant.id}</td>
+                      <td>{variant.name}</td>
+                      <td>{Number(variant.buy_price || 0).toFixed(2)}</td>
+                      <td>{Number(variant.sell_price || 0).toFixed(2)}</td>
+                      <td>{Number(variant.stock || 0).toFixed(2)}</td>
+                      <td>
+                        <button
+                          ref={index === 0 ? inventoryVariantFirstButtonRef : undefined}
+                          type="button"
+                          className="px-2 py-1 text-xs"
+                          onFocus={() => setInventoryVariantIndex(index)}
+                          onClick={() => {
+                            void submitAddProduct({ ...inventoryVariantModalState.payload, id: Number(variant.id) });
+                          }}
+                        >
+                          Update This Variant
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-4 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                className="!bg-amber-500 !text-slate-900"
+                onClick={() => {
+                  void submitAddProduct(inventoryVariantModalState.payload);
+                }}
+              >
+                Create New Variant
+              </button>
+              <button
+                type="button"
+                className="!bg-slate-600 !text-white"
+                onClick={() => {
+                  setInventoryVariantModalState(null);
+                  setInventoryVariantIndex(0);
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {isSuperAdmin ? (
         <SurfaceCard title={t("inventory.removeProduct")} subtitle={t("inventory.removeSubtitle")}>
           <div className="grid gap-2 xl:grid-cols-[1.1fr_1.6fr_auto]">
@@ -474,7 +662,7 @@ export function InventoryTab({
                   ) : (
                     removeNameSuggestions.map((product) => (
                       <div
-                        key={`remove-${product.barcode_id}`}
+                        key={`remove-${product.barcode_id}-${product.id}`}
                         role="button"
                         tabIndex={0}
                         className="flex w-full flex-col items-start gap-0.5 border-0 border-b border-slate-700 bg-slate-900 px-3 py-2 text-left text-[15px] text-slate-100 hover:bg-slate-800 focus:bg-slate-800"
@@ -610,7 +798,7 @@ export function InventoryTab({
                 const status = stockValue <= 0 ? t("inventory.statusOut") : stockValue <= 5 ? t("inventory.statusLow") : t("inventory.statusHealthy");
                 const surcharge = Number(product.card_surcharge_enabled || 0) > 0 ? Number(product.card_surcharge_pct || 0).toFixed(2) : "0.00";
                 return (
-                  <tr key={product.barcode_id}>
+                  <tr key={`${product.barcode_id}-${product.id}`}>
                     <td>{product.barcode_id}</td>
                     <td>{product.name}</td>
                     <td>{stockValue.toFixed(2)}</td>

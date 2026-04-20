@@ -14,7 +14,7 @@ export function getFinancialSummary(): FinancialSummary {
       SELECT COALESCE(SUM(si.qty * COALESCE(si.cogs_unit_cost, p.buy_price)), 0) AS value
       FROM sale_items si
       JOIN sales s ON s.id = si.sale_id
-      LEFT JOIN products p ON p.barcode_id = si.product_id
+      LEFT JOIN products p ON p.id = si.product_id
       WHERE s.status = 'COMPLETED'
       `,
     )

@@ -76,8 +76,12 @@ export function SuppliersTab({
   const [editSupplierName, setEditSupplierName] = useState("");
   const [editSupplierContact, setEditSupplierContact] = useState("");
   const [remoteMatchedProduct, setRemoteMatchedProduct] = useState<Product | null>(null);
+  const [remoteBarcodeVariants, setRemoteBarcodeVariants] = useState<Product[]>([]);
   const [remoteProductSuggestions, setRemoteProductSuggestions] = useState<Product[] | null>(null);
+  const [priceMismatchModalOpen, setPriceMismatchModalOpen] = useState(false);
+  const [selectedMismatchVariantId, setSelectedMismatchVariantId] = useState<number | null>(null);
   const lastMatchedProductIdRef = useRef<string | null>(null);
+  const updateSelectedButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const matchedProduct = useMemo(() => {
     const barcode = (batchLineDraft.product_id || "").trim().toLowerCase();
@@ -86,6 +90,21 @@ export function SuppliersTab({
     }
     return products.find((product) => product.barcode_id.trim().toLowerCase() === barcode) || remoteMatchedProduct || null;
   }, [products, batchLineDraft.product_id, remoteMatchedProduct]);
+
+  const barcodeVariants = useMemo(() => {
+    const barcode = (batchLineDraft.product_id || "").trim().toLowerCase();
+    if (!barcode) {
+      return [];
+    }
+    const all = [...products, ...remoteBarcodeVariants]
+      .filter((product) => product.barcode_id.trim().toLowerCase() === barcode)
+      .sort((a, b) => Number(a.sell_price || 0) - Number(b.sell_price || 0));
+    const byId = new Map<number, Product>();
+    for (const row of all) {
+      byId.set(Number(row.id), row);
+    }
+    return Array.from(byId.values());
+  }, [products, remoteBarcodeVariants, batchLineDraft.product_id]);
 
   const productNameSuggestions = useMemo(() => {
     if (remoteProductSuggestions) {
@@ -104,6 +123,7 @@ export function SuppliersTab({
     const barcode = (batchLineDraft.product_id || "").trim();
     if (!barcode || !onSearchProducts) {
       setRemoteMatchedProduct(null);
+      setRemoteBarcodeVariants([]);
       return;
     }
 
@@ -114,7 +134,9 @@ export function SuppliersTab({
         if (cancelled) {
           return;
         }
-        const exact = rows.find((product) => product.barcode_id.trim().toLowerCase() === barcode.toLowerCase());
+        const exactRows = rows.filter((product) => product.barcode_id.trim().toLowerCase() === barcode.toLowerCase());
+        const exact = exactRows[0];
+        setRemoteBarcodeVariants(exactRows);
         setRemoteMatchedProduct(exact || null);
       })();
     }, 150);
@@ -194,6 +216,50 @@ export function SuppliersTab({
       onBatchLineDraftChange(nextDraft);
     }
   }, [matchedProduct, batchLineDraft, onBatchLineDraftChange]);
+
+  useEffect(() => {
+    if (!priceMismatchModalOpen) {
+      setSelectedMismatchVariantId(null);
+      return;
+    }
+    const incomingSell = Number(batchLineDraft.new_item_sell_price || 0);
+    const nearest = barcodeVariants.reduce<Product | null>((best, current) => {
+      if (!best) {
+        return current;
+      }
+      const bestGap = Math.abs(Number(best.sell_price || 0) - incomingSell);
+      const currentGap = Math.abs(Number(current.sell_price || 0) - incomingSell);
+      return currentGap < bestGap ? current : best;
+    }, barcodeVariants[0] || matchedProduct || null);
+    setSelectedMismatchVariantId(nearest ? Number(nearest.id) : null);
+    const timer = window.setTimeout(() => {
+      updateSelectedButtonRef.current?.focus();
+    }, 0);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [priceMismatchModalOpen, matchedProduct, barcodeVariants, batchLineDraft.new_item_sell_price]);
+
+  function handleAddLineClick() {
+    if (!matchedProduct) {
+      onAddBatchLine();
+      return;
+    }
+
+    const incomingSell = Number(batchLineDraft.new_item_sell_price || matchedProduct.sell_price || 0);
+    const currentSell = Number(matchedProduct.sell_price || 0);
+    if (Number.isFinite(incomingSell) && Number.isFinite(currentSell) && Math.abs(incomingSell - currentSell) >= 0.01) {
+      setPriceMismatchModalOpen(true);
+      return;
+    }
+
+    onBatchLineDraftChange({
+      ...batchLineDraft,
+      matched_product_id: Number(matchedProduct.id),
+      resolution_mode: "update-existing",
+    });
+    onAddBatchLine();
+  }
 
   return (
     <section className="space-y-4">
@@ -433,10 +499,136 @@ export function SuppliersTab({
               }
             />
           </label>
-          <button type="button" onClick={onAddBatchLine}>
+          <button type="button" onClick={handleAddLineClick}>
             {t("suppliers.addLine")}
           </button>
         </div>
+
+        {priceMismatchModalOpen && matchedProduct ? (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Price mismatch decision"
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                setPriceMismatchModalOpen(false);
+                setSelectedMismatchVariantId(null);
+                return;
+              }
+              if (event.key === "ArrowDown") {
+                event.preventDefault();
+                if (barcodeVariants.length === 0) {
+                  return;
+                }
+                const currentIndex = Math.max(0, barcodeVariants.findIndex((row) => Number(row.id) === Number(selectedMismatchVariantId || 0)));
+                const next = barcodeVariants[(currentIndex + 1) % barcodeVariants.length];
+                setSelectedMismatchVariantId(Number(next.id));
+                return;
+              }
+              if (event.key === "ArrowUp") {
+                event.preventDefault();
+                if (barcodeVariants.length === 0) {
+                  return;
+                }
+                const currentIndex = Math.max(0, barcodeVariants.findIndex((row) => Number(row.id) === Number(selectedMismatchVariantId || 0)));
+                const next = barcodeVariants[(currentIndex - 1 + barcodeVariants.length) % barcodeVariants.length];
+                setSelectedMismatchVariantId(Number(next.id));
+                return;
+              }
+              if (event.key === "Enter") {
+                event.preventDefault();
+                onBatchLineDraftChange({
+                  ...batchLineDraft,
+                  matched_product_id: Number(selectedMismatchVariantId || matchedProduct.id),
+                  resolution_mode: "update-existing",
+                });
+                setPriceMismatchModalOpen(false);
+                onAddBatchLine();
+              }
+            }}
+          >
+            <div className="w-full max-w-3xl rounded-2xl border border-border/80 bg-card p-5 shadow-panel">
+              <h4 className="m-0 text-lg font-semibold text-foreground">{t("suppliers.priceMismatchTitle")}</h4>
+              <p className="mb-3 mt-2 text-sm text-muted-foreground">
+                {t("suppliers.priceMismatchDescription", {
+                  barcode: matchedProduct.barcode_id,
+                  existingSell: Number(matchedProduct.sell_price).toFixed(2),
+                  incomingSell: Number(batchLineDraft.new_item_sell_price || 0).toFixed(2),
+                })}
+              </p>
+              <p className="mb-3 mt-0 text-xs text-muted-foreground">{t("suppliers.priceMismatchHint")}</p>
+              <div className="max-h-72 overflow-auto rounded-xl border border-border/80 bg-background/40">
+                <table className="m-0">
+                  <thead>
+                    <tr>
+                      <th>{t("suppliers.id")}</th>
+                      <th>{t("suppliers.productName")}</th>
+                      <th>{t("suppliers.buyPrice")}</th>
+                      <th>{t("suppliers.sellPrice")}</th>
+                      <th>{t("suppliers.stock")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {barcodeVariants.map((variant) => (
+                      <tr
+                        key={`${variant.barcode_id}-${variant.id}`}
+                        className={Number(selectedMismatchVariantId) === Number(variant.id) ? "bg-cyan-950/35" : undefined}
+                        onClick={() => setSelectedMismatchVariantId(Number(variant.id))}
+                      >
+                        <td>{variant.id}</td>
+                        <td>{variant.name}</td>
+                        <td>{Number(variant.buy_price || 0).toFixed(2)}</td>
+                        <td>{Number(variant.sell_price || 0).toFixed(2)}</td>
+                        <td>{Number(variant.stock || 0).toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <button
+                  ref={updateSelectedButtonRef}
+                  type="button"
+                  className="!ring-2 !ring-cyan-400"
+                  onClick={() => {
+                    onBatchLineDraftChange({
+                      ...batchLineDraft,
+                      matched_product_id: Number(selectedMismatchVariantId || matchedProduct.id),
+                      resolution_mode: "update-existing",
+                    });
+                    setPriceMismatchModalOpen(false);
+                    onAddBatchLine();
+                  }}
+                >
+                  {t("suppliers.updateSelectedVariant")}
+                </button>
+                <button
+                  type="button"
+                  className="!bg-amber-500 !text-slate-900"
+                  onClick={() => {
+                    onBatchLineDraftChange({
+                      ...batchLineDraft,
+                      matched_product_id: Number(matchedProduct.id),
+                      resolution_mode: "create-variant",
+                      create_new_item: true,
+                    });
+                    setPriceMismatchModalOpen(false);
+                    onAddBatchLine();
+                  }}
+                >
+                  {t("suppliers.createNewPriceVariant")}
+                </button>
+              </div>
+              <div className="mt-3 flex justify-end">
+                <button type="button" className="!bg-slate-600 !text-white" onClick={() => setPriceMismatchModalOpen(false)}>
+                  {t("suppliers.cancel")}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         <h4 className="mb-0 mt-4 text-base font-semibold text-foreground">{t("suppliers.batchLines")}</h4>
         <div className="mt-2 overflow-hidden rounded-xl border border-border/80 bg-card/40">

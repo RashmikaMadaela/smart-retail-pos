@@ -22,7 +22,8 @@ function buildSchema(db: Database.Database) {
     );
 
     CREATE TABLE products (
-      barcode_id TEXT PRIMARY KEY,
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      barcode_id TEXT NOT NULL,
       name TEXT NOT NULL,
       buy_price REAL NOT NULL,
       sell_price REAL NOT NULL,
@@ -52,13 +53,14 @@ function buildSchema(db: Database.Database) {
     CREATE TABLE sale_items (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       sale_id INTEGER NOT NULL,
-      product_id TEXT NOT NULL,
+      product_id INTEGER NOT NULL,
+      scanned_barcode TEXT NOT NULL,
       qty REAL NOT NULL,
       sold_at_price REAL NOT NULL,
       item_discount REAL DEFAULT 0.0,
       applied_surcharge REAL DEFAULT 0.0,
       FOREIGN KEY(sale_id) REFERENCES sales(id),
-      FOREIGN KEY(product_id) REFERENCES products(barcode_id)
+      FOREIGN KEY(product_id) REFERENCES products(id)
     );
   `);
 }
@@ -137,7 +139,7 @@ describe("catalog service", () => {
     expect(result.action).toBe("created");
   });
 
-  test("detects existing product and updates instead of creating", () => {
+  test("creates a new variant when same barcode has a different sell price", () => {
     createProduct({
       barcode_id: "P-001",
       name: "Original Widget",
@@ -154,14 +156,16 @@ describe("catalog service", () => {
       sell_price: 105,
     });
 
-    expect(result.action).toBe("updated");
+    expect(result.action).toBe("created");
 
     const db = new Database(dbPath, { fileMustExist: true });
-    const product = db.prepare("SELECT name, stock FROM products WHERE barcode_id = 'P-001'").get() as any;
+    const variants = db.prepare("SELECT id, name, sell_price, stock FROM products WHERE barcode_id = 'P-001' ORDER BY id ASC").all() as any[];
     db.close();
 
-    expect(product.name).toBe("Updated Widget");
-    expect(Number(product.stock)).toBe(15);
+    expect(variants).toHaveLength(2);
+    expect(variants[1].name).toBe("Updated Widget");
+    expect(Number(variants[1].sell_price)).toBe(105);
+    expect(Number(variants[1].stock)).toBe(15);
   });
 
   test("stock deduction on sale removes quantity from product", () => {
@@ -184,7 +188,8 @@ describe("catalog service", () => {
       customer_id: null,
       cart_items: [
         {
-          product_id: created.barcode_id,
+          product_id: created.product_id,
+          scanned_barcode: created.barcode_id,
           qty: 25,
           price: 100,
           discount: 0,
@@ -222,7 +227,8 @@ describe("catalog service", () => {
       customer_id: null,
       cart_items: [
         {
-          product_id: created.barcode_id,
+          product_id: created.product_id,
+          scanned_barcode: created.barcode_id,
           qty: 15, // More than available (10)
           price: 100,
           discount: 0,

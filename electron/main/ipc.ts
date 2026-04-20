@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 import { print as nativePrintPdf } from "pdf-to-printer";
 import { z } from "zod";
 import { login } from "../../backend/services/authService";
-import { createProduct, getInventoryStats, listProducts, queryProductsPage, removeProduct, searchProducts } from "../../backend/services/catalogService";
+import { createProduct, findProductVariantsByBarcode, getInventoryStats, listProducts, queryProductsPage, removeProduct, searchProducts } from "../../backend/services/catalogService";
 import { getFinancialSummary } from "../../backend/services/reportService";
 import { completeHeldSale, holdSale, listHeldSales, processSale, recallHeldSale, voidHeldSale } from "../../backend/services/salesService";
 import {
@@ -50,6 +50,7 @@ const pageQuerySchema = z.object({
 });
 
 const createProductSchema = z.object({
+  id: z.number().int().positive().optional(),
   barcode_id: z.string().optional(),
   name: z.string().min(1),
   qty: z.number().nonnegative(),
@@ -64,7 +65,8 @@ const removeProductSchema = z.object({
 });
 
 const cartItemSchema = z.object({
-  product_id: z.string().min(1),
+  product_id: z.number().int().positive(),
+  scanned_barcode: z.string().optional(),
   qty: z.number().positive(),
   price: z.number().nonnegative(),
   discount: z.number().nonnegative(),
@@ -160,12 +162,15 @@ const receiveBatchSchema = z.object({
   items: z
     .array(
       z.object({
-        product_id: z.string().optional(),
+        product_id: z.number().int().positive().optional(),
+        barcode_id: z.string().optional(),
         qty_received: z.number().positive(),
         unit_cost: z.number().nonnegative(),
         line_discount_pct: z.number().nonnegative().max(100),
+        resolution_mode: z.enum(["update-existing", "create-variant"]).optional(),
         existing_product_update: z
           .object({
+            product_id: z.number().int().positive().optional(),
             sell_price: z.number().positive().optional(),
             default_discount_pct: z.number().nonnegative().max(100).optional(),
             card_surcharge_enabled: z.boolean().optional(),
@@ -384,6 +389,14 @@ export function registerIpcHandlers() {
       return fail("Invalid search payload");
     }
     return ok(searchProducts(parsed.data.searchText, parsed.data.limit ?? 200));
+  });
+
+  ipcMain.handle("catalog.findVariantsByBarcode", async (_event, payload) => {
+    const parsed = z.object({ barcode_id: z.string().min(1), limit: z.number().int().positive().max(200).optional() }).safeParse(payload ?? {});
+    if (!parsed.success) {
+      return fail("Invalid barcode variants payload");
+    }
+    return ok(findProductVariantsByBarcode(parsed.data.barcode_id, parsed.data.limit ?? 30));
   });
 
   ipcMain.handle("catalog.getInventoryStats", async () => {

@@ -187,7 +187,16 @@ export default function App() {
       return [];
     }
 
+    async function findVariantsByBarcodeForLookup(barcode: string): Promise<Product[]> {
+      const response = await posApiClient.findVariantsByBarcode(barcode, 30);
+      if (response.ok) {
+        return response.data;
+      }
+      return [];
+    }
+
   async function createInventoryProductNow(payload: {
+    id?: number;
     barcode_id?: string;
     name: string;
     qty: number;
@@ -195,7 +204,7 @@ export default function App() {
     sell_price: number;
     default_discount_pct?: number;
     card_surcharge_pct?: number;
-  }): Promise<{ ok: true; barcode_id: string; action: "created" | "updated" } | { ok: false }> {
+  }): Promise<{ ok: true; product_id: number; barcode_id: string; action: "created" | "updated" } | { ok: false }> {
     const response = await posApiClient.createProduct(payload);
     if (!response.ok) {
       pushError(response.error || "Unable to add product.");
@@ -206,7 +215,7 @@ export default function App() {
     const actionLabel = response.data.action === "updated" ? "updated" : "added";
     pushMessage(`Product ${actionLabel} successfully (${generatedBarcode}).`);
     await refreshProducts();
-    return { ok: true, barcode_id: generatedBarcode, action: response.data.action };
+    return { ok: true, product_id: Number(response.data.product_id), barcode_id: generatedBarcode, action: response.data.action };
   }
 
   async function removeInventoryProductNow(payload: { barcode_id: string }): Promise<{ ok: true } | { ok: false }> {
@@ -368,12 +377,13 @@ export default function App() {
     const unitDiscount = Number((Number(product.sell_price) * (defaultDiscount / 100)).toFixed(2));
 
     setCart((prev) => {
-      const existing = prev.find((row) => row.product_id === product.barcode_id);
+      const existing = prev.find((row) => row.product_id === Number(product.id));
       if (!existing) {
         return [
           ...prev,
           {
-            product_id: product.barcode_id,
+            product_id: Number(product.id),
+            barcode_id: product.barcode_id,
             name: product.name,
             qty: qtyValue,
             price: Number(product.sell_price),
@@ -383,7 +393,7 @@ export default function App() {
       }
 
       return prev.map((row) =>
-        row.product_id === product.barcode_id
+        row.product_id === Number(product.id)
           ? {
               ...row,
               qty: Number((row.qty + qtyValue).toFixed(2)),
@@ -393,7 +403,7 @@ export default function App() {
     });
   }
 
-  async function addProductToCartById(productId: string, qtyValue: number) {
+  async function addProductToCartById(productId: string, qtyValue: number, resolvedProductId?: number) {
     const normalizedId = productId.trim();
     if (!normalizedId) {
       pushError("Enter a product barcode.");
@@ -404,21 +414,34 @@ export default function App() {
       return;
     }
 
-    let product = products.find(
-      (x) => x.barcode_id.toLowerCase() === normalizedId.toLowerCase() || x.name.toLowerCase() === normalizedId.toLowerCase(),
-    );
+    let product = Number.isFinite(Number(resolvedProductId)) && Number(resolvedProductId) > 0
+      ? products.find((x) => Number(x.id) === Number(resolvedProductId))
+      : products.find(
+          (x) => x.barcode_id.toLowerCase() === normalizedId.toLowerCase() || x.name.toLowerCase() === normalizedId.toLowerCase(),
+        );
 
     if (!product) {
       const remote = await posApiClient.searchProducts(normalizedId, BILLING_REMOTE_SEARCH_LIMIT);
       if (remote.ok) {
-        const exactMatch = remote.data.find(
-          (x: Product) => x.barcode_id.toLowerCase() === normalizedId.toLowerCase() || x.name.toLowerCase() === normalizedId.toLowerCase(),
-        );
-        if (exactMatch) {
-          product = exactMatch;
-        } else if (remote.data.length === 1) {
+        if (Number.isFinite(Number(resolvedProductId)) && Number(resolvedProductId) > 0) {
+          const exactById = remote.data.find((x: Product) => Number(x.id) === Number(resolvedProductId));
+          if (exactById) {
+            product = exactById;
+          }
+        }
+
+        if (!product) {
+          const exactMatch = remote.data.find(
+            (x: Product) => x.barcode_id.toLowerCase() === normalizedId.toLowerCase() || x.name.toLowerCase() === normalizedId.toLowerCase(),
+          );
+          if (exactMatch) {
+            product = exactMatch;
+          }
+        }
+
+        if (!product && remote.data.length === 1) {
           product = remote.data[0];
-        } else if (remote.data.length > 1) {
+        } else if (!product && remote.data.length > 1) {
           pushError(`Multiple products match '${normalizedId}'. Type full barcode/id.`);
           return;
         }
@@ -434,7 +457,7 @@ export default function App() {
     pushMessage(`${product.name} added to cart.`);
   }
 
-  function adjustCartQty(productId: string, delta: number) {
+  function adjustCartQty(productId: number, delta: number) {
     setCart((prev) =>
       prev.flatMap((row) => {
         if (row.product_id !== productId) {
@@ -449,11 +472,11 @@ export default function App() {
     );
   }
 
-  function removeFromCart(productId: string) {
+  function removeFromCart(productId: number) {
     setCart((prev) => prev.filter((row) => row.product_id !== productId));
   }
 
-  function updateCartDiscount(productId: string, mode: "percent" | "amount", rawValue: string) {
+  function updateCartDiscount(productId: number, mode: "percent" | "amount", rawValue: string) {
     const parsed = Number(rawValue || "0");
     const safeValue = Number.isFinite(parsed) ? parsed : 0;
 
@@ -506,7 +529,7 @@ export default function App() {
     }
 
     const surcharge = cart.reduce((acc, item) => {
-      const product = products.find((p) => p.barcode_id === item.product_id);
+      const product = products.find((p) => Number(p.id) === Number(item.product_id));
       if (!product || Number(product.card_surcharge_enabled || 0) !== 1) {
         return acc;
       }
@@ -583,6 +606,7 @@ export default function App() {
       customer_id: customerId,
       cart_items: cart.map((row) => ({
         product_id: row.product_id,
+        scanned_barcode: row.scanned_barcode || row.barcode_id,
         qty: row.qty,
         price: row.price,
         discount: row.discount,
@@ -641,6 +665,7 @@ export default function App() {
       cashier_id: user.id,
       cart_items: cart.map((row) => ({
         product_id: row.product_id,
+        scanned_barcode: row.scanned_barcode || row.barcode_id,
         qty: row.qty,
         price: row.price,
         discount: row.discount,
@@ -674,8 +699,10 @@ export default function App() {
     }
 
     const recalled = (response.data.items || []).map((item: any) => ({
-      product_id: item.product_id,
-      name: item.name || item.product_id,
+      product_id: Number(item.product_id),
+      barcode_id: item.scanned_barcode || item.barcode_id || String(item.product_id),
+      scanned_barcode: item.scanned_barcode || item.barcode_id || String(item.product_id),
+      name: item.name || item.barcode_id || String(item.product_id),
       qty: Number(item.qty),
       price: Number(item.sold_at_price),
       discount: Number(item.item_discount || 0),
@@ -725,6 +752,7 @@ export default function App() {
       payment_status: paymentMode,
       cart_items: cart.map((row) => ({
         product_id: row.product_id,
+        scanned_barcode: row.scanned_barcode || row.barcode_id,
         qty: row.qty,
         price: row.price,
         discount: row.discount,
@@ -886,7 +914,7 @@ export default function App() {
       ? products.find((product) => product.barcode_id.trim().toLowerCase() === normalizedProductId.toLowerCase())
       : null;
 
-    const createNewItem = !matchedProduct;
+    const createNewItem = !matchedProduct || batchLineDraft.resolution_mode === "create-variant";
     if (!createNewItem && !normalizedProductId) {
       pushError("Batch line product id is required.");
       return;
@@ -953,6 +981,8 @@ export default function App() {
         ...batchLineDraft,
         create_new_item: createNewItem,
         product_id: normalizedProductId,
+        matched_product_id: matchedProduct ? Number(matchedProduct.id) : undefined,
+        resolution_mode: createNewItem ? "create-variant" : (batchLineDraft.resolution_mode || "update-existing"),
         unit_cost: String(cost),
         line_discount_pct: String(disc),
         new_item_buy_price: String(Number(batchLineDraft.new_item_buy_price || batchLineDraft.unit_cost || "0")),
@@ -1005,11 +1035,13 @@ export default function App() {
         const surchargeEnabled = Boolean(line.new_item_card_surcharge_enabled) || surchargePct > 0;
 
         return {
-          product_id: line.product_id.trim(),
+          product_id: Number(line.matched_product_id || 0) || undefined,
+          barcode_id: line.product_id.trim(),
+          resolution_mode: line.resolution_mode || (line.create_new_item ? "create-variant" : "update-existing"),
           qty_received: Number(line.qty_received),
           unit_cost: Number(line.unit_cost),
           line_discount_pct: Number(line.line_discount_pct || "0"),
-          new_product: line.create_new_item
+          new_product: line.create_new_item || line.resolution_mode === "create-variant"
             ? {
                 barcode_id: line.product_id.trim(),
                 name: (line.new_item_name || "").trim(),
@@ -1021,9 +1053,10 @@ export default function App() {
                 min_stock: 0,
               }
             : undefined,
-          existing_product_update: line.create_new_item
+              existing_product_update: line.create_new_item || line.resolution_mode === "create-variant"
             ? undefined
             : {
+                product_id: Number(line.matched_product_id || 0) || undefined,
                 sell_price: sellPrice,
                 default_discount_pct: defaultDiscountPct,
                 card_surcharge_enabled: surchargeEnabled,
@@ -1663,7 +1696,8 @@ export default function App() {
                       setCustomerName(customer.name || "");
                       setCustomerContact(customer.contact || "");
                     }}
-                      onSearchProducts={searchProductsForLookup}
+                    onSearchProducts={searchProductsForLookup}
+                    onResolveBarcodeVariants={findVariantsByBarcodeForLookup}
                     onHoldSale={holdCurrentBill}
                     onProcessSale={processCheckout}
                   />
@@ -1689,6 +1723,7 @@ export default function App() {
                   onRefreshProducts={() => void refreshProducts()}
                   onQueryProductsPage={queryInventoryProductsPage}
                   onSearchProducts={searchProductsForLookup}
+                  onResolveBarcodeVariants={findVariantsByBarcodeForLookup}
                   onCreateProduct={(payload) => createInventoryProductNow(payload)}
                   onRemoveProduct={(payload) => removeInventoryProductNow(payload)}
                   isSuperAdmin={isSuperAdmin}

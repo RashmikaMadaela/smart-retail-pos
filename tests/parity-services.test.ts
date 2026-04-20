@@ -11,6 +11,8 @@ import { completeHeldSale, holdSale, processSale, recallHeldSale } from "../back
 
 let testDir = "";
 let dbPath = "";
+const P100_ID = 1;
+const P200_ID = 2;
 
 function buildSchema(db: Database.Database) {
   db.exec(`
@@ -24,7 +26,8 @@ function buildSchema(db: Database.Database) {
     );
 
     CREATE TABLE products (
-      barcode_id TEXT PRIMARY KEY,
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      barcode_id TEXT NOT NULL,
       name TEXT NOT NULL,
       buy_price REAL NOT NULL,
       sell_price REAL NOT NULL,
@@ -59,13 +62,13 @@ function buildSchema(db: Database.Database) {
     CREATE TABLE supplier_batch_items (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       batch_id INTEGER NOT NULL,
-      product_id TEXT NOT NULL,
+      product_id INTEGER NOT NULL,
       qty_received REAL NOT NULL,
       unit_cost REAL NOT NULL,
       line_discount_pct REAL DEFAULT 0.0,
       line_total REAL NOT NULL,
       FOREIGN KEY(batch_id) REFERENCES supplier_batches(id),
-      FOREIGN KEY(product_id) REFERENCES products(barcode_id)
+      FOREIGN KEY(product_id) REFERENCES products(id)
     );
 
     CREATE TABLE supplier_payments (
@@ -107,14 +110,15 @@ function buildSchema(db: Database.Database) {
     CREATE TABLE sale_items (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       sale_id INTEGER NOT NULL,
-      product_id TEXT NOT NULL,
+      product_id INTEGER NOT NULL,
+      scanned_barcode TEXT NOT NULL,
       qty REAL NOT NULL,
       sold_at_price REAL NOT NULL,
       item_discount REAL DEFAULT 0.0,
       cogs_unit_cost REAL,
       applied_surcharge REAL DEFAULT 0.0,
       FOREIGN KEY(sale_id) REFERENCES sales(id),
-      FOREIGN KEY(product_id) REFERENCES products(barcode_id)
+      FOREIGN KEY(product_id) REFERENCES products(id)
     );
 
     CREATE TABLE expenses (
@@ -170,7 +174,7 @@ describe("sales parity", () => {
     const result = processSale({
       cashier_id: 2,
       customer_id: null,
-      cart_items: [{ product_id: "P200", qty: 1, price: 100, discount: 0 }],
+      cart_items: [{ product_id: P200_ID, scanned_barcode: "P200", qty: 1, price: 100, discount: 0 }],
       subtotal: 100,
       global_discount: 0,
       total_amount: 100,
@@ -202,7 +206,7 @@ describe("sales parity", () => {
     const result = processSale({
       cashier_id: 2,
       customer_id: null,
-      cart_items: [{ product_id: "P100", qty: 1, price: 100, discount: 0 }],
+      cart_items: [{ product_id: P100_ID, scanned_barcode: "P100", qty: 1, price: 100, discount: 0 }],
       subtotal: 100,
       global_discount: 0,
       total_amount: 100,
@@ -232,7 +236,7 @@ describe("sales parity", () => {
   test("hold then complete held sale updates stock only on completion", () => {
     const hold = holdSale({
       cashier_id: 2,
-      cart_items: [{ product_id: "P100", qty: 2, price: 100, discount: 0 }],
+      cart_items: [{ product_id: P100_ID, scanned_barcode: "P100", qty: 2, price: 100, discount: 0 }],
       subtotal: 200,
       global_discount: 0,
       total_amount: 200,
@@ -267,7 +271,7 @@ describe("sales parity", () => {
     const sale = processSale({
       cashier_id: 2,
       customer_id: null,
-      cart_items: [{ product_id: "P100", qty: 1, price: 100, discount: 0 }],
+      cart_items: [{ product_id: P100_ID, scanned_barcode: "P100", qty: 1, price: 100, discount: 0 }],
       subtotal: 100,
       global_discount: 0,
       total_amount: 100,
@@ -291,7 +295,7 @@ describe("sales parity", () => {
     const batch = receiveSupplierBatch(
       supplierId,
       "B-COST-1",
-      [{ product_id: "P100", qty_received: 10, unit_cost: 200, line_discount_pct: 0 }],
+      [{ product_id: P100_ID, barcode_id: "P100", qty_received: 10, unit_cost: 200, line_discount_pct: 0 }],
       0,
     );
     expect(batch.ok).toBe(true);
@@ -312,7 +316,7 @@ describe("ledger parity", () => {
     const first = processSale({
       cashier_id: 2,
       customer_id: customer.data.id,
-      cart_items: [{ product_id: "P100", qty: 1, price: 100, discount: 0 }],
+      cart_items: [{ product_id: P100_ID, scanned_barcode: "P100", qty: 1, price: 100, discount: 0 }],
       subtotal: 100,
       global_discount: 0,
       total_amount: 100,
@@ -324,7 +328,7 @@ describe("ledger parity", () => {
     const second = processSale({
       cashier_id: 2,
       customer_id: customer.data.id,
-      cart_items: [{ product_id: "P100", qty: 2, price: 100, discount: 0 }],
+      cart_items: [{ product_id: P100_ID, scanned_barcode: "P100", qty: 2, price: 100, discount: 0 }],
       subtotal: 200,
       global_discount: 0,
       total_amount: 200,
@@ -363,7 +367,7 @@ describe("ledger parity", () => {
     const batch = receiveSupplierBatch(
       supplierId,
       "B-100",
-      [{ product_id: "P100", qty_received: 10, unit_cost: 20, line_discount_pct: 10 }],
+      [{ product_id: P100_ID, barcode_id: "P100", qty_received: 10, unit_cost: 20, line_discount_pct: 10 }],
       50,
     );
     expect(batch.ok).toBe(true);
@@ -396,7 +400,8 @@ describe("ledger parity", () => {
       "B-WAC-1",
       [
         {
-          product_id: "P100",
+          product_id: P100_ID,
+          barcode_id: "P100",
           qty_received: 10,
           unit_cost: 120,
           line_discount_pct: 0,

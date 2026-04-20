@@ -17,10 +17,11 @@ type BillingTabProps = {
   totalAmount: number;
   changeDue: number;
   balanceDue: number;
-  onQuickAddProduct: (productId: string, qty: number) => void | Promise<void>;
-  onUpdateCartDiscount: (productId: string, mode: "percent" | "amount", value: string) => void;
-  onAdjustCartQty: (productId: string, delta: number) => void;
-  onRemoveFromCart: (productId: string) => void;
+  onQuickAddProduct: (productIdOrBarcode: string, qty: number, resolvedProductId?: number) => void | Promise<void>;
+  onResolveBarcodeVariants?: (barcode: string) => Promise<Product[]>;
+  onUpdateCartDiscount: (productId: number, mode: "percent" | "amount", value: string) => void;
+  onAdjustCartQty: (productId: number, delta: number) => void;
+  onRemoveFromCart: (productId: number) => void;
   onPaymentModeChange: (value: "PAID" | "PARTIAL" | "UNPAID") => void;
   onPaymentMethodChange: (value: "CASH" | "CARD") => void;
   onPaidAmountChange: (value: string) => void;
@@ -49,6 +50,7 @@ export function BillingTab({
   changeDue,
   balanceDue,
   onQuickAddProduct,
+  onResolveBarcodeVariants,
   onUpdateCartDiscount,
   onAdjustCartQty,
   onRemoveFromCart,
@@ -72,7 +74,10 @@ export function BillingTab({
   const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
   const [remoteNameSuggestions, setRemoteNameSuggestions] = useState<Product[] | null>(null);
   const [remoteMatchedById, setRemoteMatchedById] = useState<Product | null>(null);
+  const [variantModalState, setVariantModalState] = useState<{ barcode: string; qty: number; options: Product[] } | null>(null);
+  const [variantModalIndex, setVariantModalIndex] = useState(0);
   const scannerRef = useRef<HTMLInputElement | null>(null);
+  const variantFirstButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const itemCount = useMemo(
     () => cart.reduce((acc, item) => acc + Number(item.qty), 0),
@@ -162,7 +167,45 @@ export function BillingTab({
     if (!resolvedId || !Number.isFinite(qty) || qty <= 0) {
       return;
     }
-    await onQuickAddProduct(resolvedId, qty);
+
+    const needle = resolvedId.trim().toLowerCase();
+    const localCandidates = products.filter((product) => product.barcode_id.trim().toLowerCase() === needle);
+    let candidates = localCandidates;
+
+    if (candidates.length <= 1 && onResolveBarcodeVariants) {
+      const remoteCandidates = await onResolveBarcodeVariants(resolvedId);
+      if (remoteCandidates.length > 0) {
+        candidates = remoteCandidates;
+      }
+    }
+
+    if (candidates.length > 1) {
+      setVariantModalState({
+        barcode: resolvedId,
+        qty,
+        options: candidates,
+      });
+      return;
+    }
+
+    if (candidates.length === 1) {
+      await onQuickAddProduct(resolvedId, qty, Number(candidates[0].id));
+    } else {
+      await onQuickAddProduct(resolvedId, qty);
+    }
+    setScannerInput("");
+    setProductNameInput("");
+    setQuickQty("1");
+    scannerRef.current?.focus();
+  }
+
+  async function handleVariantSelect(variant: Product) {
+    if (!variantModalState) {
+      return;
+    }
+    await onQuickAddProduct(variantModalState.barcode, variantModalState.qty, Number(variant.id));
+    setVariantModalState(null);
+    setVariantModalIndex(0);
     setScannerInput("");
     setProductNameInput("");
     setQuickQty("1");
@@ -240,6 +283,20 @@ export function BillingTab({
       return next;
     });
   }, [cart]);
+
+  useEffect(() => {
+    if (!variantModalState) {
+      setVariantModalIndex(0);
+      return;
+    }
+    setVariantModalIndex(0);
+    const timer = window.setTimeout(() => {
+      variantFirstButtonRef.current?.focus();
+    }, 0);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [variantModalState]);
 
   return (
     <section className="space-y-4">
@@ -357,7 +414,7 @@ export function BillingTab({
                     };
                     return (
                       <tr key={item.product_id}>
-                        <td>{item.product_id}</td>
+                        <td>{item.barcode_id || item.product_id}</td>
                         <td>{item.name}</td>
                         <td>
                           <div className="flex items-center gap-1">
@@ -567,6 +624,98 @@ export function BillingTab({
           </div>
         </aside>
       </div>
+
+      {variantModalState ? (
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/70 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Select Variant"
+          onKeyDown={(event) => {
+            if (!variantModalState || variantModalState.options.length === 0) {
+              return;
+            }
+            if (event.key === "Escape") {
+              event.preventDefault();
+              setVariantModalState(null);
+              setVariantModalIndex(0);
+              scannerRef.current?.focus();
+              return;
+            }
+            if (event.key === "ArrowDown") {
+              event.preventDefault();
+              setVariantModalIndex((idx) => (idx + 1) % variantModalState.options.length);
+              return;
+            }
+            if (event.key === "ArrowUp") {
+              event.preventDefault();
+              setVariantModalIndex((idx) => (idx - 1 + variantModalState.options.length) % variantModalState.options.length);
+              return;
+            }
+            if (event.key === "Enter") {
+              event.preventDefault();
+              void handleVariantSelect(variantModalState.options[variantModalIndex] || variantModalState.options[0]);
+            }
+          }}
+        >
+          <div className="w-full max-w-2xl rounded-2xl border border-border/80 bg-card p-5 shadow-panel">
+            <h4 className="m-0 text-lg font-semibold text-foreground">Select Variant</h4>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Multiple variants found for barcode {variantModalState.barcode}. Select the physical variant to continue.
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">Use Up/Down to choose, Enter to select, Esc to cancel.</p>
+            <div className="mt-3 max-h-72 overflow-auto rounded-xl border border-border/80 bg-background/40">
+              <table className="m-0">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Sell</th>
+                    <th>Stock</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {variantModalState.options.map((variant, index) => (
+                    <tr key={variant.id} className={index === variantModalIndex ? "bg-cyan-950/35" : undefined}>
+                      <td>{variant.id}</td>
+                      <td>{variant.name}</td>
+                      <td>{Number(variant.sell_price).toFixed(2)}</td>
+                      <td>{Number(variant.stock).toFixed(2)}</td>
+                      <td>
+                        <button
+                          ref={index === 0 ? variantFirstButtonRef : undefined}
+                          type="button"
+                          className="px-2 py-1 text-xs"
+                          onFocus={() => setVariantModalIndex(index)}
+                          onClick={() => {
+                            void handleVariantSelect(variant);
+                          }}
+                        >
+                          Select
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                className="!bg-slate-600 !text-white"
+                onClick={() => {
+                  setVariantModalState(null);
+                  setVariantModalIndex(0);
+                  scannerRef.current?.focus();
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {isCheckoutConfirmOpen ? (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/70 p-4" role="dialog" aria-modal="true" aria-label={t("billing.checkoutConfirm") }>

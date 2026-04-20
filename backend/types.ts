@@ -5,6 +5,7 @@ export type AuthUser = {
 };
 
 export type Product = {
+  id: number;
   barcode_id: string;
   name: string;
   buy_price: number;
@@ -24,7 +25,8 @@ export type FinancialSummary = {
 };
 
 export type CartItem = {
-  product_id: string;
+  product_id: number;
+  scanned_barcode?: string;
   qty: number;
   price: number;
   discount: number;
@@ -45,7 +47,9 @@ export type HeldSaleRow = {
 };
 
 export type SaleItemRow = {
-  product_id: string;
+  product_id: number;
+  scanned_barcode: string;
+  barcode_id: string | null;
   name: string | null;
   qty: number;
   sold_at_price: number;
@@ -125,11 +129,14 @@ export type SupplierLedger = {
 };
 
 export type SupplierBatchInput = {
-  product_id?: string;
+  product_id?: number;
+  barcode_id?: string;
   qty_received: number;
   unit_cost: number;
   line_discount_pct: number;
+  resolution_mode?: "update-existing" | "create-variant";
   existing_product_update?: {
+    product_id?: number;
     sell_price?: number;
     default_discount_pct?: number;
     card_surcharge_enabled?: boolean;

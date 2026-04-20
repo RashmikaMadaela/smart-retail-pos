@@ -101,6 +101,7 @@ describe("SuppliersTab", () => {
     const onBatchLineDraftChange = vi.fn();
     const products = [
       {
+        id: 1,
         barcode_id: "P001",
         name: "Demo Product",
         buy_price: 100,
@@ -211,5 +212,78 @@ describe("SuppliersTab", () => {
     );
 
     expect(onBatchLineDraftChange).not.toHaveBeenCalled();
+  });
+
+  test("supports keyboard decision in price mismatch modal", () => {
+    const onBatchLineDraftChange = vi.fn();
+    const onAddBatchLine = vi.fn();
+
+    const view = render(
+      <SuppliersTab
+        products={[
+          {
+            id: 1,
+            barcode_id: "P001",
+            name: "Milk",
+            buy_price: 100,
+            sell_price: 200,
+            stock: 10,
+            default_discount_pct: 0,
+            card_surcharge_enabled: 0,
+            card_surcharge_pct: 0,
+          },
+        ]}
+        supplierName=""
+        supplierContact=""
+        suppliers={[{ id: 3, name: "ABC Traders", contact: "0119999999", total_outstanding: 1000 }]}
+        selectedSupplierId={3}
+        batchReference="INV-001"
+        batchPaid="0"
+        batchLineDraft={{
+          product_id: "P001",
+          qty_received: "2",
+          unit_cost: "100",
+          line_discount_pct: "0",
+          new_item_name: "Milk",
+          new_item_sell_price: "250",
+          create_new_item: false,
+        }}
+        batchLines={[]}
+        selectedSupplierBatchId={null}
+        supplierPayAmount=""
+        supplierPayMethod="CASH"
+        supplierPayNote=""
+        supplierLedger={{ supplier: null, batches: [], payments: [] }}
+        onRefreshSuppliers={vi.fn()}
+        onSupplierNameChange={vi.fn()}
+        onSupplierContactChange={vi.fn()}
+        onCreateSupplier={vi.fn()}
+        onUpdateSupplier={vi.fn()}
+        onSelectSupplier={vi.fn()}
+        onBatchReferenceChange={vi.fn()}
+        onBatchPaidChange={vi.fn()}
+        onBatchLineDraftChange={onBatchLineDraftChange}
+        onAddBatchLine={onAddBatchLine}
+        onReceiveSupplierBatch={vi.fn()}
+        onSelectSupplierBatch={vi.fn()}
+        onSupplierPayAmountChange={vi.fn()}
+        onSupplierPayMethodChange={vi.fn()}
+        onSupplierPayNoteChange={vi.fn()}
+        onApplySupplierPayment={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(within(view.container).getByRole("button", { name: "Add Line" }));
+
+    const modal = screen.getByRole("dialog", { name: "Price mismatch decision" });
+    fireEvent.keyDown(modal, { key: "Enter" });
+
+    expect(onBatchLineDraftChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        matched_product_id: 1,
+        resolution_mode: "update-existing",
+      }),
+    );
+    expect(onAddBatchLine).toHaveBeenCalledTimes(1);
   });
 });

@@ -8,6 +8,17 @@ import type {
   SupplierLedger,
 } from "../types";
 
+type ProductVariantRow = {
+  id: number;
+  barcode_id: string;
+  stock: number;
+  buy_price: number;
+  sell_price: number;
+  default_discount_pct: number;
+  card_surcharge_enabled: number;
+  card_surcharge_pct: number;
+};
+
 function nonNegative(value: number, label: string) {
   if (value < 0) {
     throw new Error(`${label} must be non-negative.`);
@@ -331,59 +342,103 @@ export function receiveSupplierBatch(
         throw new Error("Supplier not found.");
       }
 
-      const normalizedItems: Array<SupplierBatchInput & { product_id: string; line_total: number; effective_unit_cost: number }> = [];
+      const normalizedItems: Array<SupplierBatchInput & {
+        product_id: number;
+        barcode_id: string;
+        line_total: number;
+        effective_unit_cost: number;
+      }> = [];
       let totalCost = 0;
 
-      const selectProduct = db.prepare(
+      const selectProductById = db.prepare(
         `
-        SELECT barcode_id, stock, buy_price, sell_price, default_discount_pct, card_surcharge_enabled, card_surcharge_pct
+        SELECT id, barcode_id, stock, buy_price, sell_price, default_discount_pct, card_surcharge_enabled, card_surcharge_pct
         FROM products
-        WHERE barcode_id = ?
+        WHERE id = ?
+        `,
+      );
+
+      const selectProductVariantsByBarcode = db.prepare(
+        `
+        SELECT id, barcode_id, stock, buy_price, sell_price, default_discount_pct, card_surcharge_enabled, card_surcharge_pct
+        FROM products
+        WHERE LOWER(barcode_id) = LOWER(?)
+        ORDER BY sell_price ASC, id ASC
+        `,
+      );
+
+      const insertVariant = db.prepare(
+        `
+        INSERT INTO products (
+          barcode_id, name, buy_price, sell_price, stock, min_stock,
+          default_discount_pct, card_surcharge_enabled, card_surcharge_pct
+        ) VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?)
         `,
       );
 
       for (const item of items) {
-        let productId = (item.product_id || "").trim();
+        const resolutionMode = (item.resolution_mode || "update-existing") as "update-existing" | "create-variant";
+        const requestedProductId = Number(item.product_id || 0);
+        let barcodeId = (item.barcode_id || "").trim();
         const qty = Number(item.qty_received || 0);
         const unitCost = Number(item.unit_cost || 0);
         const lineDiscountPct = Number(item.line_discount_pct || 0);
         const existingProductUpdate = item.existing_product_update;
         const newProduct = item.new_product;
 
-        if (!productId && newProduct) {
-          productId = (newProduct.barcode_id || "").trim() || generateSystemProductId();
+        if (!barcodeId && newProduct) {
+          barcodeId = (newProduct.barcode_id || "").trim();
         }
-        if (!productId) {
-          throw new Error("Product id/barcode is required unless creating a new item.");
+        if (!barcodeId && (!Number.isFinite(requestedProductId) || requestedProductId <= 0)) {
+          barcodeId = generateSystemProductId();
         }
 
-        positive(qty, `Received qty for ${productId}`);
-        nonNegative(unitCost, `Unit cost for ${productId}`);
-        nonNegative(lineDiscountPct, `Line discount percent for ${productId}`);
+        positive(qty, `Received qty for ${barcodeId || requestedProductId}`);
+        nonNegative(unitCost, `Unit cost for ${barcodeId || requestedProductId}`);
+        nonNegative(lineDiscountPct, `Line discount percent for ${barcodeId || requestedProductId}`);
         if (lineDiscountPct > 100) {
-          throw new Error(`Line discount percent cannot exceed 100 for ${productId}.`);
+          throw new Error(`Line discount percent cannot exceed 100 for ${barcodeId || requestedProductId}.`);
         }
 
-        const productExists = selectProduct.get(productId) as
-          | {
-              barcode_id: string;
-              stock: number;
-              buy_price: number;
-              sell_price: number;
-              default_discount_pct: number;
-              card_surcharge_enabled: number;
-              card_surcharge_pct: number;
-            }
-          | undefined;
+        let resolvedProduct: ProductVariantRow | null = null;
 
-        if (!productExists) {
-          if (!newProduct) {
-            throw new Error(`Product not found: ${productId}`);
+        if (Number.isFinite(requestedProductId) && requestedProductId > 0) {
+          resolvedProduct =
+            (selectProductById.get(Number(requestedProductId)) as ProductVariantRow | undefined) || null;
+          if (!resolvedProduct) {
+            throw new Error(`Product not found: ${requestedProductId}`);
           }
+          barcodeId = resolvedProduct.barcode_id;
+        }
 
+        const variantCandidates =
+          !resolvedProduct && barcodeId
+            ? (selectProductVariantsByBarcode.all(barcodeId) as ProductVariantRow[])
+            : [];
+
+        if (!resolvedProduct && variantCandidates.length > 0) {
+          if (resolutionMode === "create-variant" && newProduct) {
+            // Handled in the create branch below.
+          } else if (existingProductUpdate?.product_id) {
+            const exact = variantCandidates.find((candidate) => candidate.id === Number(existingProductUpdate.product_id));
+            if (!exact) {
+              throw new Error(`Selected product variant not found for ${barcodeId}.`);
+            }
+            resolvedProduct = exact;
+          } else if (variantCandidates.length === 1) {
+            resolvedProduct = variantCandidates[0];
+          } else {
+            throw new Error(`Multiple variants found for barcode ${barcodeId}. Select a specific variant.`);
+          }
+        }
+
+        if (!resolvedProduct || (resolutionMode === "create-variant" && newProduct)) {
+          if (!newProduct) {
+            throw new Error(`Product variant not found for ${barcodeId}.`);
+          }
           const productName = (newProduct.name || "").trim();
           if (!productName) {
-            throw new Error(`New product name is required for ${productId}.`);
+            throw new Error(`New product name is required for ${barcodeId || requestedProductId}.`);
           }
 
           const buyPrice = Number(newProduct.buy_price ?? unitCost);
@@ -393,27 +448,22 @@ export function receiveSupplierBatch(
           const surchargeEnabled = newProduct.card_surcharge_enabled ? 1 : 0;
           const surchargePct = Number(newProduct.card_surcharge_pct ?? 0);
 
-          positive(buyPrice, `Buy price for ${productId}`);
-          positive(sellPrice, `Sell price for ${productId}`);
-          nonNegative(defaultDiscountPct, `Default discount percent for ${productId}`);
+          const targetBarcode = (newProduct.barcode_id || "").trim() || barcodeId || generateSystemProductId();
+
+          positive(buyPrice, `Buy price for ${targetBarcode}`);
+          positive(sellPrice, `Sell price for ${targetBarcode}`);
+          nonNegative(defaultDiscountPct, `Default discount percent for ${targetBarcode}`);
           if (defaultDiscountPct > 100) {
-            throw new Error(`Default discount percent cannot exceed 100 for ${productId}.`);
+            throw new Error(`Default discount percent cannot exceed 100 for ${targetBarcode}.`);
           }
-          nonNegative(minStock, `Minimum stock for ${productId}`);
-          nonNegative(surchargePct, `Card surcharge percent for ${productId}`);
+          nonNegative(minStock, `Minimum stock for ${targetBarcode}`);
+          nonNegative(surchargePct, `Card surcharge percent for ${targetBarcode}`);
           if (surchargePct > 100) {
-            throw new Error(`Card surcharge percent cannot exceed 100 for ${productId}.`);
+            throw new Error(`Card surcharge percent cannot exceed 100 for ${targetBarcode}.`);
           }
 
-          db.prepare(
-            `
-            INSERT INTO products (
-              barcode_id, name, buy_price, sell_price, stock, min_stock,
-              default_discount_pct, card_surcharge_enabled, card_surcharge_pct
-            ) VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?)
-            `,
-          ).run(
-            productId,
+          const inserted = insertVariant.run(
+            targetBarcode,
             productName,
             buyPrice,
             sellPrice,
@@ -422,24 +472,31 @@ export function receiveSupplierBatch(
             surchargeEnabled,
             surchargePct,
           );
+
+          const createdId = Number(inserted.lastInsertRowid);
+          resolvedProduct = (selectProductById.get(createdId) as typeof resolvedProduct) || null;
+          if (!resolvedProduct) {
+            throw new Error(`Product variant not found after create: ${targetBarcode}`);
+          }
+          barcodeId = resolvedProduct.barcode_id;
         }
 
         if (existingProductUpdate) {
           if (existingProductUpdate.sell_price != null) {
-            positive(Number(existingProductUpdate.sell_price), `Sell price for ${productId}`);
+            positive(Number(existingProductUpdate.sell_price), `Sell price for ${barcodeId}`);
           }
           if (existingProductUpdate.default_discount_pct != null) {
             const discount = Number(existingProductUpdate.default_discount_pct);
-            nonNegative(discount, `Default discount percent for ${productId}`);
+            nonNegative(discount, `Default discount percent for ${barcodeId}`);
             if (discount > 100) {
-              throw new Error(`Default discount percent cannot exceed 100 for ${productId}.`);
+              throw new Error(`Default discount percent cannot exceed 100 for ${barcodeId}.`);
             }
           }
           if (existingProductUpdate.card_surcharge_pct != null) {
             const surcharge = Number(existingProductUpdate.card_surcharge_pct);
-            nonNegative(surcharge, `Card surcharge percent for ${productId}`);
+            nonNegative(surcharge, `Card surcharge percent for ${barcodeId}`);
             if (surcharge > 100) {
-              throw new Error(`Card surcharge percent cannot exceed 100 for ${productId}.`);
+              throw new Error(`Card surcharge percent cannot exceed 100 for ${barcodeId}.`);
             }
           }
         }
@@ -451,10 +508,12 @@ export function receiveSupplierBatch(
         totalCost += lineTotal;
 
         normalizedItems.push({
-          product_id: productId,
+          product_id: Number(resolvedProduct.id),
+          barcode_id: resolvedProduct.barcode_id,
           qty_received: qty,
           unit_cost: unitCost,
           line_discount_pct: lineDiscountPct,
+          resolution_mode: resolutionMode,
           existing_product_update: existingProductUpdate,
           new_product: newProduct,
           line_total: lineTotal,
@@ -509,7 +568,7 @@ export function receiveSupplierBatch(
           default_discount_pct = ?,
           card_surcharge_enabled = ?,
           card_surcharge_pct = ?
-        WHERE barcode_id = ?
+        WHERE id = ?
         `,
       );
 
@@ -523,8 +582,9 @@ export function receiveSupplierBatch(
           item.line_total,
         );
 
-        const product = selectProduct.get(item.product_id) as
+          const product = selectProductById.get(item.product_id) as
           | {
+            id: number;
               barcode_id: string;
               stock: number;
               buy_price: number;

@@ -1,4 +1,5 @@
 export type Product = {
+  id: number;
   barcode_id: string;
   name: string;
   buy_price?: number;
@@ -7,6 +8,7 @@ export type Product = {
   default_discount_pct?: number;
   card_surcharge_pct?: number;
   card_surcharge_enabled?: number;
+  created_at?: string;
 };
 
 export type InventoryStats = {
@@ -30,11 +32,13 @@ export type Summary = {
 };
 
 export type CartItem = {
-  product_id: string;
+  product_id: number;
+  barcode_id: string;
   name: string;
   qty: number;
   price: number;
   discount: number;
+  scanned_barcode?: string;
 };
 
 export type HeldSale = {
@@ -105,9 +109,11 @@ export type SupplierLedger = {
 
 export type BatchLineDraft = {
   product_id: string;
+  matched_product_id?: number;
   qty_received: string;
   unit_cost: string;
   line_discount_pct: string;
+  resolution_mode?: "update-existing" | "create-variant";
   create_new_item?: boolean;
   new_item_name?: string;
   new_item_sell_price?: string;

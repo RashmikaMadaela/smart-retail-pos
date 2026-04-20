@@ -10,7 +10,7 @@ describe("OperationsTab", () => {
 
     render(
       <OperationsTab
-        products={[{ barcode_id: "P001", name: "Milk", sell_price: 250, stock: 10 }]}
+        products={[{ id: 1, barcode_id: "P001", name: "Milk", sell_price: 250, stock: 10 }]}
         expenses={[]}
         onRefreshExpenses={vi.fn()}
         onCreateExpense={onCreateExpense}

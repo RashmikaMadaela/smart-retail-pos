@@ -44,13 +44,14 @@ function normalizeCartItems(cartItems: CartItem[]): CartItem[] {
   }
 
   return cartItems.map((item) => {
-    const productId = (item.product_id || "").trim();
+    const productId = Number(item.product_id || 0);
+    const scannedBarcode = (item.scanned_barcode || "").trim();
     const qty = Number(item.qty ?? 0);
     const price = Number(item.price ?? 0);
     const discount = Number(item.discount ?? 0);
     const appliedSurcharge = Number(item.applied_surcharge ?? 0);
 
-    if (!productId) {
+    if (!Number.isFinite(productId) || productId <= 0) {
       throw new Error("Cart item product_id is required.");
     }
     positive(qty, `Quantity for ${productId}`);
@@ -63,6 +64,7 @@ function normalizeCartItems(cartItems: CartItem[]): CartItem[] {
 
     return {
       product_id: productId,
+      scanned_barcode: scannedBarcode,
       qty,
       price,
       discount,
@@ -116,7 +118,7 @@ function ensureStockAvailable(items: CartItem[]) {
   const db = getDb();
   for (const item of items) {
     const product = db
-      .prepare("SELECT name, stock FROM products WHERE barcode_id = ?")
+      .prepare("SELECT name, stock FROM products WHERE id = ?")
       .get(item.product_id) as { name: string; stock: number } | undefined;
 
     if (!product) {
@@ -140,7 +142,7 @@ function resolveItemSurcharge(item: CartItem, paymentMethod: string): number {
       `
       SELECT card_surcharge_enabled, card_surcharge_pct
       FROM products
-      WHERE barcode_id = ?
+      WHERE id = ?
       `,
     )
     .get(item.product_id) as { card_surcharge_enabled: number; card_surcharge_pct: number } | undefined;
@@ -233,19 +235,21 @@ export function processSale(input: ProcessSaleInput): ServiceResult<number> {
       const saleId = Number(result.lastInsertRowid);
       const insertItem = db.prepare(
         `
-        INSERT INTO sale_items (sale_id, product_id, qty, sold_at_price, item_discount, cogs_unit_cost, applied_surcharge)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO sale_items (sale_id, product_id, scanned_barcode, qty, sold_at_price, item_discount, cogs_unit_cost, applied_surcharge)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `,
       );
-      const deductStock = db.prepare("UPDATE products SET stock = stock - ? WHERE barcode_id = ?");
-      const selectCogsUnitCost = db.prepare("SELECT buy_price FROM products WHERE barcode_id = ?");
+      const deductStock = db.prepare("UPDATE products SET stock = stock - ? WHERE id = ?");
+      const selectCogsUnitCost = db.prepare("SELECT buy_price, barcode_id FROM products WHERE id = ?");
 
       for (const item of normalizedItems) {
-        const productCostRow = selectCogsUnitCost.get(item.product_id) as { buy_price: number } | undefined;
+        const productCostRow = selectCogsUnitCost.get(item.product_id) as { buy_price: number; barcode_id: string } | undefined;
         const cogsUnitCost = Number(productCostRow?.buy_price || 0);
+        const scannedBarcode = item.scanned_barcode || productCostRow?.barcode_id || "";
         insertItem.run(
           saleId,
           item.product_id,
+          scannedBarcode,
           item.qty,
           item.price,
           item.discount,
@@ -325,9 +329,9 @@ export function getSaleItems(saleId: number): SaleItemRow[] {
   return db
     .prepare(
       `
-      SELECT si.product_id, p.name, si.qty, si.sold_at_price, si.item_discount, si.applied_surcharge
+      SELECT si.product_id, si.scanned_barcode, p.barcode_id, p.name, si.qty, si.sold_at_price, si.item_discount, si.applied_surcharge
       FROM sale_items si
-      LEFT JOIN products p ON p.barcode_id = si.product_id
+      LEFT JOIN products p ON p.id = si.product_id
       WHERE si.sale_id = ?
       ORDER BY si.id ASC
       `,
@@ -412,7 +416,7 @@ export function completeHeldSale(input: CompleteHeldSaleInput): ServiceResult<st
         const items = db
           .prepare(
             `
-            SELECT product_id, qty, sold_at_price AS price, item_discount AS discount
+            SELECT product_id, scanned_barcode, qty, sold_at_price AS price, item_discount AS discount
             FROM sale_items
             WHERE sale_id = ?
             `,
@@ -481,19 +485,21 @@ export function completeHeldSale(input: CompleteHeldSaleInput): ServiceResult<st
 
       const insertItem = db.prepare(
         `
-        INSERT INTO sale_items (sale_id, product_id, qty, sold_at_price, item_discount, cogs_unit_cost, applied_surcharge)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO sale_items (sale_id, product_id, scanned_barcode, qty, sold_at_price, item_discount, cogs_unit_cost, applied_surcharge)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `,
       );
-      const deductStock = db.prepare("UPDATE products SET stock = stock - ? WHERE barcode_id = ?");
-      const selectCogsUnitCost = db.prepare("SELECT buy_price FROM products WHERE barcode_id = ?");
+      const deductStock = db.prepare("UPDATE products SET stock = stock - ? WHERE id = ?");
+      const selectCogsUnitCost = db.prepare("SELECT buy_price, barcode_id FROM products WHERE id = ?");
 
       for (const item of normalizedItems) {
-        const productCostRow = selectCogsUnitCost.get(item.product_id) as { buy_price: number } | undefined;
+        const productCostRow = selectCogsUnitCost.get(item.product_id) as { buy_price: number; barcode_id: string } | undefined;
         const cogsUnitCost = Number(productCostRow?.buy_price || 0);
+        const scannedBarcode = item.scanned_barcode || productCostRow?.barcode_id || "";
         insertItem.run(
           Number(input.sale_id),
           item.product_id,
+          scannedBarcode,
           item.qty,
           item.price,
           item.discount,

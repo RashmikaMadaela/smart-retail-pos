@@ -6,6 +6,7 @@ declare global {
       login: (username: string, password: string) => Promise<{ ok: boolean; data?: any; error?: string }>;
       listProducts: (limit?: number) => Promise<{ ok: boolean; data?: any; error?: string }>;
       searchProducts: (searchText: string, limit?: number) => Promise<{ ok: boolean; data?: any; error?: string }>;
+      findVariantsByBarcode: (barcodeId: string, limit?: number) => Promise<{ ok: boolean; data?: any; error?: string }>;
       getInventoryStats: () => Promise<{ ok: boolean; data?: any; error?: string }>;
       queryProductsPage: (payload: { searchText?: string; lowStockOnly?: boolean; limit?: number; offset?: number }) => Promise<{ ok: boolean; data?: any; error?: string }>;
       createProduct: (payload: unknown) => Promise<{ ok: boolean; data?: any; error?: string }>;

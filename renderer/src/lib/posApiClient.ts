@@ -30,12 +30,14 @@ export const posApiClient = {
   listProducts: (limit = 1000) => safeCall(() => window.posApi.listProducts(limit) as Promise<ApiResult<any[]>>, "Unable to load products"),
   searchProducts: (searchText: string, limit = 200) =>
     safeCall(() => window.posApi.searchProducts(searchText, limit) as Promise<ApiResult<any[]>>, "Unable to search products"),
+  findVariantsByBarcode: (barcodeId: string, limit = 30) =>
+    safeCall(() => window.posApi.findVariantsByBarcode(barcodeId, limit) as Promise<ApiResult<any[]>>, "Unable to resolve barcode variants"),
   getInventoryStats: () =>
     safeCall(() => window.posApi.getInventoryStats() as Promise<ApiResult<InventoryStats>>, "Unable to load inventory stats"),
   queryProductsPage: (payload: { searchText?: string; lowStockOnly?: boolean; limit?: number; offset?: number }) =>
     safeCall(() => window.posApi.queryProductsPage(payload) as Promise<ApiResult<ProductPageResult>>, "Unable to query product page"),
   createProduct: (payload: unknown) =>
-    safeCall(() => window.posApi.createProduct(payload) as Promise<ApiResult<{ barcode_id: string; action: "created" | "updated" }>>, "Unable to create product"),
+    safeCall(() => window.posApi.createProduct(payload) as Promise<ApiResult<{ product_id: number; barcode_id: string; action: "created" | "updated" }>>, "Unable to create product"),
   removeProduct: (payload: { barcode_id: string }) =>
     safeCall(() => window.posApi.removeProduct(payload) as Promise<ApiResult<{ barcode_id: string }>>, "Unable to remove product"),
   getSummary: () => safeCall(() => window.posApi.getSummary() as Promise<ApiResult<any>>, "Unable to load summary"),

@@ -2,6 +2,7 @@ import { getDb } from "../db/sqlite";
 import type { Product } from "../types";
 
 export type CreateProductInput = {
+  id?: number;
   barcode_id?: string;
   name: string;
   qty: number;
@@ -68,11 +69,30 @@ export function searchProducts(searchText: string, limit: number): Product[] {
       SELECT *
       FROM products
       WHERE name LIKE ? OR barcode_id LIKE ?
-      ORDER BY name ASC
+      ORDER BY name ASC, sell_price ASC, id ASC
       LIMIT ?
       `,
     )
     .all(pattern, pattern, limit) as Product[];
+}
+
+export function findProductVariantsByBarcode(barcodeId: string, limit = 30): Product[] {
+  const db = getDb();
+  const barcode = (barcodeId || "").trim();
+  if (!barcode) {
+    return [];
+  }
+  return db
+    .prepare(
+      `
+      SELECT *
+      FROM products
+      WHERE LOWER(barcode_id) = LOWER(?)
+      ORDER BY sell_price ASC, id ASC
+      LIMIT ?
+      `,
+    )
+    .all(barcode, Number(limit)) as Product[];
 }
 
 export function getInventoryStats(): InventoryStats {
@@ -137,7 +157,7 @@ export function queryProductsPage(query: ProductPageQuery): ProductPageResult {
   };
 }
 
-export function createProduct(input: CreateProductInput): { barcode_id: string; action: "created" | "updated" } {
+export function createProduct(input: CreateProductInput): { product_id: number; barcode_id: string; action: "created" | "updated" } {
   const db = getDb();
 
   const productName = (input.name || "").trim();
@@ -173,11 +193,48 @@ export function createProduct(input: CreateProductInput): { barcode_id: string; 
     barcodeId = nextPriyankaStoreBarcode();
   }
 
-  const existing = db
-    .prepare("SELECT barcode_id FROM products WHERE barcode_id = ?")
-    .get(barcodeId) as { barcode_id: string } | undefined;
+  const explicitId = Number(input.id || 0);
+  if (Number.isFinite(explicitId) && explicitId > 0) {
+    const existingById = db
+      .prepare("SELECT id FROM products WHERE id = ?")
+      .get(explicitId) as { id: number } | undefined;
 
-  if (existing) {
+    if (existingById) {
+      db.prepare(
+        `
+        UPDATE products
+        SET
+          barcode_id = ?,
+          name = ?,
+          buy_price = ?,
+          sell_price = ?,
+          stock = ?,
+          default_discount_pct = ?,
+          card_surcharge_enabled = ?,
+          card_surcharge_pct = ?
+        WHERE id = ?
+        `,
+      ).run(
+        barcodeId,
+        productName,
+        buyPrice,
+        sellPrice,
+        qty,
+        defaultDiscount,
+        surchargePct > 0 ? 1 : 0,
+        surchargePct,
+        explicitId,
+      );
+
+      return { product_id: explicitId, barcode_id: barcodeId, action: "updated" };
+    }
+  }
+
+  const existingVariant = db
+    .prepare("SELECT id FROM products WHERE LOWER(barcode_id) = LOWER(?) AND ABS(sell_price - ?) < 0.000001 LIMIT 1")
+    .get(barcodeId, sellPrice) as { id: number } | undefined;
+
+  if (existingVariant) {
     db.prepare(
       `
       UPDATE products
@@ -189,7 +246,7 @@ export function createProduct(input: CreateProductInput): { barcode_id: string; 
         default_discount_pct = ?,
         card_surcharge_enabled = ?,
         card_surcharge_pct = ?
-      WHERE barcode_id = ?
+      WHERE id = ?
       `,
     ).run(
       productName,
@@ -199,13 +256,13 @@ export function createProduct(input: CreateProductInput): { barcode_id: string; 
       defaultDiscount,
       surchargePct > 0 ? 1 : 0,
       surchargePct,
-      barcodeId,
+      existingVariant.id,
     );
 
-    return { barcode_id: barcodeId, action: "updated" };
+    return { product_id: existingVariant.id, barcode_id: barcodeId, action: "updated" };
   }
 
-  db.prepare(
+  const inserted = db.prepare(
     `
     INSERT INTO products (
       barcode_id, name, buy_price, sell_price, stock, min_stock,
@@ -223,7 +280,7 @@ export function createProduct(input: CreateProductInput): { barcode_id: string; 
     surchargePct,
   );
 
-  return { barcode_id: barcodeId, action: "created" };
+  return { product_id: Number(inserted.lastInsertRowid), barcode_id: barcodeId, action: "created" };
 }
 
 export function removeProduct(barcodeId: string): { barcode_id: string } {
