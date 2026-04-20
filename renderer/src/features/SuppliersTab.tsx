@@ -80,7 +80,7 @@ export function SuppliersTab({
   const [remoteProductSuggestions, setRemoteProductSuggestions] = useState<Product[] | null>(null);
   const [priceMismatchModalOpen, setPriceMismatchModalOpen] = useState(false);
   const [selectedMismatchVariantId, setSelectedMismatchVariantId] = useState<number | null>(null);
-  const lastMatchedProductIdRef = useRef<string | null>(null);
+  const lastMatchedProductIdRef = useRef<number | null>(null);
   const updateSelectedButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const matchedProduct = useMemo(() => {
@@ -176,8 +176,15 @@ export function SuppliersTab({
       return;
     }
 
-    const productChanged = lastMatchedProductIdRef.current !== matchedProduct.barcode_id;
-    lastMatchedProductIdRef.current = matchedProduct.barcode_id;
+    const matchedId = Number(matchedProduct.id || 0);
+    if (!Number.isFinite(matchedId) || matchedId <= 0) {
+      return;
+    }
+
+    if (lastMatchedProductIdRef.current === matchedId) {
+      return;
+    }
+    lastMatchedProductIdRef.current = matchedId;
 
     const buyPrice = String(Number(matchedProduct.buy_price || 0));
     const sellPrice = String(Number(matchedProduct.sell_price || 0));
@@ -189,32 +196,19 @@ export function SuppliersTab({
     const nextDraft: BatchLineDraft = {
       ...batchLineDraft,
       create_new_item: false,
-      new_item_name: productChanged ? matchedProduct.name || "" : batchLineDraft.new_item_name || matchedProduct.name || "",
-      new_item_buy_price: productChanged ? buyPrice : batchLineDraft.new_item_buy_price || buyPrice,
-      new_item_sell_price: productChanged ? sellPrice : batchLineDraft.new_item_sell_price || sellPrice,
-      new_item_default_discount_pct: productChanged ? discPct : batchLineDraft.new_item_default_discount_pct || discPct,
-      new_item_card_surcharge_enabled: productChanged
-        ? Number(matchedProduct.card_surcharge_enabled || 0) > 0
-        : Boolean(batchLineDraft.new_item_card_surcharge_enabled),
-      new_item_card_surcharge_pct: productChanged ? surchargePct : batchLineDraft.new_item_card_surcharge_pct || surchargePct,
-      unit_cost: productChanged ? buyPrice : batchLineDraft.unit_cost || buyPrice,
-      line_discount_pct: productChanged ? discPct : batchLineDraft.line_discount_pct || discPct,
+      matched_product_id: matchedId,
+      resolution_mode: "update-existing",
+      new_item_name: matchedProduct.name || "",
+      new_item_buy_price: buyPrice,
+      new_item_sell_price: sellPrice,
+      new_item_default_discount_pct: discPct,
+      new_item_card_surcharge_enabled: Number(matchedProduct.card_surcharge_enabled || 0) > 0,
+      new_item_card_surcharge_pct: surchargePct,
+      unit_cost: buyPrice,
+      line_discount_pct: discPct,
     };
 
-    const isSame =
-      nextDraft.new_item_name === (batchLineDraft.new_item_name || "") &&
-      nextDraft.new_item_buy_price === (batchLineDraft.new_item_buy_price || "") &&
-      nextDraft.new_item_sell_price === (batchLineDraft.new_item_sell_price || "") &&
-      nextDraft.new_item_default_discount_pct === (batchLineDraft.new_item_default_discount_pct || "") &&
-      nextDraft.new_item_card_surcharge_enabled === Boolean(batchLineDraft.new_item_card_surcharge_enabled) &&
-      nextDraft.new_item_card_surcharge_pct === (batchLineDraft.new_item_card_surcharge_pct || "") &&
-      nextDraft.unit_cost === batchLineDraft.unit_cost &&
-      nextDraft.line_discount_pct === batchLineDraft.line_discount_pct &&
-      nextDraft.create_new_item === Boolean(batchLineDraft.create_new_item);
-
-    if (!isSame) {
-      onBatchLineDraftChange(nextDraft);
-    }
+    onBatchLineDraftChange(nextDraft);
   }, [matchedProduct, batchLineDraft, onBatchLineDraftChange]);
 
   useEffect(() => {
@@ -568,6 +562,7 @@ export function SuppliersTab({
                       <th>{t("suppliers.buyPrice")}</th>
                       <th>{t("suppliers.sellPrice")}</th>
                       <th>{t("suppliers.stock")}</th>
+                      <th>{t("suppliers.action")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -582,29 +577,31 @@ export function SuppliersTab({
                         <td>{Number(variant.buy_price || 0).toFixed(2)}</td>
                         <td>{Number(variant.sell_price || 0).toFixed(2)}</td>
                         <td>{Number(variant.stock || 0).toFixed(2)}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="px-2 py-1 text-xs"
+                            onClick={() => {
+                              onBatchLineDraftChange({
+                                ...batchLineDraft,
+                                matched_product_id: Number(variant.id),
+                                resolution_mode: "update-existing",
+                              });
+                              setPriceMismatchModalOpen(false);
+                              onAddBatchLine();
+                            }}
+                          >
+                            {t("suppliers.updateSelectedVariant")}
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <div className="mt-3 flex justify-end gap-2">
                 <button
                   ref={updateSelectedButtonRef}
-                  type="button"
-                  className="!ring-2 !ring-cyan-400"
-                  onClick={() => {
-                    onBatchLineDraftChange({
-                      ...batchLineDraft,
-                      matched_product_id: Number(selectedMismatchVariantId || matchedProduct.id),
-                      resolution_mode: "update-existing",
-                    });
-                    setPriceMismatchModalOpen(false);
-                    onAddBatchLine();
-                  }}
-                >
-                  {t("suppliers.updateSelectedVariant")}
-                </button>
-                <button
                   type="button"
                   className="!bg-amber-500 !text-slate-900"
                   onClick={() => {

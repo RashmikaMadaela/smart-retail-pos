@@ -97,7 +97,7 @@ describe("BillingTab", () => {
     fireEvent.change(within(view.container).getByLabelText("Product ID / Barcode"), { target: { value: "P001" } });
     fireEvent.click(within(view.container).getByRole("button", { name: "Add to Cart" }));
 
-    const modal = screen.getByRole("dialog", { name: "Select Variant" });
+    const modal = screen.getByRole("dialog", { name: "Billing variant selection" });
     fireEvent.keyDown(modal, { key: "ArrowDown" });
     fireEvent.keyDown(modal, { key: "Enter" });
 

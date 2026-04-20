@@ -630,7 +630,7 @@ export function BillingTab({
           className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/70 p-4"
           role="dialog"
           aria-modal="true"
-          aria-label="Select Variant"
+          aria-label={t("billing.variantMenuAria")}
           onKeyDown={(event) => {
             if (!variantModalState || variantModalState.options.length === 0) {
               return;
@@ -659,20 +659,20 @@ export function BillingTab({
           }}
         >
           <div className="w-full max-w-2xl rounded-2xl border border-border/80 bg-card p-5 shadow-panel">
-            <h4 className="m-0 text-lg font-semibold text-foreground">Select Variant</h4>
+            <h4 className="m-0 text-lg font-semibold text-foreground">{t("billing.variantMenuTitle")}</h4>
             <p className="mt-2 text-sm text-muted-foreground">
-              Multiple variants found for barcode {variantModalState.barcode}. Select the physical variant to continue.
+              {t("billing.variantMenuDescription", { barcode: variantModalState.barcode })}
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">Use Up/Down to choose, Enter to select, Esc to cancel.</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t("billing.variantMenuHint")}</p>
             <div className="mt-3 max-h-72 overflow-auto rounded-xl border border-border/80 bg-background/40">
               <table className="m-0">
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Sell</th>
-                    <th>Stock</th>
-                    <th>Action</th>
+                    <th>{t("billing.id")}</th>
+                    <th>{t("billing.name")}</th>
+                    <th>{t("billing.variantSell")}</th>
+                    <th>{t("billing.variantStock")}</th>
+                    <th>{t("billing.action")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -692,7 +692,7 @@ export function BillingTab({
                             void handleVariantSelect(variant);
                           }}
                         >
-                          Select
+                          {t("billing.selectVariant")}
                         </button>
                       </td>
                     </tr>
@@ -710,7 +710,7 @@ export function BillingTab({
                   scannerRef.current?.focus();
                 }}
               >
-                Cancel
+                {t("billing.cancel")}
               </button>
             </div>
           </div>

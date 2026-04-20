@@ -524,7 +524,7 @@ export function InventoryTab({
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4"
           role="dialog"
           aria-modal="true"
-          aria-label="Inventory variant decision"
+          aria-label={t("inventory.variantDecisionAria")}
           onKeyDown={(event) => {
             if (!inventoryVariantModalState || inventoryVariantModalState.options.length === 0) {
               return;
@@ -553,11 +553,11 @@ export function InventoryTab({
           }}
         >
           <div className="w-full max-w-3xl rounded-2xl border border-border/80 bg-card p-5 shadow-panel">
-            <h4 className="m-0 text-lg font-semibold text-foreground">Barcode Already Exists</h4>
+            <h4 className="m-0 text-lg font-semibold text-foreground">{t("inventory.variantDecisionTitle")}</h4>
             <p className="mt-2 text-sm text-muted-foreground">
-              Choose an existing variant to update, or create a new variant for this barcode.
+              {t("inventory.variantDecisionDescription")}
             </p>
-            <p className="mb-3 mt-1 text-xs text-muted-foreground">Use Up/Down to choose, Enter to update selected variant, Esc to cancel.</p>
+            <p className="mb-3 mt-1 text-xs text-muted-foreground">{t("inventory.variantDecisionHint")}</p>
 
             <div className="max-h-72 overflow-auto rounded-xl border border-border/80 bg-background/40">
               <table className="m-0">
@@ -589,7 +589,7 @@ export function InventoryTab({
                             void submitAddProduct({ ...inventoryVariantModalState.payload, id: Number(variant.id) });
                           }}
                         >
-                          Update This Variant
+                          {t("inventory.updateThisVariant")}
                         </button>
                       </td>
                     </tr>
@@ -606,7 +606,7 @@ export function InventoryTab({
                   void submitAddProduct(inventoryVariantModalState.payload);
                 }}
               >
-                Create New Variant
+                {t("inventory.createNewVariant")}
               </button>
               <button
                 type="button"
@@ -616,7 +616,7 @@ export function InventoryTab({
                   setInventoryVariantIndex(0);
                 }}
               >
-                Cancel
+                {t("inventory.cancel")}
               </button>
             </div>
           </div>

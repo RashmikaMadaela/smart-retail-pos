@@ -214,6 +214,125 @@ describe("SuppliersTab", () => {
     expect(onBatchLineDraftChange).not.toHaveBeenCalled();
   });
 
+  test("keeps manual edits when barcode and matched variant stay the same", () => {
+    const onBatchLineDraftChange = vi.fn();
+    const products = [
+      {
+        id: 1,
+        barcode_id: "P001",
+        name: "Demo Product",
+        buy_price: 100,
+        sell_price: 200,
+        stock: 5,
+        default_discount_pct: 2,
+        card_surcharge_enabled: 0,
+        card_surcharge_pct: 0,
+      },
+    ];
+
+    const { rerender } = render(
+      <SuppliersTab
+        products={products}
+        supplierName=""
+        supplierContact=""
+        suppliers={[]}
+        selectedSupplierId={null}
+        batchReference="INV-001"
+        batchPaid="0"
+        batchLineDraft={{
+          product_id: "P001",
+          qty_received: "2",
+          unit_cost: "100",
+          line_discount_pct: "2",
+          create_new_item: false,
+          matched_product_id: 1,
+          resolution_mode: "update-existing",
+          new_item_name: "Demo Product",
+          new_item_buy_price: "100",
+          new_item_sell_price: "200",
+          new_item_default_discount_pct: "2",
+          new_item_card_surcharge_enabled: false,
+          new_item_card_surcharge_pct: "0",
+        }}
+        batchLines={[]}
+        selectedSupplierBatchId={null}
+        supplierPayAmount=""
+        supplierPayMethod="CASH"
+        supplierPayNote=""
+        supplierLedger={{ supplier: null, batches: [], payments: [] }}
+        onRefreshSuppliers={vi.fn()}
+        onSupplierNameChange={vi.fn()}
+        onSupplierContactChange={vi.fn()}
+        onCreateSupplier={vi.fn()}
+        onUpdateSupplier={vi.fn()}
+        onSelectSupplier={vi.fn()}
+        onBatchReferenceChange={vi.fn()}
+        onBatchPaidChange={vi.fn()}
+        onBatchLineDraftChange={onBatchLineDraftChange}
+        onAddBatchLine={vi.fn()}
+        onReceiveSupplierBatch={vi.fn()}
+        onSelectSupplierBatch={vi.fn()}
+        onSupplierPayAmountChange={vi.fn()}
+        onSupplierPayMethodChange={vi.fn()}
+        onSupplierPayNoteChange={vi.fn()}
+        onApplySupplierPayment={vi.fn()}
+      />,
+    );
+
+    onBatchLineDraftChange.mockClear();
+
+    rerender(
+      <SuppliersTab
+        products={products}
+        supplierName=""
+        supplierContact=""
+        suppliers={[]}
+        selectedSupplierId={null}
+        batchReference="INV-001"
+        batchPaid="0"
+        batchLineDraft={{
+          product_id: "P001",
+          qty_received: "2",
+          unit_cost: "145",
+          line_discount_pct: "7",
+          create_new_item: false,
+          matched_product_id: 1,
+          resolution_mode: "update-existing",
+          new_item_name: "Demo Product",
+          new_item_buy_price: "145",
+          new_item_sell_price: "275",
+          new_item_default_discount_pct: "7",
+          new_item_card_surcharge_enabled: false,
+          new_item_card_surcharge_pct: "0",
+        }}
+        batchLines={[]}
+        selectedSupplierBatchId={null}
+        supplierPayAmount=""
+        supplierPayMethod="CASH"
+        supplierPayNote=""
+        supplierLedger={{ supplier: null, batches: [], payments: [] }}
+        onRefreshSuppliers={vi.fn()}
+        onSupplierNameChange={vi.fn()}
+        onSupplierContactChange={vi.fn()}
+        onCreateSupplier={vi.fn()}
+        onUpdateSupplier={vi.fn()}
+        onSelectSupplier={vi.fn()}
+        onBatchReferenceChange={vi.fn()}
+        onBatchPaidChange={vi.fn()}
+        onBatchLineDraftChange={onBatchLineDraftChange}
+        onAddBatchLine={vi.fn()}
+        onReceiveSupplierBatch={vi.fn()}
+        onSelectSupplierBatch={vi.fn()}
+        onSupplierPayAmountChange={vi.fn()}
+        onSupplierPayMethodChange={vi.fn()}
+        onSupplierPayNoteChange={vi.fn()}
+        onApplySupplierPayment={vi.fn()}
+      />,
+    );
+
+    expect(onBatchLineDraftChange).not.toHaveBeenCalled();
+  });
+
   test("supports keyboard decision in price mismatch modal", () => {
     const onBatchLineDraftChange = vi.fn();
     const onAddBatchLine = vi.fn();
