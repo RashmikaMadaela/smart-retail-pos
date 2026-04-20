@@ -388,7 +388,7 @@ export function BillingTab({
             <table className="m-0">
               <thead>
                 <tr>
-                  <th>{t("billing.id")}</th>
+                  <th>{t("billing.itemNo")}</th>
                   <th>{t("billing.name")}</th>
                   <th>{t("billing.qty")}</th>
                   <th>{t("billing.price")}</th>
@@ -406,7 +406,7 @@ export function BillingTab({
                     </td>
                   </tr>
                 ) : (
-                  cart.map((item) => {
+                  cart.map((item, index) => {
                     const discountPct = item.price > 0 ? Number(((item.discount / item.price) * 100).toFixed(2)) : 0;
                     const draft = discountDrafts[item.product_id] || {
                       percent: discountPct.toFixed(2),
@@ -414,7 +414,7 @@ export function BillingTab({
                     };
                     return (
                       <tr key={item.product_id}>
-                        <td>{item.barcode_id || item.product_id}</td>
+                        <td>{index + 1}</td>
                         <td>{item.name}</td>
                         <td>
                           <div className="flex items-center gap-1">
