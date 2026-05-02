@@ -3,7 +3,7 @@ import { BarChart3, Boxes, HandCoins, LayoutDashboard, LogOut, PauseCircle, Rece
 import { useTranslation } from "react-i18next";
 import { LoginView } from "./features/LoginView";
 import type { BarcodePrintItem } from "./features/OperationsTab";
-import type { ActiveTab, BatchLineDraft, Customer, CustomerLedger, Expense, HeldSale, InventoryStats, PeriodBreakdown, Product, ProductPageResult, Summary, Supplier, SupplierBatch, SupplierLedger } from "./features/types";
+import type { ActiveTab, BatchLineDraft, Customer, CustomerLedger, Expense, HeldSale, InventoryStats, PeriodBreakdown, Product, ProductPageResult, Summary, Supplier, SupplierBatch, SupplierLedger, User } from "./features/types";
 import type { PeriodFilter } from "./features/SummaryStrip";
 import { cn } from "./lib/utils";
 import { posApiClient } from "./lib/posApiClient";
@@ -54,14 +54,15 @@ export default function App() {
   const { t } = useTranslation();
   const { locale, setLocale } = useLocaleStore();
   const { user, setUser } = useSessionStore();
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("admin123");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [isNoticeFading, setIsNoticeFading] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [inventoryStats, setInventoryStats] = useState<InventoryStats>({ total: 0, lowStock: 0, outOfStock: 0 });
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("all");
   const [breakdown, setBreakdown] = useState<PeriodBreakdown[] | null>(null);
@@ -142,12 +143,18 @@ export default function App() {
     }
 
     setUser(response.data);
+    if (response.data.role === "Cashier") {
+      setActiveTab("billing");
+    }
     await refreshProducts();
     await refreshSummary();
     await refreshHeldSales(response.data.id);
     await refreshCustomers();
     await refreshSuppliers();
     await refreshExpenses();
+    if (response.data.role === "SuperAdmin" || response.data.role === "Admin") {
+      await refreshUsers();
+    }
   }
 
   async function refreshProducts() {
@@ -266,6 +273,36 @@ export default function App() {
     if (response.ok) {
       setExpenses(response.data);
     }
+  }
+
+  async function refreshUsers() {
+    const response = await posApiClient.listUsers();
+    if (response.ok) {
+      setUsers(response.data);
+    }
+  }
+
+  async function createUserNow(username: string, password: string, role: "Admin" | "Cashier" | "SuperAdmin") {
+    const response = await posApiClient.createUser(username, password, role);
+    if (!response.ok) {
+      pushError(response.error || "Create user failed.");
+      return;
+    }
+    pushMessage(`User created successfully: ${username} (${role})`);
+    await refreshUsers();
+  }
+
+  async function deleteUserNow(userId: number) {
+    if (!window.confirm("Are you sure you want to delete this user?")) {
+      return;
+    }
+    const response = await posApiClient.deleteUser(userId);
+    if (!response.ok) {
+      pushError(response.error || "Delete user failed.");
+      return;
+    }
+    pushMessage("User deleted successfully.");
+    await refreshUsers();
   }
 
   async function createExpenseNow(payload: { description: string; amount: number; category: string }) {
@@ -1445,6 +1482,8 @@ export default function App() {
     },
   ];
 
+  const visibleTabItems = user && user.role === "Cashier" ? tabItems.filter((tab) => tab.id === "billing") : tabItems;
+
   const activeTabConfig = tabItems.find((tab) => tab.id === activeTab) || tabItems[0];
 
   const tabVisuals: Record<ActiveTab, { selectedStyle: CSSProperties; chipBgClass: string; accentColor: string; refreshStyle: CSSProperties }> = {
@@ -1643,7 +1682,7 @@ export default function App() {
           </div>
 
           <nav className="mt-4 space-y-2" aria-label="Primary navigation">
-            {tabItems.map((item) => {
+            {visibleTabItems.map((item) => {
               const Icon = item.icon;
               const selected = activeTab === item.id;
               const visual = tabVisuals[item.id];
@@ -1723,6 +1762,8 @@ export default function App() {
                     setUser(null);
                     setProducts([]);
                     setSummary(null);
+                    setUsername("");
+                    setPassword("");
                   }}
                 >
                   <LogOut size={16} aria-hidden="true" />
@@ -1918,9 +1959,14 @@ export default function App() {
                 <OperationsTab
                   products={products}
                   expenses={expenses}
+                  users={users}
+                  isSuperAdmin={user.role === "SuperAdmin" || user.role === "Admin"}
                   onRefreshExpenses={() => void refreshExpenses()}
                   onCreateExpense={createExpenseNow}
                   onPrintBarcodes={printBarcodePdfNow}
+                  onRefreshUsers={() => void refreshUsers()}
+                  onCreateUser={createUserNow}
+                  onDeleteUser={deleteUserNow}
                 />
               ) : null}
             </Suspense>

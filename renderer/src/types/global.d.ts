@@ -3,8 +3,9 @@ export {};
 declare global {
   interface Window {
     posApi: {
-      login: (username: string, password: string) => Promise<{ ok: boolean; data?: any; error?: string }>;
-      listProducts: (limit?: number) => Promise<{ ok: boolean; data?: any; error?: string }>;
+      login: (username: string, password: string) => Promise<{ ok: boolean; data?: any; error?: string }>;      createUser: (username: string, password: string, role: "Admin" | "Cashier" | "SuperAdmin") => Promise<{ ok: boolean; data?: { userId: number }; error?: string }>;
+      listUsers: () => Promise<{ ok: boolean; data?: any[]; error?: string }>;
+      deleteUser: (userId: number) => Promise<{ ok: boolean; data?: any; error?: string }>;      listProducts: (limit?: number) => Promise<{ ok: boolean; data?: any; error?: string }>;
       searchProducts: (searchText: string, limit?: number) => Promise<{ ok: boolean; data?: any; error?: string }>;
       findVariantsByBarcode: (barcodeId: string, limit?: number) => Promise<{ ok: boolean; data?: any; error?: string }>;
       getInventoryStats: () => Promise<{ ok: boolean; data?: any; error?: string }>;

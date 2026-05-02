@@ -42,6 +42,21 @@ export const posApiClient = {
       () => window.posApi.login(username, password) as Promise<ApiResult<{ id: number; username: string; role: "Admin" | "Cashier" | "SuperAdmin" }>>,
       "Unable to contact auth service",
     ),
+  createUser: (username: string, password: string, role: "Admin" | "Cashier" | "SuperAdmin") =>
+    safeCall(
+      () => window.posApi.createUser(username, password, role) as Promise<ApiResult<{ userId: number }>>,
+      "Unable to create user",
+    ),
+  listUsers: () =>
+    safeCall(
+      () => window.posApi.listUsers() as Promise<ApiResult<{ id: number; username: string; role: "Admin" | "Cashier" | "SuperAdmin" }[]>>,
+      "Unable to list users",
+    ),
+  deleteUser: (userId: number) =>
+    safeCall(
+      () => window.posApi.deleteUser(userId) as Promise<ApiResult<{}>>,
+      "Unable to delete user",
+    ),
   listProducts: (limit = 1000) => safeCall(() => window.posApi.listProducts(limit) as Promise<ApiResult<any[]>>, "Unable to load products"),
   searchProducts: (searchText: string, limit = 200) =>
     safeCall(() => window.posApi.searchProducts(searchText, limit) as Promise<ApiResult<any[]>>, "Unable to search products"),

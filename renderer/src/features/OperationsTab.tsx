@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Eye, EyeOff } from "lucide-react";
 import { SurfaceCard } from "@/components/ui/SurfaceCard";
 import { ToolbarCard } from "@/components/ui/ToolbarCard";
-import type { Expense, Product } from "./types";
+import type { Expense, Product, User } from "./types";
 
 type BarcodeQueueItem = {
   product_id: string;
@@ -16,12 +17,17 @@ export type BarcodePrintItem = BarcodeQueueItem;
 type OperationsTabProps = {
   products: Product[];
   expenses: Expense[];
+  users: User[];
+  isSuperAdmin: boolean;
   onRefreshExpenses: () => void;
   onCreateExpense: (payload: { description: string; amount: number; category: string }) => void;
   onPrintBarcodes: (items: BarcodePrintItem[]) => Promise<void>;
+  onRefreshUsers: () => void;
+  onCreateUser: (username: string, password: string, role: "Admin" | "Cashier" | "SuperAdmin") => void;
+  onDeleteUser: (userId: number) => void;
 };
 
-export function OperationsTab({ products, expenses, onRefreshExpenses, onCreateExpense, onPrintBarcodes }: OperationsTabProps) {
+export function OperationsTab({ products, expenses, users, isSuperAdmin, onRefreshExpenses, onCreateExpense, onPrintBarcodes, onRefreshUsers, onCreateUser, onDeleteUser }: OperationsTabProps) {
   const { t } = useTranslation();
   const [barcodeInput, setBarcodeInput] = useState("");
   const [barcodeQty, setBarcodeQty] = useState("1");
@@ -31,6 +37,11 @@ export function OperationsTab({ products, expenses, onRefreshExpenses, onCreateE
   const [expenseDescription, setExpenseDescription] = useState("");
   const [expenseAmount, setExpenseAmount] = useState("");
   const [expenseCategory, setExpenseCategory] = useState("General");
+
+  const [newUsername, setNewUsername] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newUserRole, setNewUserRole] = useState<"Admin" | "Cashier" | "SuperAdmin">("Cashier");
+  const [showPassword, setShowPassword] = useState(false);
 
   const queueCount = useMemo(() => queue.reduce((acc, item) => acc + item.qty, 0), [queue]);
 
@@ -67,6 +78,16 @@ export function OperationsTab({ products, expenses, onRefreshExpenses, onCreateE
     onCreateExpense({ description: expenseDescription, amount, category: expenseCategory });
     setExpenseDescription("");
     setExpenseAmount("");
+  }
+
+  function submitNewUser() {
+    if (!newUsername.trim() || !newPassword.trim()) {
+      return;
+    }
+    onCreateUser(newUsername.trim(), newPassword, newUserRole);
+    setNewUsername("");
+    setNewPassword("");
+    setNewUserRole("Cashier");
   }
 
   async function printQueueAsPdf() {
@@ -210,6 +231,87 @@ export function OperationsTab({ products, expenses, onRefreshExpenses, onCreateE
           </div>
         </SurfaceCard>
       </div>
+
+      {isSuperAdmin ? (
+        <SurfaceCard title={t("operations.userManagement")} subtitle={t("operations.userManagementSubtitle")}>
+          <div className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto]">
+            <label className="text-sm font-medium text-foreground">
+              {t("operations.username")}
+              <input value={newUsername} onChange={(event) => setNewUsername(event.target.value)} />
+            </label>
+            <label className="text-sm font-medium text-foreground">
+              {t("operations.password")}
+              <div className="relative">
+                <input type={showPassword ? "text" : "password"} value={newPassword} onChange={(event) => setNewPassword(event.target.value)} className="pr-10" />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </label>
+            <label className="text-sm font-medium text-foreground">
+              {t("operations.role")}
+              <select value={newUserRole} onChange={(event) => setNewUserRole(event.target.value as "Admin" | "Cashier" | "SuperAdmin")}>
+                <option value="Cashier">{t("operations.cashier")}</option>
+                <option value="Admin">{t("operations.admin")}</option>
+                <option value="SuperAdmin">{t("operations.superAdmin")}</option>
+              </select>
+            </label>
+            <div className="self-end">
+              <button type="button" onClick={submitNewUser}>
+                {t("operations.createUser")}
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-3 flex justify-end">
+            <button type="button" onClick={onRefreshUsers}>
+              {t("operations.refreshUsers")}
+            </button>
+          </div>
+
+          <div className="mt-3 overflow-hidden rounded-xl border border-border/80 bg-card/40">
+            <table className="m-0">
+              <thead>
+                <tr>
+                  <th>{t("held.id")}</th>
+                  <th>{t("operations.username")}</th>
+                  <th>{t("operations.role")}</th>
+                  <th>{t("operations.actions")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
+                      {t("operations.emptyUsers")}
+                    </td>
+                  </tr>
+                ) : (
+                  users.map((user) => (
+                    <tr key={user.id}>
+                      <td>{user.id}</td>
+                      <td>{user.username}</td>
+                      <td>{user.role}</td>
+                      <td>
+                        {user.role !== "SuperAdmin" ? (
+                          <button type="button" className="danger" onClick={() => onDeleteUser(user.id)}>
+                            {t("operations.deleteUser")}
+                          </button>
+                        ) : null}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </SurfaceCard>
+      ) : null}
     </section>
   );
 }

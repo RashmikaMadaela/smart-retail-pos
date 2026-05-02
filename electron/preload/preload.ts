@@ -3,6 +3,12 @@ import { contextBridge, ipcRenderer } from "electron";
 const api = {
   login: (username: string, password: string) =>
     ipcRenderer.invoke("auth.login", { username, password }),
+  createUser: (username: string, password: string, role: "Admin" | "Cashier" | "SuperAdmin") =>
+    ipcRenderer.invoke("auth.createUser", { username, password, role }),
+  listUsers: () =>
+    ipcRenderer.invoke("auth.listUsers"),
+  deleteUser: (userId: number) =>
+    ipcRenderer.invoke("auth.deleteUser", { userId }),
   listProducts: (limit?: number) =>
     ipcRenderer.invoke("catalog.listProducts", { limit }),
   searchProducts: (searchText: string, limit?: number) =>

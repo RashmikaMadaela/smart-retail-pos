@@ -3,7 +3,7 @@ import type { OpenDialogOptions } from "electron";
 import { pathToFileURL } from "node:url";
 import { print as nativePrintPdf } from "pdf-to-printer";
 import { z } from "zod";
-import { login } from "../../backend/services/authService";
+import { login, createUser, listUsers, deleteUser } from "../../backend/services/authService";
 import { createProduct, findProductVariantsByBarcode, getInventoryStats, listProducts, queryProductsPage, removeProduct, searchProducts } from "../../backend/services/catalogService";
 import { getFinancialSummary, getFinancialSummaryByPeriod, getDailyBreakdown, getMonthlyBreakdown, getYearlyBreakdown } from "../../backend/services/reportService";
 import { completeHeldSale, holdSale, listHeldSales, processSale, recallHeldSale, voidHeldSale } from "../../backend/services/salesService";
@@ -31,6 +31,16 @@ import { clearAllBusinessData, clearInventoryStock, exportInventoryToJson, impor
 const loginSchema = z.object({
   username: z.string().min(1),
   password: z.string().min(1),
+});
+
+const createUserSchema = z.object({
+  username: z.string().min(1),
+  password: z.string().min(1),
+  role: z.enum(["Admin", "Cashier", "SuperAdmin"]),
+});
+
+const deleteUserSchema = z.object({
+  userId: z.number().int().positive(),
 });
 
 const searchSchema = z.object({
@@ -384,6 +394,28 @@ export function registerIpcHandlers() {
     }
     const result = login(parsed.data.username, parsed.data.password);
     return result.ok ? ok(result.user) : fail(result.error);
+  });
+
+  ipcMain.handle("auth.createUser", async (_event, payload) => {
+    const parsed = createUserSchema.safeParse(payload);
+    if (!parsed.success) {
+      return fail("Invalid create user payload");
+    }
+    const result = createUser(parsed.data.username, parsed.data.password, parsed.data.role);
+    return result.ok ? ok({ userId: result.userId }) : fail(result.error);
+  });
+
+  ipcMain.handle("auth.listUsers", async () => {
+    return ok(listUsers());
+  });
+
+  ipcMain.handle("auth.deleteUser", async (_event, payload) => {
+    const parsed = deleteUserSchema.safeParse(payload);
+    if (!parsed.success) {
+      return fail("Invalid delete user payload");
+    }
+    const result = deleteUser(parsed.data.userId);
+    return result.ok ? ok({}) : fail(result.error);
   });
 
   ipcMain.handle("catalog.listProducts", async (_event, payload) => {

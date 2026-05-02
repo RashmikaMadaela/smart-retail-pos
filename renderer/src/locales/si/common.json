@@ -110,7 +110,20 @@
     "category": "වර්ගය",
     "recordExpense": "වියදම සටහන් කරන්න",
     "date": "දිනය",
-    "emptyExpenses": "වියදම් හමු නොවීය."
+    "emptyExpenses": "වියදම් හමු නොවීය.",
+    "userManagement": "පරිශීලක කළමනාකරණය",
+    "userManagementSubtitle": "Cashier සාදන්න සහ කළමනාකරණය කරන්න (Admin පමණි)",
+    "username": "පරිශීලක නාමය",
+    "password": "රහස් පදය",
+    "role": "භූමිකාව",
+    "cashier": "cashier",
+    "admin": "admin",
+    "superAdmin": "superAdmin",
+    "createUser": "පරිශීලක සාදන්න",
+    "refreshUsers": "පරිශීලකයන් නැවුම් කරන්න",
+    "emptyUsers": "පරිශීලකයන් හමු නොවීය",
+    "actions": "ක්‍රියාවන්",
+    "deleteUser": "මකන්න"
   },
   "messages": {
     "barcodesPrinted": "{{printer}} මුද්‍රකයේ බාර්කෝඩ් මුද්‍රණය විය. PDF සුරකින ලදී: {{path}}",

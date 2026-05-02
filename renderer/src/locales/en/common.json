@@ -110,7 +110,20 @@
     "category": "Category",
     "recordExpense": "Record Expense",
     "date": "Date",
-    "emptyExpenses": "No expenses found."
+    "emptyExpenses": "No expenses found.",
+    "userManagement": "User Management",
+    "userManagementSubtitle": "Create and manage cashier accounts (Admin only)",
+    "username": "Username",
+    "password": "Password",
+    "role": "Role",
+    "cashier": "Cashier",
+    "admin": "Admin",
+    "superAdmin": "SuperAdmin",
+    "createUser": "Create User",
+    "refreshUsers": "Refresh Users",
+    "emptyUsers": "No users found",
+    "actions": "Actions",
+    "deleteUser": "Delete"
   },
   "messages": {
     "barcodesPrinted": "Barcodes printed on {{printer}}. PDF saved: {{path}}",

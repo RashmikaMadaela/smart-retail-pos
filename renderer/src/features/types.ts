@@ -97,6 +97,12 @@ export type Expense = {
   category: string;
 };
 
+export type User = {
+  id: number;
+  username: string;
+  role: "Admin" | "Cashier" | "SuperAdmin";
+};
+
 export type CustomerLedger = {
   customer: Customer | null;
   sales: Array<{
