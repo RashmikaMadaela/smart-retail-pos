@@ -5,7 +5,7 @@ import { print as nativePrintPdf } from "pdf-to-printer";
 import { z } from "zod";
 import { login } from "../../backend/services/authService";
 import { createProduct, findProductVariantsByBarcode, getInventoryStats, listProducts, queryProductsPage, removeProduct, searchProducts } from "../../backend/services/catalogService";
-import { getFinancialSummary } from "../../backend/services/reportService";
+import { getFinancialSummary, getFinancialSummaryByPeriod, getDailyBreakdown, getMonthlyBreakdown, getYearlyBreakdown } from "../../backend/services/reportService";
 import { completeHeldSale, holdSale, listHeldSales, processSale, recallHeldSale, voidHeldSale } from "../../backend/services/salesService";
 import {
   createOrGetCustomer,
@@ -216,6 +216,17 @@ const expenseCreateSchema = z.object({
   description: z.string().min(1),
   amount: z.number().positive(),
   category: z.string().optional(),
+});
+
+const reportPeriodSchema = z.object({
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+});
+
+const reportBreakdownSchema = z.object({
+  startDate: z.string(),
+  endDate: z.string(),
+  granularity: z.enum(["daily", "monthly", "yearly"]),
 });
 
 const salePrintSchema = z.object({
@@ -446,6 +457,33 @@ export function registerIpcHandlers() {
 
   ipcMain.handle("report.summary", async () => {
     return ok(getFinancialSummary());
+  });
+
+  ipcMain.handle("report.summaryByPeriod", async (_event, payload) => {
+    const parsed = reportPeriodSchema.safeParse(payload ?? {});
+    if (!parsed.success) {
+      return fail("Invalid report period payload");
+    }
+    return ok(getFinancialSummaryByPeriod(parsed.data.startDate, parsed.data.endDate));
+  });
+
+  ipcMain.handle("report.breakdown", async (_event, payload) => {
+    const parsed = reportBreakdownSchema.safeParse(payload);
+    if (!parsed.success) {
+      return fail("Invalid report breakdown payload");
+    }
+    const { startDate, endDate, granularity } = parsed.data;
+    
+    let breakdown;
+    if (granularity === "daily") {
+      breakdown = getDailyBreakdown(startDate, endDate);
+    } else if (granularity === "monthly") {
+      breakdown = getMonthlyBreakdown(startDate, endDate);
+    } else {
+      breakdown = getYearlyBreakdown(startDate, endDate);
+    }
+    
+    return ok(breakdown);
   });
 
   ipcMain.handle("sales.processSale", async (_event, payload) => {

@@ -31,6 +31,8 @@ beforeEach(() => {
     createProduct: vi.fn().mockResolvedValue({ ok: true, data: { product_id: 1, barcode_id: "PS-10001", action: "created" } }),
     removeProduct: vi.fn().mockResolvedValue({ ok: true, data: { barcode_id: "PS-10001" } }),
     getSummary: vi.fn().mockResolvedValue({ ok: true, data: {} }),
+    getSummaryByPeriod: vi.fn().mockResolvedValue({ ok: true, data: { gross_sales: 0, cogs: 0, expenses: 0, net_profit: 0 } }),
+    getReportBreakdown: vi.fn().mockResolvedValue({ ok: true, data: [] }),
     listExpenses: vi.fn().mockResolvedValue({ ok: true, data: [] }),
     createExpense: vi.fn().mockResolvedValue({ ok: true, data: { expense_id: 1 } }),
     exportSaleBillPdf: vi.fn().mockResolvedValue({ ok: true, data: { file_path: "E:/tmp/bill.pdf" } }),

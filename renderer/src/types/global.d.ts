@@ -12,6 +12,8 @@ declare global {
       createProduct: (payload: unknown) => Promise<{ ok: boolean; data?: any; error?: string }>;
       removeProduct: (payload: unknown) => Promise<{ ok: boolean; data?: any; error?: string }>;
       getSummary: () => Promise<{ ok: boolean; data?: any; error?: string }>;
+      getSummaryByPeriod: (payload?: { startDate?: string; endDate?: string }) => Promise<{ ok: boolean; data?: any; error?: string }>;
+      getReportBreakdown: (payload: { startDate: string; endDate: string; granularity: "daily" | "monthly" | "yearly" }) => Promise<{ ok: boolean; data?: any; error?: string }>;
       processSale: (payload: unknown) => Promise<{ ok: boolean; data?: any; error?: string }>;
       holdSale: (payload: unknown) => Promise<{ ok: boolean; data?: any; error?: string }>;
       listHeldSales: (cashierId?: number) => Promise<{ ok: boolean; data?: any; error?: string }>;

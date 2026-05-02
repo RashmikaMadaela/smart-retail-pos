@@ -3,7 +3,8 @@ import { BarChart3, Boxes, HandCoins, LayoutDashboard, LogOut, PauseCircle, Rece
 import { useTranslation } from "react-i18next";
 import { LoginView } from "./features/LoginView";
 import type { BarcodePrintItem } from "./features/OperationsTab";
-import type { ActiveTab, BatchLineDraft, Customer, CustomerLedger, Expense, HeldSale, InventoryStats, Product, ProductPageResult, Summary, Supplier, SupplierBatch, SupplierLedger } from "./features/types";
+import type { ActiveTab, BatchLineDraft, Customer, CustomerLedger, Expense, HeldSale, InventoryStats, PeriodBreakdown, Product, ProductPageResult, Summary, Supplier, SupplierBatch, SupplierLedger } from "./features/types";
+import type { PeriodFilter } from "./features/SummaryStrip";
 import { cn } from "./lib/utils";
 import { posApiClient } from "./lib/posApiClient";
 import { useBillingStore } from "./store/useBillingStore";
@@ -62,6 +63,8 @@ export default function App() {
   const [inventoryStats, setInventoryStats] = useState<InventoryStats>({ total: 0, lowStock: 0, outOfStock: 0 });
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("all");
+  const [breakdown, setBreakdown] = useState<PeriodBreakdown[] | null>(null);
   const { activeTab, setActiveTab } = useShellStore();
   const {
     paymentMode,
@@ -1135,11 +1138,97 @@ export default function App() {
   }
 
   async function refreshSummary() {
-    const response = await posApiClient.getSummary();
-    if (response.ok) {
-      setSummary(response.data);
+    const { startDate, endDate, granularity } = getPeriodDates(periodFilter);
+    
+    if (periodFilter === "all") {
+      const response = await posApiClient.getSummary();
+      if (response.ok) {
+        setSummary(response.data);
+      }
+      setBreakdown(null);
+    } else {
+      const response = await posApiClient.getSummaryByPeriod({ startDate, endDate });
+      if (response.ok) {
+        setSummary(response.data);
+      }
+      
+      // Fetch breakdown data
+      if (startDate && endDate && granularity) {
+        const breakdownResponse = await posApiClient.getReportBreakdown({
+          startDate,
+          endDate,
+          granularity,
+        });
+        if (breakdownResponse.ok) {
+          setBreakdown(breakdownResponse.data);
+        }
+      }
     }
   }
+
+  function getPeriodDates(filter: PeriodFilter): { 
+    startDate?: string; 
+    endDate?: string; 
+    granularity?: "daily" | "monthly" | "yearly";
+  } {
+    const now = new Date();
+    const formatDate = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    switch (filter) {
+      case "today": {
+        const start = formatDate(now);
+        const end = formatDate(now);
+        return { startDate: `${start} 00:00:00`, endDate: `${end} 23:59:59`, granularity: "daily" };
+      }
+      case "week": {
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay());
+        const weekEnd = new Date(now);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        return { 
+          startDate: `${formatDate(weekStart)} 00:00:00`, 
+          endDate: `${formatDate(weekEnd)} 23:59:59`,
+          granularity: "daily",
+        };
+      }
+      case "month": {
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        return { 
+          startDate: `${formatDate(monthStart)} 00:00:00`, 
+          endDate: `${formatDate(monthEnd)} 23:59:59`,
+          granularity: "daily",
+        };
+      }
+      case "year": {
+        const yearStart = new Date(now.getFullYear(), 0, 1);
+        const yearEnd = new Date(now.getFullYear(), 11, 31);
+        return { 
+          startDate: `${formatDate(yearStart)} 00:00:00`, 
+          endDate: `${formatDate(yearEnd)} 23:59:59`,
+          granularity: "monthly",
+        };
+      }
+      default:
+        return {};
+    }
+  }
+
+  async function handlePeriodFilterChange(filter: PeriodFilter) {
+    setPeriodFilter(filter);
+    setBreakdown(null);
+  }
+
+  useEffect(() => {
+    if (user) {
+      refreshSummary();
+    }
+  }, [periodFilter, user]);
 
   async function clearInventoryStockNow() {
     if (!isSuperAdmin) {
@@ -1685,7 +1774,15 @@ export default function App() {
                     </section>
                   }
                 >
-                  <SummaryStrip summary={summary} netColor={netColor} isSuperAdmin={isSuperAdmin} onClearAllData={() => void clearAllDataNow()} />
+                  <SummaryStrip 
+                    summary={summary} 
+                    netColor={netColor} 
+                    isSuperAdmin={isSuperAdmin} 
+                    onClearAllData={() => void clearAllDataNow()}
+                    periodFilter={periodFilter}
+                    onPeriodFilterChange={handlePeriodFilterChange}
+                    breakdown={breakdown}
+                  />
                 </Suspense>
               ) : null}
 

@@ -1,17 +1,30 @@
 import { lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
-import type { Summary } from "./types";
+import type { Summary, PeriodBreakdown } from "./types";
 
 const SummaryCharts = lazy(() => import("./SummaryCharts"));
+
+export type PeriodFilter = "today" | "week" | "month" | "year" | "all";
 
 type SummaryStripProps = {
   summary: Summary | null;
   netColor: string;
   isSuperAdmin?: boolean;
   onClearAllData?: () => void;
+  periodFilter?: PeriodFilter;
+  onPeriodFilterChange?: (filter: PeriodFilter) => void;
+  breakdown?: PeriodBreakdown[] | null;
 };
 
-export function SummaryStrip({ summary, netColor, isSuperAdmin = false, onClearAllData }: SummaryStripProps) {
+export function SummaryStrip({ 
+  summary, 
+  netColor, 
+  isSuperAdmin = false, 
+  onClearAllData,
+  periodFilter = "all",
+  onPeriodFilterChange,
+  breakdown,
+}: SummaryStripProps) {
   const { t } = useTranslation();
   const safeSummary = summary ?? {
     gross_sales: 0,
@@ -27,11 +40,25 @@ export function SummaryStrip({ summary, netColor, isSuperAdmin = false, onClearA
     { name: t("summary.profit"), value: Number(safeSummary.net_profit.toFixed(2)) },
   ];
 
-  const trendData = [
-    { bucket: "-3", amount: Number((safeSummary.gross_sales * 0.55).toFixed(2)) },
-    { bucket: "-2", amount: Number((safeSummary.gross_sales * 0.72).toFixed(2)) },
-    { bucket: "-1", amount: Number((safeSummary.gross_sales * 0.88).toFixed(2)) },
-    { bucket: "Now", amount: Number(safeSummary.gross_sales.toFixed(2)) },
+  // Use breakdown for trend data if available, otherwise use mock data
+  const trendData = breakdown && breakdown.length > 0 
+    ? breakdown.map((item) => ({
+        bucket: item.period,
+        amount: Number(item.gross_sales.toFixed(2)),
+      }))
+    : [
+        { bucket: "-3", amount: Number((safeSummary.gross_sales * 0.55).toFixed(2)) },
+        { bucket: "-2", amount: Number((safeSummary.gross_sales * 0.72).toFixed(2)) },
+        { bucket: "-1", amount: Number((safeSummary.gross_sales * 0.88).toFixed(2)) },
+        { bucket: "Now", amount: Number(safeSummary.gross_sales.toFixed(2)) },
+      ];
+
+  const periodButtons: Array<{ value: PeriodFilter; label: string }> = [
+    { value: "today", label: t("summary.today") || "Today" },
+    { value: "week", label: t("summary.thisWeek") || "This Week" },
+    { value: "month", label: t("summary.thisMonth") || "This Month" },
+    { value: "year", label: t("summary.thisYear") || "This Year" },
+    { value: "all", label: t("summary.allTime") || "All Time" },
   ];
 
   return (
@@ -49,6 +76,28 @@ export function SummaryStrip({ summary, netColor, isSuperAdmin = false, onClearA
           </div>
         </div>
       ) : null}
+
+      {onPeriodFilterChange && (
+        <div className="xl:col-span-2 rounded-xl border border-border/80 bg-background/45 p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-medium text-muted-foreground mr-2">Period:</span>
+            {periodButtons.map((btn) => (
+              <button
+                key={btn.value}
+                type="button"
+                onClick={() => onPeriodFilterChange(btn.value)}
+                className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                  periodFilter === btn.value
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                }`}
+              >
+                {btn.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <article className="rounded-xl border border-border/80 bg-background/45 p-4">

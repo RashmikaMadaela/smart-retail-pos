@@ -17,6 +17,10 @@ const api = {
   removeProduct: (payload: unknown) =>
     ipcRenderer.invoke("catalog.removeProduct", payload),
   getSummary: () => ipcRenderer.invoke("report.summary"),
+  getSummaryByPeriod: (payload?: { startDate?: string; endDate?: string }) =>
+    ipcRenderer.invoke("report.summaryByPeriod", payload),
+  getReportBreakdown: (payload: { startDate: string; endDate: string; granularity: "daily" | "monthly" | "yearly" }) =>
+    ipcRenderer.invoke("report.breakdown", payload),
   processSale: (payload: unknown) => ipcRenderer.invoke("sales.processSale", payload),
   holdSale: (payload: unknown) => ipcRenderer.invoke("sales.holdSale", payload),
   listHeldSales: (cashierId?: number) =>

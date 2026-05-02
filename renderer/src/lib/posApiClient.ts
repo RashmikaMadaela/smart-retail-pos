@@ -13,6 +13,21 @@ type ProductPageResult = {
   offset: number;
 };
 
+type FinancialSummary = {
+  gross_sales: number;
+  cogs: number;
+  expenses: number;
+  net_profit: number;
+};
+
+type PeriodBreakdown = {
+  period: string;
+  gross_sales: number;
+  cogs: number;
+  expenses: number;
+  net_profit: number;
+};
+
 async function safeCall<T>(fn: () => Promise<ApiResult<T>>, fallback: string): Promise<ApiResult<T>> {
   try {
     return await fn();
@@ -40,7 +55,11 @@ export const posApiClient = {
     safeCall(() => window.posApi.createProduct(payload) as Promise<ApiResult<{ product_id: number; barcode_id: string; action: "created" | "updated" }>>, "Unable to create product"),
   removeProduct: (payload: { barcode_id: string }) =>
     safeCall(() => window.posApi.removeProduct(payload) as Promise<ApiResult<{ barcode_id: string }>>, "Unable to remove product"),
-  getSummary: () => safeCall(() => window.posApi.getSummary() as Promise<ApiResult<any>>, "Unable to load summary"),
+  getSummary: () => safeCall(() => window.posApi.getSummary() as Promise<ApiResult<FinancialSummary>>, "Unable to load summary"),
+  getSummaryByPeriod: (payload?: { startDate?: string; endDate?: string }) =>
+    safeCall(() => window.posApi.getSummaryByPeriod(payload) as Promise<ApiResult<FinancialSummary>>, "Unable to load period summary"),
+  getReportBreakdown: (payload: { startDate: string; endDate: string; granularity: "daily" | "monthly" | "yearly" }) =>
+    safeCall(() => window.posApi.getReportBreakdown(payload) as Promise<ApiResult<PeriodBreakdown[]>>, "Unable to load report breakdown"),
 
   processSale: (payload: unknown) =>
     safeCall(() => window.posApi.processSale(payload) as Promise<ApiResult<{ sale_id: number }>>, "Unable to process sale"),

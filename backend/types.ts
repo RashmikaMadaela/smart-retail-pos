@@ -24,6 +24,14 @@ export type FinancialSummary = {
   net_profit: number;
 };
 
+export type PeriodBreakdown = {
+  period: string;
+  gross_sales: number;
+  cogs: number;
+  expenses: number;
+  net_profit: number;
+};
+
 export type CartItem = {
   product_id: number;
   scanned_barcode?: string;

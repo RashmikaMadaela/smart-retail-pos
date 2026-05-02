@@ -319,7 +319,12 @@
     "danger": "Clear all business data tables. This action cannot be undone.",
     "clearAll": "Clear All Data",
     "grossSales": "Gross Sales",
-    "netProfit": "Net Profit"
+    "netProfit": "Net Profit",
+    "today": "Today",
+    "thisWeek": "This Week",
+    "thisMonth": "This Month",
+    "thisYear": "This Year",
+    "allTime": "All Time"
   },
   "error": {
     "title": "Something went wrong",
