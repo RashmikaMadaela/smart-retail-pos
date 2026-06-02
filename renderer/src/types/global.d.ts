@@ -45,6 +45,8 @@ declare global {
       importInventoryData: (payload: { role: "SuperAdmin"; file_path: string }) => Promise<{ ok: boolean; data?: any; error?: string }>;
       pickInventoryImportFile: (role: "SuperAdmin") => Promise<{ ok: boolean; data?: any; error?: string }>;
       openInventoryExportFolder: (role: "SuperAdmin") => Promise<{ ok: boolean; data?: any; error?: string }>;
+      processReturn: (payload: unknown) => Promise<{ ok: boolean; data?: any; error?: string }>;
+      listReturns: (limit?: number) => Promise<{ ok: boolean; data?: any; error?: string }>;
     };
   }
 }

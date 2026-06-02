@@ -80,6 +80,7 @@ export function BillingTab({
   const [stockWarningMessage, setStockWarningMessage] = useState<string | null>(null);
   const scannerRef = useRef<HTMLInputElement | null>(null);
   const variantFirstButtonRef = useRef<HTMLButtonElement | null>(null);
+  const handleBarcodeInputRef = useRef(handleBarcodeInput);
 
   const itemCount = useMemo(
     () => cart.reduce((acc, item) => acc + Number(item.qty), 0),
@@ -286,6 +287,39 @@ export function BillingTab({
       window.removeEventListener("pos-shortcut", onShortcut as EventListener);
     };
   }, [onHoldSale]);
+
+  // Keep the ref in sync with the latest handleBarcodeInput so the stable
+  // keydown listener below can call it without a stale closure.
+  useEffect(() => {
+    handleBarcodeInputRef.current = handleBarcodeInput;
+  });
+
+  // Intercept printable keystrokes that land outside any text input and
+  // redirect them to the scanner field.  This prevents barcode scanner
+  // Enter events from accidentally clicking the focused +/- qty button.
+  useEffect(() => {
+    function onGlobalKeyDown(e: KeyboardEvent) {
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      ) return;
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+      if (e.key.length !== 1) return; // skip Enter, F-keys, arrows, etc.
+
+      const scanner = scannerRef.current;
+      if (!scanner) return;
+      e.preventDefault();
+      scanner.focus();
+      handleBarcodeInputRef.current(scanner.value + e.key);
+    }
+
+    document.addEventListener("keydown", onGlobalKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onGlobalKeyDown);
+    };
+  }, []); // stable — uses only refs
 
   useEffect(() => {
     setDiscountDrafts((prev) => {

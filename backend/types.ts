@@ -91,6 +91,30 @@ export type Customer = {
   total_outstanding: number;
 };
 
+export type ReturnCartItem = {
+  product_id: number;
+  barcode_id: string;
+  name: string;
+  qty: number;
+  return_price: number;
+};
+
+export type ProcessReturnInput = {
+  cashier_id: number;
+  items: Array<{ product_id: number; qty: number; return_price: number }>;
+  note?: string;
+};
+
+export type ReturnRow = {
+  id: number;
+  timestamp: string;
+  note: string | null;
+  cashier: string | null;
+  item_count: number;
+  return_total: number;
+  item_names: string | null;
+};
+
 export type CustomerLedger = {
   customer: Customer | null;
   sales: Array<{

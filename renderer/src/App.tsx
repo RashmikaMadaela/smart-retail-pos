@@ -1,5 +1,5 @@
 import { CSSProperties, FormEvent, Suspense, lazy, useEffect, useMemo, useState } from "react";
-import { BarChart3, Boxes, HandCoins, LayoutDashboard, LogOut, PauseCircle, ReceiptText, RefreshCw, Truck } from "lucide-react";
+import { BarChart3, Boxes, HandCoins, LayoutDashboard, LogOut, PauseCircle, ReceiptText, RefreshCw, RotateCcw, Truck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { LoginView } from "./features/LoginView";
 import type { BarcodePrintItem } from "./features/OperationsTab";
@@ -45,6 +45,11 @@ const SuppliersTab = lazy(async () => {
 const OperationsTab = lazy(async () => {
   const module = await import("./features/OperationsTab");
   return { default: module.OperationsTab };
+});
+
+const ReturnsTab = lazy(async () => {
+  const module = await import("./features/ReturnsTab");
+  return { default: module.ReturnsTab };
 });
 
 const PRODUCT_BOOTSTRAP_LIMIT = 200;
@@ -1480,9 +1485,22 @@ export default function App() {
       headerSubtitle: t("tabs.operations.subtitle"),
       refreshLabel: t("actions.refreshOperations"),
     },
+    {
+      id: "returns",
+      label: t("tabs.returns.label"),
+      description: t("tabs.returns.description"),
+      icon: RotateCcw,
+      selectedClass: "border-violet-300/55 bg-violet-400/12 text-violet-100",
+      chipClass: "bg-violet-300",
+      headerAccentClass: "border-l-violet-300/70",
+      refreshClass: "border-violet-300/45 bg-violet-400/10 text-violet-100 hover:border-violet-300/70",
+      headerTitle: t("tabs.returns.title"),
+      headerSubtitle: t("tabs.returns.subtitle"),
+      refreshLabel: t("actions.refreshReturns"),
+    },
   ];
 
-  const visibleTabItems = user && user.role === "Cashier" ? tabItems.filter((tab) => tab.id === "billing") : tabItems;
+  const visibleTabItems = user && user.role === "Cashier" ? tabItems.filter((tab) => tab.id === "billing" || tab.id === "returns") : tabItems;
 
   const activeTabConfig = tabItems.find((tab) => tab.id === activeTab) || tabItems[0];
 
@@ -1528,6 +1546,12 @@ export default function App() {
       chipBgClass: "bg-rose-300",
       accentColor: "#fda4af",
       refreshStyle: { borderColor: "rgba(253, 164, 175, 0.45)", backgroundColor: "rgba(253, 164, 175, 0.1)", color: "#ffe4e6" },
+    },
+    returns: {
+      selectedStyle: { borderColor: "#c4b5fd", backgroundColor: "rgba(196, 181, 253, 0.16)", color: "#ede9fe" },
+      chipBgClass: "bg-violet-300",
+      accentColor: "#c4b5fd",
+      refreshStyle: { borderColor: "rgba(196, 181, 253, 0.45)", backgroundColor: "rgba(196, 181, 253, 0.1)", color: "#ede9fe" },
     },
   };
 
@@ -1616,6 +1640,11 @@ export default function App() {
       if (event.ctrlKey && event.key === "7") {
         event.preventDefault();
         setActiveTab("operations");
+        return;
+      }
+      if (event.ctrlKey && event.key === "8") {
+        event.preventDefault();
+        setActiveTab("returns");
         return;
       }
 
@@ -1967,6 +1996,26 @@ export default function App() {
                   onRefreshUsers={() => void refreshUsers()}
                   onCreateUser={createUserNow}
                   onDeleteUser={deleteUserNow}
+                  onFindProductByBarcode={async (barcode) => {
+                    const result = await posApiClient.findVariantsByBarcode(barcode, 1);
+                    return result.data?.[0] ?? null;
+                  }}
+                />
+              ) : null}
+
+              {activeTab === "returns" ? (
+                <ReturnsTab
+                  cashierId={user.id}
+                  onSearchProducts={async (text, limit) => {
+                    const result = await posApiClient.searchProducts(text, limit ?? 10);
+                    return result.data ?? [];
+                  }}
+                  onResolveBarcodeVariants={async (barcode) => {
+                    const result = await posApiClient.searchProducts(barcode, 5);
+                    return (result.data ?? []).filter((p: Product) => p.barcode_id === barcode);
+                  }}
+                  onProcessReturn={async (payload) => posApiClient.processReturn(payload)}
+                  onListReturns={async (limit) => posApiClient.listReturns(limit)}
                 />
               ) : null}
             </Suspense>

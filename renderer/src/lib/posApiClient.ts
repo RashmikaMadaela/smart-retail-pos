@@ -156,4 +156,14 @@ export const posApiClient = {
       () => window.posApi.openInventoryExportFolder(role) as Promise<ApiResult<{ path: string }>>,
       "Unable to open inventory export folder",
     ),
+  processReturn: (payload: unknown) =>
+    safeCall(
+      () => window.posApi.processReturn(payload) as Promise<ApiResult<{ return_id: number }>>,
+      "Unable to process return",
+    ),
+  listReturns: (limit?: number) =>
+    safeCall(
+      () => window.posApi.listReturns(limit) as Promise<ApiResult<Array<{ id: number; timestamp: string; note: string | null; cashier: string | null; item_count: number; return_total: number; item_names: string | null }>>>,
+      "Unable to load returns",
+    ),
 };

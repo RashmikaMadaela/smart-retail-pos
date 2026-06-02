@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import type Database from "better-sqlite3";
 
-const CURRENT_SCHEMA_VERSION = 2;
+const CURRENT_SCHEMA_VERSION = 3;
 
 function ensureColumn(db: Database.Database, tableName: string, columnName: string, definition: string) {
   const columns = db.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>;
@@ -280,6 +280,24 @@ export function initializeDatabaseSchema(db: Database.Database) {
 
     CREATE INDEX IF NOT EXISTS idx_sale_items_product_id ON sale_items(product_id);
 
+    CREATE TABLE IF NOT EXISTS sale_returns (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      cashier_id INTEGER NOT NULL,
+      timestamp DATETIME DEFAULT (datetime('now','localtime')),
+      note TEXT,
+      FOREIGN KEY(cashier_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS sale_return_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      return_id INTEGER NOT NULL,
+      product_id INTEGER NOT NULL,
+      qty REAL NOT NULL,
+      return_price REAL NOT NULL,
+      FOREIGN KEY(return_id) REFERENCES sale_returns(id),
+      FOREIGN KEY(product_id) REFERENCES products(id)
+    );
+
     CREATE TABLE IF NOT EXISTS expenses (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       description TEXT NOT NULL,
@@ -303,6 +321,27 @@ export function initializeDatabaseSchema(db: Database.Database) {
 
   if (currentVersion < 2) {
     migrateSchemaV1ToV2(db);
+  }
+
+  if (currentVersion < 3) {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS sale_returns (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        cashier_id INTEGER NOT NULL,
+        timestamp DATETIME DEFAULT (datetime('now','localtime')),
+        note TEXT,
+        FOREIGN KEY(cashier_id) REFERENCES users(id)
+      );
+      CREATE TABLE IF NOT EXISTS sale_return_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        return_id INTEGER NOT NULL,
+        product_id INTEGER NOT NULL,
+        qty REAL NOT NULL,
+        return_price REAL NOT NULL,
+        FOREIGN KEY(return_id) REFERENCES sale_returns(id),
+        FOREIGN KEY(product_id) REFERENCES products(id)
+      );
+    `);
   }
 
   if (currentVersion < CURRENT_SCHEMA_VERSION) {

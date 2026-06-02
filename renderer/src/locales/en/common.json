@@ -26,9 +26,10 @@
     "refreshHeld": "Refresh Held Sales",
     "refreshCustomers": "Refresh Customers",
     "refreshSuppliers": "Refresh Suppliers",
-    "refreshOperations": "Refresh Operations"
+    "refreshOperations": "Refresh Operations",
+    "refreshReturns": "Refresh Returns"
   },
-  "shortcuts": "Shortcuts: Ctrl+1 Dashboard, Ctrl+2 Billing, Ctrl+3 Inventory, Ctrl+4 Held, Ctrl+5 Customers, Ctrl+6 Suppliers, Ctrl+7 Operations, Ctrl+/ Focus scanner, F8 Hold, F9 Checkout",
+  "shortcuts": "Shortcuts: Ctrl+1 Dashboard, Ctrl+2 Billing, Ctrl+3 Inventory, Ctrl+4 Held, Ctrl+5 Customers, Ctrl+6 Suppliers, Ctrl+7 Operations, Ctrl+8 Returns, Ctrl+/ Focus scanner, F8 Hold, F9 Checkout",
   "tabs": {
     "dashboard": {
       "label": "Dashboard",
@@ -71,6 +72,12 @@
       "description": "Barcode and expenses",
       "title": "Operations Hub",
       "subtitle": "Manage expenses and barcode label generation efficiently."
+    },
+    "returns": {
+      "label": "Returns",
+      "description": "Reverse stock and sales",
+      "title": "Product Returns",
+      "subtitle": "Scan or search items to add to a return, then process to restore stock."
     }
   },
   "held": {
@@ -96,6 +103,7 @@
     "barcodeInput": "Barcode/Product ID",
     "qty": "Qty",
     "addToQueue": "Add to Queue",
+    "productNotFound": "Product not found for that barcode.",
     "queued": "Queued labels: {{count}}",
     "productId": "Product ID",
     "name": "Name",
@@ -344,5 +352,24 @@
     "subtitle": "The POS UI hit an unexpected error.",
     "reload": "Reload App",
     "unexpected": "Unexpected renderer error"
+  },
+  "returns": {
+    "title": "Product Returns",
+    "scanOrSearch": "Scan Barcode or Search Product",
+    "addToReturn": "Add to Return",
+    "qty": "Qty",
+    "returnPrice": "Return Price",
+    "processReturn": "Process Return",
+    "confirmReturn": "Confirm Return",
+    "success": "Return #{{id}} processed. Stock restored.",
+    "recentReturns": "Recent Returns",
+    "emptyCart": "No items in return. Scan or search a product.",
+    "emptyReturns": "No returns found.",
+    "note": "Note (optional)",
+    "date": "Date",
+    "cashier": "Cashier",
+    "items": "Items",
+    "remove": "Remove",
+    "name": "Name"
   }
 }

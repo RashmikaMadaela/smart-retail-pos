@@ -25,14 +25,16 @@ type OperationsTabProps = {
   onRefreshUsers: () => void;
   onCreateUser: (username: string, password: string, role: "Admin" | "Cashier" | "SuperAdmin") => void;
   onDeleteUser: (userId: number) => void;
+  onFindProductByBarcode: (barcode: string) => Promise<Product | null>;
 };
 
-export function OperationsTab({ products, expenses, users, isSuperAdmin, onRefreshExpenses, onCreateExpense, onPrintBarcodes, onRefreshUsers, onCreateUser, onDeleteUser }: OperationsTabProps) {
+export function OperationsTab({ products, expenses, users, isSuperAdmin, onRefreshExpenses, onCreateExpense, onPrintBarcodes, onRefreshUsers, onCreateUser, onDeleteUser, onFindProductByBarcode }: OperationsTabProps) {
   const { t } = useTranslation();
   const [barcodeInput, setBarcodeInput] = useState("");
   const [barcodeQty, setBarcodeQty] = useState("1");
   const [queue, setQueue] = useState<BarcodeQueueItem[]>([]);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [queueError, setQueueError] = useState<string | null>(null);
 
   const [expenseDescription, setExpenseDescription] = useState("");
   const [expenseAmount, setExpenseAmount] = useState("");
@@ -45,24 +47,34 @@ export function OperationsTab({ products, expenses, users, isSuperAdmin, onRefre
 
   const queueCount = useMemo(() => queue.reduce((acc, item) => acc + item.qty, 0), [queue]);
 
-  function addToQueue() {
+  async function addToQueue() {
     const id = barcodeInput.trim();
     const qty = Number(barcodeQty || "0");
     if (!id || !Number.isFinite(qty) || qty <= 0) {
       return;
     }
-    const product = products.find((x) => x.barcode_id.toLowerCase() === id.toLowerCase());
+
+    // Fast path: check bootstrap list first
+    let product: Product | null | undefined = products.find((x) => x.barcode_id.toLowerCase() === id.toLowerCase());
+
+    // Fallback: live lookup for products outside the bootstrap limit
     if (!product) {
+      product = await onFindProductByBarcode(id);
+    }
+
+    if (!product) {
+      setQueueError(t("operations.productNotFound"));
       return;
     }
 
+    setQueueError(null);
     setQueue((prev) => {
-      const existing = prev.find((item) => item.product_id === product.barcode_id);
+      const existing = prev.find((item) => item.product_id === product!.barcode_id);
       if (!existing) {
-        return [...prev, { product_id: product.barcode_id, name: product.name, qty, sell_price: Number(product.sell_price) }];
+        return [...prev, { product_id: product!.barcode_id, name: product!.name, qty, sell_price: Number(product!.sell_price) }];
       }
       return prev.map((item) =>
-        item.product_id === product.barcode_id ? { ...item, qty: Number((item.qty + qty).toFixed(2)) } : item,
+        item.product_id === product!.barcode_id ? { ...item, qty: Number((item.qty + qty).toFixed(2)) } : item,
       );
     });
 
@@ -131,10 +143,12 @@ export function OperationsTab({ products, expenses, users, isSuperAdmin, onRefre
               {t("operations.qty")}
               <input value={barcodeQty} onChange={(event) => setBarcodeQty(event.target.value)} />
             </label>
-            <button type="button" onClick={addToQueue}>
+            <button type="button" onClick={() => void addToQueue()}>
               {t("operations.addToQueue")}
             </button>
           </div>
+
+          {queueError && <p className="mt-2 text-sm text-destructive">{queueError}</p>}
 
           <p className="mt-3 text-sm text-muted-foreground">{t("operations.queued", { count: Number(queueCount.toFixed(2)) })}</p>
 

@@ -27,6 +27,7 @@ import { createExpense, listExpenses } from "../../backend/services/expenseServi
 import { exportBarcodePdf, exportSaleBillPdf } from "../../backend/services/printService";
 import { printTSPLLabels } from "../../backend/services/tsplPrinterService";
 import { clearAllBusinessData, clearInventoryStock, exportInventoryToJson, importInventoryFromJson } from "../../backend/services/inventoryAdminService";
+import { processReturn, listReturns } from "../../backend/services/returnsService";
 
 const loginSchema = z.object({
   username: z.string().min(1),
@@ -881,5 +882,30 @@ export function registerIpcHandlers() {
     }
 
     return ok({ path: folderPath });
+  });
+
+  ipcMain.handle("returns.processReturn", (_event, payload) => {
+    const schema = z.object({
+      cashier_id: z.number().int().positive(),
+      items: z.array(
+        z.object({
+          product_id: z.number().int().positive(),
+          qty: z.number().positive(),
+          return_price: z.number().nonnegative(),
+        }),
+      ).min(1),
+      note: z.string().optional(),
+    });
+    const parsed = schema.safeParse(payload);
+    if (!parsed.success) {
+      return fail("Invalid return payload: " + parsed.error.message);
+    }
+    return processReturn(parsed.data);
+  });
+
+  ipcMain.handle("returns.listReturns", (_event, payload) => {
+    const parsed = listSchema.safeParse(payload ?? {});
+    const limit = parsed.success ? parsed.data.limit : 50;
+    return ok(listReturns(limit));
   });
 }

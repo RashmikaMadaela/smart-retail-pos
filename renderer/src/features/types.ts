@@ -137,4 +137,4 @@ export type BatchLineDraft = {
   new_item_card_surcharge_pct?: string;
 };
 
-export type ActiveTab = "dashboard" | "billing" | "inventory" | "held" | "customers" | "suppliers" | "operations";
+export type ActiveTab = "dashboard" | "billing" | "inventory" | "held" | "customers" | "suppliers" | "operations" | "returns";

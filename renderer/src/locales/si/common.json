@@ -26,9 +26,10 @@
     "refreshHeld": "රඳවාගත් විකුණුම් නැවුම් කරන්න",
     "refreshCustomers": "පාරිභෝගිකයන් නැවුම් කරන්න",
     "refreshSuppliers": "සැපයුම්කරුවන් නැවුම් කරන්න",
-    "refreshOperations": "මෙහෙයුම් නැවුම් කරන්න"
+    "refreshOperations": "මෙහෙයුම් නැවුම් කරන්න",
+    "refreshReturns": "ආපසු හැරවීම් නැවුම් කරන්න"
   },
-  "shortcuts": "Shortcut: Ctrl+1 Dashboard, Ctrl+2 Billing, Ctrl+3 Inventory, Ctrl+4 Held, Ctrl+5 Customers, Ctrl+6 Suppliers, Ctrl+7 Operations, Ctrl+/ Scanner, F8 Hold, F9 Checkout",
+  "shortcuts": "Shortcut: Ctrl+1 Dashboard, Ctrl+2 Billing, Ctrl+3 Inventory, Ctrl+4 Held, Ctrl+5 Customers, Ctrl+6 Suppliers, Ctrl+7 Operations, Ctrl+8 Returns, Ctrl+/ Scanner, F8 Hold, F9 Checkout",
   "tabs": {
     "dashboard": {
       "label": "ඩැෂ්බෝඩ්",
@@ -71,6 +72,12 @@
       "description": "බාර්කෝඩ් සහ වියදම්",
       "title": "මෙහෙයුම් මධ්‍යස්ථානය",
       "subtitle": "වියදම් සහ බාර්කෝඩ් ලේබල් නිර්මාණය කාර්යක්ෂමව කළමනාකරණය කරන්න."
+    },
+    "returns": {
+      "label": "ආපසු",
+      "description": "ස්ටොක් සහ විකුණුම් ආපසු",
+      "title": "නිෂ්පාදන ආපසු හැරවීම",
+      "subtitle": "ස්ටොක් යාවත්කාලීන කිරීමට අයිතම ස්කෑන් කරන්න හෝ සොයන්න."
     }
   },
   "held": {
@@ -96,6 +103,7 @@
     "barcodeInput": "බාර්කෝඩ්/නිෂ්පාදන අංකය",
     "qty": "ප්‍රමාණය",
     "addToQueue": "පෝලිමට එක් කරන්න",
+    "productNotFound": "එම බාර්කෝඩ් සඳහා නිෂ්පාදනය හමු නොවීය.",
     "queued": "පෝලිමේ ලේබල්: {{count}}",
     "productId": "නිෂ්පාදන අංකය",
     "name": "නම",
@@ -344,5 +352,24 @@
     "subtitle": "POS UI එකට අනපේක්ෂිත දෝෂයක් සිදු විය.",
     "reload": "App නැවත පූරණය",
     "unexpected": "අනපේක්ෂිත renderer දෝෂය"
+  },
+  "returns": {
+    "title": "නිෂ්පාදන ආපසු හැරවීම",
+    "scanOrSearch": "බාර්කෝඩ් ස්කෑන් කරන්න හෝ නිෂ්පාදනය සොයන්න",
+    "addToReturn": "ආපසුවට එක් කරන්න",
+    "qty": "ප්‍රමාණය",
+    "returnPrice": "ආපසු මිල",
+    "processReturn": "ආපසු හැරවීම කරන්න",
+    "confirmReturn": "ආපසුව තහවුරු කරන්න",
+    "success": "ආපසු #{{id}} සාර්ථකයි. ස්ටොක් යාවත්කාලී විය.",
+    "recentReturns": "ආපසු හැරවීම්",
+    "emptyCart": "ආපසුවේ අයිතම නැත. නිෂ්පාදනයක් ස්කෑන් කරන්න හෝ සොයන්න.",
+    "emptyReturns": "ආපසු හැරවීම් නොමැත.",
+    "note": "සටහන (විකල්ප)",
+    "date": "දිනය",
+    "cashier": "කැෂියර්",
+    "items": "අයිතම්",
+    "remove": "ඉවත් කරන්න",
+    "name": "නම"
   }
 }
