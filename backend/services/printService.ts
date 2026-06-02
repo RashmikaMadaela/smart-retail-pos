@@ -112,9 +112,9 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
     const pageWidth = mmToPt(80);
     const horizontalPadding = 10;
     const usableWidth = pageWidth - horizontalPadding * 2;
-    const lineHeight = 15;
-    const rowHeight = 18;
-    const estimatedHeight = Math.max(560, 340 + payload.items.length * 34);
+    const lineHeight = 13;
+    const rowHeight = 14;
+    const estimatedHeight = Math.max(460, 290 + payload.items.length * 28);
 
     const doc = new PDFDocument({ size: [pageWidth, estimatedHeight], margin: 0 });
     const billFontPath = resolveBillFontPath();
@@ -182,7 +182,7 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
         const logoWidth = Math.min(usableWidth * 1, 240);
         const x = (pageWidth - logoWidth) / 2;
         doc.image(logoPath, x, y, { fit: [logoWidth, 96], align: "center" });
-        y += 102;
+        y += 96;
       } catch {
         // Ignore logo rendering errors and continue with text receipt.
       }
@@ -232,8 +232,10 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
       0,
     );
 
+    let itemIndex = 0;
     for (const item of payload.items) {
-      const name = String(item.name || item.product_id);
+      itemIndex += 1;
+      const name = `#${itemIndex}. ${String(item.name || item.product_id)}`;
       const sellUnitPrice = Number(item.sold_at_price || 0);
       const discountedUnitPrice = Math.max(0, sellUnitPrice - Number(item.item_discount || 0));
       const lineTotal = Number(item.qty) * discountedUnitPrice;
@@ -251,7 +253,7 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
     }
 
     drawDivider(y);
-    y += 8;
+    y += 6;
 
     const totalSaved = Number(payload.sale.discount || 0);
 
@@ -267,7 +269,7 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
     y += lineHeight + 4;
 
     drawDivider(y);
-    y += 8;
+    y += 6;
 
     const paid = Number(payload.sale.paid_amount || 0);
     const cardPaid = String(payload.sale.payment_method || "").toUpperCase() === "CARD" ? paid : 0;
@@ -284,7 +286,7 @@ export async function exportSaleBillPdf(saleId: number): Promise<ServiceResult<{
     y += lineHeight + 4;
 
     drawDivider(y);
-    y += 8;
+    y += 6;
     drawAmountRow("ඉතිරි ණය මුදල", Number(payload.sale.balance_due).toFixed(2), y, true);
     y += lineHeight + 8;
 
