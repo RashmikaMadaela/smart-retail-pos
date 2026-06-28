@@ -263,6 +263,8 @@
     "updateSelectedVariant": "Update Selected Variant (WAC)",
     "createNewPriceVariant": "Create New Price Variant",
     "batchLines": "Batch Lines",
+    "clearBatchLines": "Clear Batch Lines",
+    "removeLine": "Remove Line",
     "barcode": "Barcode",
     "lineTotal": "Line Total",
     "noBatchLines": "No batch lines added.",

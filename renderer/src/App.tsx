@@ -982,7 +982,12 @@ export default function App() {
       ? products.find((product) => product.barcode_id.trim().toLowerCase() === normalizedProductId.toLowerCase())
       : null;
 
-    const createNewItem = !matchedProduct || batchLineDraft.resolution_mode === "create-variant";
+    const incomingSell = Number(batchLineDraft.new_item_sell_price || (matchedProduct ? String(matchedProduct.sell_price || 0) : "0"));
+    const existingSell = Number(matchedProduct?.sell_price || 0);
+    const hasPriceMismatch = matchedProduct
+      ? Number.isFinite(incomingSell) && Number.isFinite(existingSell) && Math.abs(incomingSell - existingSell) >= 0.01
+      : false;
+    const createNewItem = !matchedProduct || ((batchLineDraft.resolution_mode === "create-variant" || Boolean(batchLineDraft.create_new_item)) && hasPriceMismatch);
     if (!createNewItem && !normalizedProductId) {
       pushError("Batch line product id is required.");
       return;
@@ -1007,10 +1012,6 @@ export default function App() {
       pushError("Default discount % must be between 0 and 100.");
       return;
     }
-    if (!Number.isFinite(surchargePct) || surchargePct < 0 || surchargePct > 100) {
-      pushError("Card surcharge % must be between 0 and 100.");
-      return;
-    }
 
     if (createNewItem) {
       const name = (batchLineDraft.new_item_name || "").trim();
@@ -1028,10 +1029,6 @@ export default function App() {
       }
       if (!Number.isFinite(defaultDiscount) || defaultDiscount < 0 || defaultDiscount > 100) {
         pushError("Default discount % must be between 0 and 100.");
-        return;
-      }
-      if (!Number.isFinite(surchargePct) || surchargePct < 0 || surchargePct > 100) {
-        pushError("Card surcharge % must be between 0 and 100.");
         return;
       }
     }
@@ -1064,6 +1061,19 @@ export default function App() {
       new_item_default_discount_pct: "0",
     });
     pushMessage("Batch line added.");
+  }
+
+  function clearSupplierBatchLines() {
+    if (batchLines.length === 0) {
+      return;
+    }
+    setBatchLines([]);
+    pushMessage("Batch lines cleared.");
+  }
+
+  function removeSupplierBatchLine(index: number) {
+    setBatchLines((prev) => prev.filter((_, idx) => idx !== index));
+    pushMessage("Batch line removed.");
   }
 
   async function receiveSupplierBatchNow() {
@@ -1964,6 +1974,8 @@ export default function App() {
                   onBatchPaidChange={setBatchPaid}
                   onBatchLineDraftChange={setBatchLineDraft}
                   onAddBatchLine={addSupplierBatchLine}
+                  onClearBatchLines={clearSupplierBatchLines}
+                  onRemoveBatchLine={removeSupplierBatchLine}
                   onReceiveSupplierBatch={receiveSupplierBatchNow}
                   onSelectSupplierBatch={setSelectedSupplierBatchId}
                   onSupplierPayAmountChange={setSupplierPayAmount}

@@ -263,6 +263,8 @@
     "updateSelectedVariant": "තෝරාගත් Variant එක යාවත්කාලීන කරන්න (WAC)",
     "createNewPriceVariant": "නව මිල Variant එකක් සාදන්න",
     "batchLines": "බැච් පේළි",
+    "clearBatchLines": "බැච් පේළි ඉවත් කරන්න",
+    "removeLine": "පේළිය ඉවත් කරන්න",
     "barcode": "බාර්කෝඩ්",
     "lineTotal": "පේළි එකතුව",
     "noBatchLines": "බැච් පේළි එකතු කර නැත.",

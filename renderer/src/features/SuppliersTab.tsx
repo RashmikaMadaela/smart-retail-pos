@@ -30,6 +30,8 @@ type SuppliersTabProps = {
   onBatchPaidChange: (value: string) => void;
   onBatchLineDraftChange: (draft: BatchLineDraft) => void;
   onAddBatchLine: () => void;
+  onClearBatchLines?: () => void;
+  onRemoveBatchLine?: (index: number) => void;
   onReceiveSupplierBatch: () => void;
   onSelectSupplierBatch: (batchId: number) => void;
   onSupplierPayAmountChange: (value: string) => void;
@@ -64,6 +66,8 @@ export function SuppliersTab({
   onBatchPaidChange,
   onBatchLineDraftChange,
   onAddBatchLine,
+  onClearBatchLines,
+  onRemoveBatchLine,
   onReceiveSupplierBatch,
   onSelectSupplierBatch,
   onSupplierPayAmountChange,
@@ -188,7 +192,9 @@ export function SuppliersTab({
 
     const buyPrice = String(Number(matchedProduct.buy_price || 0));
     const sellPrice = String(Number(matchedProduct.sell_price || 0));
-    const discPct = String(Number(matchedProduct.default_discount_pct || 0));
+    const discPctNum = Number(matchedProduct.default_discount_pct || 0);
+    const discPct = String(discPctNum);
+    const discAmt = String(Number(((Number(sellPrice || 0) * discPctNum) / 100).toFixed(2)));
 
     const nextDraft: BatchLineDraft = {
       ...batchLineDraft,
@@ -201,6 +207,7 @@ export function SuppliersTab({
       new_item_default_discount_pct: discPct,
       unit_cost: buyPrice,
       line_discount_pct: discPct,
+      line_discount_amt: discAmt,
     };
 
     onBatchLineDraftChange(nextDraft);
@@ -473,8 +480,8 @@ export function SuppliersTab({
                   line_discount_pct: pct,
                   new_item_default_discount_pct: pct,
                   line_discount_amt: String(
-                    Number(batchLineDraft.unit_cost || 0) > 0
-                      ? Number(((Number(batchLineDraft.unit_cost || 0) * Number(pct || 0)) / 100).toFixed(2))
+                    Number(batchLineDraft.new_item_sell_price || 0) > 0
+                      ? Number(((Number(batchLineDraft.new_item_sell_price || 0) * Number(pct || 0)) / 100).toFixed(2))
                       : 0
                   ),
                 });
@@ -489,11 +496,11 @@ export function SuppliersTab({
               min="0"
               step="0.01"
               value={batchLineDraft.line_discount_amt || "0"}
-              disabled={!batchLineDraft.unit_cost || Number(batchLineDraft.unit_cost) === 0}
+              disabled={!batchLineDraft.new_item_sell_price || Number(batchLineDraft.new_item_sell_price) === 0}
               onChange={(e) => {
                 const amt = e.target.value;
-                const cost = Number(batchLineDraft.unit_cost || 0);
-                const pct = cost > 0 ? String(Number(((Number(amt || 0) / cost) * 100).toFixed(2))) : "0";
+                const price = Number(batchLineDraft.new_item_sell_price || 0);
+                const pct = price > 0 ? String(Number(((Number(amt || 0) / price) * 100).toFixed(2))) : "0";
                 onBatchLineDraftChange({
                   ...batchLineDraft,
                   line_discount_amt: amt,
@@ -637,7 +644,17 @@ export function SuppliersTab({
           </div>
         ) : null}
 
-        <h4 className="mb-0 mt-4 text-base font-semibold text-foreground">{t("suppliers.batchLines")}</h4>
+        <div className="mt-4 flex items-center justify-between gap-2">
+          <h4 className="m-0 text-base font-semibold text-foreground">{t("suppliers.batchLines")}</h4>
+          <button
+            type="button"
+            className="!bg-slate-600 !text-white"
+            disabled={batchLines.length === 0 || !onClearBatchLines}
+            onClick={() => onClearBatchLines?.()}
+          >
+            {t("suppliers.clearBatchLines")}
+          </button>
+        </div>
         <div className="mt-2 overflow-hidden rounded-xl border border-border/80 bg-card/40">
           <table className="m-0">
             <thead>
@@ -648,14 +665,15 @@ export function SuppliersTab({
                 <th>{t("suppliers.buyPrice")}</th>
                 <th>{t("suppliers.sellPrice")}</th>
                 <th>{t("suppliers.discPct")}</th>
-                <th>{t("suppliers.cardSurcharge")}</th>
+                <th>{t("suppliers.discAmt")}</th>
                 <th>{t("suppliers.lineTotal")}</th>
+                <th>{t("suppliers.action")}</th>
               </tr>
             </thead>
             <tbody>
               {batchLines.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
+                  <td colSpan={9} className="py-10 text-center text-sm text-muted-foreground">
                     {t("suppliers.noBatchLines")}
                   </td>
                 </tr>
@@ -663,7 +681,9 @@ export function SuppliersTab({
                 batchLines.map((line, index) => {
                   const qty = Number(line.qty_received || 0);
                   const buy = Number(line.unit_cost || line.new_item_buy_price || 0);
+                  const sell = Number(line.new_item_sell_price || 0);
                   const disc = Number(line.line_discount_pct || 0);
+                  const discAmt = Number(line.line_discount_amt || ((sell * disc) / 100));
                   const base = qty * buy;
                   const total = Number((base - base * (disc / 100)).toFixed(2));
                   return (
@@ -672,10 +692,19 @@ export function SuppliersTab({
                       <td>{line.new_item_name || "-"}</td>
                       <td>{qty.toFixed(2)}</td>
                       <td>{buy.toFixed(2)}</td>
-                      <td>{Number(line.new_item_sell_price || 0).toFixed(2)}</td>
+                      <td>{sell.toFixed(2)}</td>
                       <td>{disc.toFixed(2)}</td>
-                      <td>{Number(line.new_item_card_surcharge_pct || 0).toFixed(2)}</td>
+                      <td>{discAmt.toFixed(2)}</td>
                       <td>{total.toFixed(2)}</td>
+                      <td>
+                        <button
+                          type="button"
+                          className="danger px-2 py-1 text-xs"
+                          onClick={() => onRemoveBatchLine?.(index)}
+                        >
+                          {t("suppliers.removeLine")}
+                        </button>
+                      </td>
                     </tr>
                   );
                 })
