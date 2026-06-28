@@ -112,13 +112,12 @@ export default function App() {
     qty_received: "",
     unit_cost: "",
     line_discount_pct: "0",
+    line_discount_amt: "0",
     create_new_item: false,
     new_item_name: "",
     new_item_sell_price: "",
     new_item_buy_price: "",
     new_item_default_discount_pct: "0",
-    new_item_card_surcharge_enabled: false,
-    new_item_card_surcharge_pct: "0",
   });
   const [selectedSupplierBatchId, setSelectedSupplierBatchId] = useState<number | null>(null);
   const [supplierPayAmount, setSupplierPayAmount] = useState("");
@@ -996,12 +995,6 @@ export default function App() {
       batchLineDraft.new_item_default_discount_pct ||
         (matchedProduct ? String(matchedProduct.default_discount_pct || 0) : batchLineDraft.line_discount_pct || "0"),
     );
-    const surchargePct = Number(
-      batchLineDraft.new_item_card_surcharge_pct ||
-        (matchedProduct && Number(matchedProduct.card_surcharge_enabled || 0) > 0
-          ? String(matchedProduct.card_surcharge_pct || 0)
-          : "0"),
-    );
     if (!Number.isFinite(qty) || qty <= 0 || !Number.isFinite(cost) || cost < 0 || !Number.isFinite(disc) || disc < 0) {
       pushError("Batch line values are invalid.");
       return;
@@ -1024,7 +1017,6 @@ export default function App() {
       const sellPrice = Number(batchLineDraft.new_item_sell_price || "0");
       const buyPrice = Number(batchLineDraft.new_item_buy_price || batchLineDraft.unit_cost || "0");
       const defaultDiscount = Number(batchLineDraft.new_item_default_discount_pct || "0");
-      const surchargePct = Number(batchLineDraft.new_item_card_surcharge_pct || "0");
 
       if (!name) {
         pushError("New item name is required.");
@@ -1057,8 +1049,6 @@ export default function App() {
         new_item_buy_price: String(Number(batchLineDraft.new_item_buy_price || batchLineDraft.unit_cost || "0")),
         new_item_sell_price: String(sellPrice),
         new_item_default_discount_pct: String(defaultDiscount),
-        new_item_card_surcharge_enabled: surchargePct > 0,
-        new_item_card_surcharge_pct: String(surchargePct),
       },
     ]);
     setBatchLineDraft({
@@ -1066,13 +1056,12 @@ export default function App() {
       qty_received: "",
       unit_cost: "",
       line_discount_pct: "0",
+      line_discount_amt: "0",
       create_new_item: false,
       new_item_name: "",
       new_item_sell_price: "",
       new_item_buy_price: "",
       new_item_default_discount_pct: "0",
-      new_item_card_surcharge_enabled: false,
-      new_item_card_surcharge_pct: "0",
     });
     pushMessage("Batch line added.");
   }
@@ -1100,8 +1089,6 @@ export default function App() {
       items: batchLines.map((line) => {
         const sellPrice = Number(line.new_item_sell_price || "0");
         const defaultDiscountPct = Number(line.new_item_default_discount_pct || line.line_discount_pct || "0");
-        const surchargePct = Number(line.new_item_card_surcharge_pct || "0");
-        const surchargeEnabled = Boolean(line.new_item_card_surcharge_enabled) || surchargePct > 0;
 
         return {
           product_id: Number(line.matched_product_id || 0) || undefined,
@@ -1117,8 +1104,6 @@ export default function App() {
                 buy_price: Number(line.new_item_buy_price || line.unit_cost || "0"),
                 sell_price: sellPrice,
                 default_discount_pct: defaultDiscountPct,
-                card_surcharge_enabled: surchargeEnabled,
-                card_surcharge_pct: surchargePct,
                 min_stock: 0,
               }
             : undefined,
@@ -1128,8 +1113,6 @@ export default function App() {
                 product_id: Number(line.matched_product_id || 0) || undefined,
                 sell_price: sellPrice,
                 default_discount_pct: defaultDiscountPct,
-                card_surcharge_enabled: surchargeEnabled,
-                card_surcharge_pct: surchargePct,
               },
         };
       }),

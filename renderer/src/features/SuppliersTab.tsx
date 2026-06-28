@@ -189,9 +189,6 @@ export function SuppliersTab({
     const buyPrice = String(Number(matchedProduct.buy_price || 0));
     const sellPrice = String(Number(matchedProduct.sell_price || 0));
     const discPct = String(Number(matchedProduct.default_discount_pct || 0));
-    const surchargePct = String(
-      Number(matchedProduct.card_surcharge_enabled || 0) > 0 ? Number(matchedProduct.card_surcharge_pct || 0) : 0,
-    );
 
     const nextDraft: BatchLineDraft = {
       ...batchLineDraft,
@@ -202,8 +199,6 @@ export function SuppliersTab({
       new_item_buy_price: buyPrice,
       new_item_sell_price: sellPrice,
       new_item_default_discount_pct: discPct,
-      new_item_card_surcharge_enabled: Number(matchedProduct.card_surcharge_enabled || 0) > 0,
-      new_item_card_surcharge_pct: surchargePct,
       unit_cost: buyPrice,
       line_discount_pct: discPct,
     };
@@ -471,26 +466,41 @@ export function SuppliersTab({
               max="100"
               step="0.01"
               value={batchLineDraft.line_discount_pct}
-              onChange={(e) => onBatchLineDraftChange({ ...batchLineDraft, line_discount_pct: e.target.value, new_item_default_discount_pct: e.target.value })}
+              onChange={(e) => {
+                const pct = e.target.value;
+                onBatchLineDraftChange({
+                  ...batchLineDraft,
+                  line_discount_pct: pct,
+                  new_item_default_discount_pct: pct,
+                  line_discount_amt: String(
+                    Number(batchLineDraft.unit_cost || 0) > 0
+                      ? Number(((Number(batchLineDraft.unit_cost || 0) * Number(pct || 0)) / 100).toFixed(2))
+                      : 0
+                  ),
+                });
+              }}
             />
           </label>
           <label className="m-0 block text-sm font-medium text-foreground">
-            {t("suppliers.cardSurcharge")}
+            {t("suppliers.discAmt")}
             <input
               className="no-spinner"
               type="number"
               min="0"
-              max="100"
               step="0.01"
-              value={batchLineDraft.new_item_card_surcharge_pct || ""}
-              onChange={(e) =>
+              value={batchLineDraft.line_discount_amt || "0"}
+              disabled={!batchLineDraft.unit_cost || Number(batchLineDraft.unit_cost) === 0}
+              onChange={(e) => {
+                const amt = e.target.value;
+                const cost = Number(batchLineDraft.unit_cost || 0);
+                const pct = cost > 0 ? String(Number(((Number(amt || 0) / cost) * 100).toFixed(2))) : "0";
                 onBatchLineDraftChange({
                   ...batchLineDraft,
-                  new_item_card_surcharge_pct: e.target.value,
-                  new_item_card_surcharge_enabled: Number(e.target.value || "0") > 0,
-                  create_new_item: !matchedProduct,
-                })
-              }
+                  line_discount_amt: amt,
+                  line_discount_pct: pct,
+                  new_item_default_discount_pct: pct,
+                });
+              }}
             />
           </label>
           <button type="button" onClick={handleAddLineClick}>

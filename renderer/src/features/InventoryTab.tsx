@@ -56,7 +56,7 @@ export function InventoryTab({
   const [newBuyPrice, setNewBuyPrice] = useState("");
   const [newSellPrice, setNewSellPrice] = useState("");
   const [newDiscPct, setNewDiscPct] = useState("");
-  const [newCardSurchargePct, setNewCardSurchargePct] = useState("");
+  const [newDiscAmt, setNewDiscAmt] = useState("");
   const [barcodeMatched, setBarcodeMatched] = useState(false);
   const [removeBarcode, setRemoveBarcode] = useState("");
   const [removeName, setRemoveName] = useState("");
@@ -209,7 +209,7 @@ export function InventoryTab({
     setNewBuyPrice("");
     setNewSellPrice("");
     setNewDiscPct("");
-    setNewCardSurchargePct("");
+    setNewDiscAmt("");
     setBarcodeMatched(false);
     setInventoryVariantModalState(null);
     setInventoryVariantIndex(0);
@@ -224,7 +224,6 @@ export function InventoryTab({
       buy_price: Number(newBuyPrice || "0"),
       sell_price: Number(newSellPrice || "0"),
       default_discount_pct: Number(newDiscPct || "0"),
-      card_surcharge_pct: Number(newCardSurchargePct || "0"),
     };
 
     const normalizedBarcode = (payload.barcode_id || "").trim().toLowerCase();
@@ -499,18 +498,38 @@ export function InventoryTab({
           </label>
           <label className="m-0 block text-sm font-medium text-foreground">
             {t("inventory.discPct")}
-            <input className="no-spinner" type="number" min="0" max="100" step="0.01" value={newDiscPct} onChange={(event) => setNewDiscPct(event.target.value)} />
-          </label>
-          <label className="m-0 block text-sm font-medium text-foreground">
-            {t("inventory.cardSurcharge")}
             <input
               className="no-spinner"
               type="number"
               min="0"
               max="100"
               step="0.01"
-              value={newCardSurchargePct}
-              onChange={(event) => setNewCardSurchargePct(event.target.value)}
+              value={newDiscPct}
+              onChange={(event) => {
+                const pct = event.target.value;
+                setNewDiscPct(pct);
+                const price = Number(newSellPrice || 0);
+                const amt = price > 0 ? Number(((price * Number(pct || 0)) / 100).toFixed(2)) : 0;
+                setNewDiscAmt(String(amt));
+              }}
+            />
+          </label>
+          <label className="m-0 block text-sm font-medium text-foreground">
+            {t("inventory.discAmt")}
+            <input
+              className="no-spinner"
+              type="number"
+              min="0"
+              step="0.01"
+              value={newDiscAmt}
+              disabled={!newSellPrice || Number(newSellPrice) === 0}
+              onChange={(event) => {
+                const amt = event.target.value;
+                setNewDiscAmt(amt);
+                const price = Number(newSellPrice || 0);
+                const pct = price > 0 ? Number(((Number(amt || 0) / price) * 100).toFixed(2)) : 0;
+                setNewDiscPct(String(pct));
+              }}
             />
           </label>
           <button type="button" onClick={() => void addProductRow()}>
