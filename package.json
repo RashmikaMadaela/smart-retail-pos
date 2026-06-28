@@ -28,6 +28,7 @@
     "dist:nsis": "npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false BUILD_TARGET=nsis electron-builder --win nsis --publish never",
     "dist:portable": "npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false BUILD_TARGET=portable electron-builder --win portable --publish never",
     "dist": "npm run dist:nsis && npm run dist:portable",
+    "dist:publish": "npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false BUILD_TARGET=nsis electron-builder --win nsis --publish always",
     "pretest": "npm run rebuild:native:node",
     "check": "tsc --noEmit",
     "test": "vitest run"
@@ -37,6 +38,11 @@
     "productName": "FloreoPOS",
     "directories": {
       "output": "release"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "RashmikaMadaela",
+      "repo": "smart-retail-pos"
     },
     "files": [
       "dist/**",
@@ -76,6 +82,8 @@
   "dependencies": {
     "better-sqlite3": "^11.8.1",
     "bwip-js": "^4.8.0",
+    "electron-log": "^5.4.4",
+    "electron-updater": "^6.8.9",
     "i18next": "^25.8.20",
     "lucide-react": "^0.577.0",
     "pdf-to-printer": "^5.7.0",

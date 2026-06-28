@@ -2,6 +2,7 @@ import { app, BrowserWindow } from "electron";
 import fs from "node:fs";
 import path from "node:path";
 import { registerIpcHandlers } from "./ipc";
+import { initAutoUpdater } from "./updater";
 import { ensureSuperAdminUser } from "../../backend/services/authService";
 
 function resolveProjectRoot() {
@@ -90,7 +91,7 @@ function resolveWindowIconPath() {
   return path.join(projectRoot, "build", "icon.png");
 }
 
-function createMainWindow() {
+function createMainWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 1320,
     height: 860,
@@ -111,11 +112,12 @@ function createMainWindow() {
     if (process.env.POS_OPEN_DEVTOOLS === "1") {
       win.webContents.openDevTools({ mode: "detach" });
     }
-    return;
+    return win;
   }
 
   const rendererIndex = resolveRendererIndexPath();
   win.loadFile(rendererIndex);
+  return win;
 }
 
 app.whenReady().then(() => {
@@ -128,7 +130,12 @@ app.whenReady().then(() => {
   process.env.POS_INVENTORY_EXPORT_DIR = resolveInventoryExportRootPath();
   ensureSuperAdminUser();
   registerIpcHandlers();
-  createMainWindow();
+  const mainWindow = createMainWindow();
+
+  // Auto-update: only runs in packaged builds, skipped in dev mode
+  if (app.isPackaged) {
+    initAutoUpdater(mainWindow);
+  }
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
