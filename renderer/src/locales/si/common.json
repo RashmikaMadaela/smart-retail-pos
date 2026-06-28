@@ -202,7 +202,18 @@
     "clearCartConfirm": "කරත්තය හිස් කරන්නද?",
     "clearCartMessage": "මෙය කරත්තයේ ඇති සියලු {{count}} අයිතම ඉවත් කරනු ඇත.",
     "clearCartUndo": "මෙම ක්‍රියාව අවලංගු කළ නොහැක.",
-    "clearCartTooltip": "කරත්තයේ සියලු අයිතම ඉවත් කරන්න"
+    "clearCartTooltip": "කරත්තයේ සියලු අයිතම ඉවත් කරන්න",
+    "customItemToggle": "+ custom අයිතමය",
+    "customItemClose": "✕ වසන්න",
+    "customItemPanelTitle": "custom අයිතමය - ගබඩාවට සුරැකීමකින් තොරව කෙලින්ම බිලට එකතු කෙරේ",
+    "customItemName": "අයිතම නාමය",
+    "customItemNamePlaceholder": "උදා: ප්ලාස්ටික් බෑග්",
+    "customItemQty": "ප්‍රමාණය",
+    "customItemPrice": "යූනිට් මිල (LKR)",
+    "customItemDiscPct": "වට්ටම %",
+    "customItemDiscAmt": "වට්ටම (LKR)",
+    "customItemAddBtn": "බිලට එකතු කරන්න",
+    "customItemBadge": "custom"
   },
   "customers": {
     "title": "පාරිභෝගික ලෙජරය",

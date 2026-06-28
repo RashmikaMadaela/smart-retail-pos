@@ -47,6 +47,10 @@ export type CartItem = {
   price: number;
   discount: number;
   scanned_barcode?: string;
+  /** True when this is an ad-hoc/custom item not in inventory. */
+  is_adhoc?: boolean;
+  /** The cashier-entered label for ad-hoc items. */
+  item_name?: string;
 };
 
 export type HeldSale = {

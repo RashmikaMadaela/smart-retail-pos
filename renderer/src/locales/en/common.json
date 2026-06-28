@@ -202,7 +202,18 @@
     "clearCartConfirm": "Clear Cart?",
     "clearCartMessage": "This will remove all {{count}} items from the cart.",
     "clearCartUndo": "This action cannot be undone.",
-    "clearCartTooltip": "Clear all items from cart"
+    "clearCartTooltip": "Clear all items from cart",
+    "customItemToggle": "+ Custom Item",
+    "customItemClose": "✕ Close",
+    "customItemPanelTitle": "Custom Item — adds directly to bill without saving to inventory",
+    "customItemName": "Item Name",
+    "customItemNamePlaceholder": "e.g. Plastic Bag",
+    "customItemQty": "Qty",
+    "customItemPrice": "Unit Price (LKR)",
+    "customItemDiscPct": "Disc %",
+    "customItemDiscAmt": "Disc (LKR)",
+    "customItemAddBtn": "Add to Bill",
+    "customItemBadge": "Custom"
   },
   "customers": {
     "title": "Customer Ledger",

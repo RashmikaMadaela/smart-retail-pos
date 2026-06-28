@@ -39,6 +39,8 @@ describe("BillingTab", () => {
         customerSuggestions={[]}
         onCustomerSuggestionSelect={vi.fn()}
         onHoldSale={vi.fn()}
+        onClearCart={vi.fn()}
+        onAddAdhocItem={vi.fn()}
         onProcessSale={onProcessSale}
       />,
     );
@@ -90,6 +92,8 @@ describe("BillingTab", () => {
         customerSuggestions={[]}
         onCustomerSuggestionSelect={vi.fn()}
         onHoldSale={vi.fn()}
+        onClearCart={vi.fn()}
+        onAddAdhocItem={vi.fn()}
         onProcessSale={vi.fn()}
       />,
     );
@@ -135,6 +139,8 @@ describe("BillingTab", () => {
         customerSuggestions={[]}
         onCustomerSuggestionSelect={vi.fn()}
         onHoldSale={vi.fn()}
+        onClearCart={vi.fn()}
+        onAddAdhocItem={vi.fn()}
         onProcessSale={vi.fn()}
       />,
     );
@@ -183,6 +189,8 @@ describe("BillingTab", () => {
         customerSuggestions={[]}
         onCustomerSuggestionSelect={vi.fn()}
         onHoldSale={vi.fn()}
+        onClearCart={vi.fn()}
+        onAddAdhocItem={vi.fn()}
         onProcessSale={vi.fn()}
       />,
     );
@@ -226,6 +234,8 @@ describe("BillingTab", () => {
         customerSuggestions={[]}
         onCustomerSuggestionSelect={vi.fn()}
         onHoldSale={vi.fn()}
+        onClearCart={vi.fn()}
+        onAddAdhocItem={vi.fn()}
         onProcessSale={vi.fn()}
       />,
     );

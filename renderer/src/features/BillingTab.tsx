@@ -33,6 +33,7 @@ type BillingTabProps = {
   onHoldSale: () => void;
   onClearCart: () => void;
   onProcessSale: (withPrint: boolean) => void;
+  onAddAdhocItem: (name: string, qty: number, price: number, discount: number) => void;
 };
 
 export function BillingTab({
@@ -66,6 +67,7 @@ export function BillingTab({
   onHoldSale,
   onClearCart,
   onProcessSale,
+  onAddAdhocItem,
 }: BillingTabProps) {
   const { t } = useTranslation();
   const discountsLocked = paymentMode === "UNPAID";
@@ -84,6 +86,15 @@ export function BillingTab({
   const scannerRef = useRef<HTMLInputElement | null>(null);
   const variantFirstButtonRef = useRef<HTMLButtonElement | null>(null);
   const handleBarcodeInputRef = useRef(handleBarcodeInput);
+
+  // Ad-hoc / custom item form state
+  const [showAdhocForm, setShowAdhocForm] = useState(false);
+  const [adhocName, setAdhocName] = useState("");
+  const [adhocQty, setAdhocQty] = useState("1");
+  const [adhocPrice, setAdhocPrice] = useState("");
+  const [adhocDiscPct, setAdhocDiscPct] = useState("0");
+  const [adhocDiscAmt, setAdhocDiscAmt] = useState("0");
+  const adhocNameRef = useRef<HTMLInputElement | null>(null);
 
   const itemCount = useMemo(
     () => cart.reduce((acc, item) => acc + Number(item.qty), 0),
@@ -211,6 +222,45 @@ export function BillingTab({
     setProductNameInput("");
     setQuickQty("1");
     scannerRef.current?.focus();
+  }
+
+  // ── Ad-hoc discount sync helpers ──────────────────────────────────────────
+  function handleAdhocDiscPctChange(value: string) {
+    setAdhocDiscPct(value);
+    const pct = Math.max(0, Math.min(100, Number(value || "0")));
+    const price = Number(adhocPrice || "0");
+    if (Number.isFinite(pct) && Number.isFinite(price)) {
+      setAdhocDiscAmt(Number((price * pct) / 100).toFixed(2));
+    }
+  }
+
+  function handleAdhocDiscAmtChange(value: string) {
+    setAdhocDiscAmt(value);
+    const price = Number(adhocPrice || "0");
+    const amt = Math.max(0, Math.min(price, Number(value || "0")));
+    if (Number.isFinite(amt) && price > 0) {
+      setAdhocDiscPct(Number((amt / price) * 100).toFixed(2));
+    } else {
+      setAdhocDiscPct("0");
+    }
+  }
+
+  function handleAddAdhocItem() {
+    const name = adhocName.trim();
+    const qty = Number(adhocQty || "0");
+    const price = Number(adhocPrice || "0");
+    const discount = Math.max(0, Math.min(price, Number(adhocDiscAmt || "0")));
+    if (!name || !Number.isFinite(qty) || qty <= 0 || !Number.isFinite(price) || price <= 0) {
+      return;
+    }
+    onAddAdhocItem(name, qty, price, discount);
+    // Reset form fields but keep panel open for quick re-entry
+    setAdhocName("");
+    setAdhocQty("1");
+    setAdhocPrice("");
+    setAdhocDiscPct("0");
+    setAdhocDiscAmt("0");
+    adhocNameRef.current?.focus();
   }
 
   async function handleVariantSelect(variant: Product) {
@@ -436,7 +486,121 @@ export function BillingTab({
               <button type="button" className="self-end md:min-w-32" onClick={() => void handleQuickAdd()}>
                 {t("billing.addToCart")}
               </button>
+              <button
+                type="button"
+                id="billing-custom-item-toggle"
+                className={`self-end md:min-w-36 !border transition-colors ${
+                  showAdhocForm
+                    ? "!bg-emerald-600 !text-white hover:!bg-emerald-500"
+                    : "!bg-slate-700 !text-emerald-300 hover:!bg-slate-600"
+                }`}
+                onClick={() => {
+                  setShowAdhocForm((prev) => !prev);
+                  if (!showAdhocForm) {
+                    // Focus name field after expand
+                    window.setTimeout(() => adhocNameRef.current?.focus(), 50);
+                  }
+                }}
+              >
+                {showAdhocForm ? t("billing.customItemClose") : t("billing.customItemToggle")}
+              </button>
             </div>
+
+            {/* ── Custom / Ad-hoc Item Form ────────────────────────────────── */}
+            {showAdhocForm && (
+              <div
+                id="billing-custom-item-form"
+                className="mt-2 rounded-xl border border-emerald-500/40 bg-emerald-950/20 p-3"
+              >
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-400">
+                  {t("billing.customItemPanelTitle")}
+                </p>
+                <div className="grid gap-3 md:grid-cols-[1fr_80px_120px_100px_100px_auto]">
+                  <label className="m-0 text-sm font-medium text-foreground">
+                    {t("billing.customItemName")}
+                    <input
+                      ref={adhocNameRef}
+                      id="adhoc-item-name"
+                      value={adhocName}
+                      placeholder={t("billing.customItemNamePlaceholder")}
+                      onChange={(e) => setAdhocName(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddAdhocItem(); } }}
+                    />
+                  </label>
+
+                  <label className="m-0 text-sm font-medium text-foreground">
+                    {t("billing.customItemQty")}
+                    <input
+                      id="adhoc-item-qty"
+                      type="number"
+                      min="0.01"
+                      step="1"
+                      value={adhocQty}
+                      onChange={(e) => setAdhocQty(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddAdhocItem(); } }}
+                    />
+                  </label>
+
+                  <label className="m-0 text-sm font-medium text-foreground">
+                    {t("billing.customItemPrice")}
+                    <input
+                      id="adhoc-item-price"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={adhocPrice}
+                      placeholder="0.00"
+                      onChange={(e) => {
+                        setAdhocPrice(e.target.value);
+                        // Re-sync discount amount when price changes
+                        const price = Number(e.target.value || "0");
+                        const pct = Number(adhocDiscPct || "0");
+                        if (Number.isFinite(price) && Number.isFinite(pct)) {
+                          setAdhocDiscAmt(Number((price * pct) / 100).toFixed(2));
+                        }
+                      }}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddAdhocItem(); } }}
+                    />
+                  </label>
+
+                  <label className="m-0 text-sm font-medium text-foreground">
+                    {t("billing.customItemDiscPct")}
+                    <input
+                      id="adhoc-item-disc-pct"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      value={adhocDiscPct}
+                      onChange={(e) => handleAdhocDiscPctChange(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddAdhocItem(); } }}
+                    />
+                  </label>
+
+                  <label className="m-0 text-sm font-medium text-foreground">
+                    {t("billing.customItemDiscAmt")}
+                    <input
+                      id="adhoc-item-disc-amt"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={adhocDiscAmt}
+                      onChange={(e) => handleAdhocDiscAmtChange(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddAdhocItem(); } }}
+                    />
+                  </label>
+
+                  <button
+                    type="button"
+                    id="adhoc-add-to-cart-btn"
+                    className="self-end !bg-emerald-600 !text-white hover:!bg-emerald-500"
+                    onClick={handleAddAdhocItem}
+                  >
+                    {t("billing.customItemAddBtn")}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="overflow-hidden rounded-2xl border border-border/80 bg-background/45">
@@ -471,7 +635,16 @@ export function BillingTab({
                     return (
                       <tr key={item.product_id}>
                         <td>{index + 1}</td>
-                        <td>{item.name}</td>
+                        <td>
+                          {item.name}
+                          {item.is_adhoc && (
+                            <span
+                              className="ml-1.5 rounded bg-emerald-600/25 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-400"
+                            >
+                              {t("billing.customItemBadge")}
+                            </span>
+                          )}
+                        </td>
                         <td>
                           <div className="flex items-center gap-1">
                             <button type="button" className="!px-2 !py-1" onClick={() => onAdjustCartQty(item.product_id, -1)}>

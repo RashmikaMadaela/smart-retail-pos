@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import type Database from "better-sqlite3";
 
-const CURRENT_SCHEMA_VERSION = 3;
+const CURRENT_SCHEMA_VERSION = 4;
 
 function ensureColumn(db: Database.Database, tableName: string, columnName: string, definition: string) {
   const columns = db.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>;
@@ -314,6 +314,7 @@ export function initializeDatabaseSchema(db: Database.Database) {
   ensureColumn(db, "sale_items", "cogs_unit_cost", "REAL");
   ensureColumn(db, "sale_items", "scanned_barcode", "TEXT DEFAULT ''");
   ensureColumn(db, "sale_items", "applied_surcharge", "REAL DEFAULT 0.0");
+  ensureColumn(db, "sale_items", "item_name", "TEXT");
   ensureColumn(db, "expenses", "category", "TEXT DEFAULT 'General'");
   ensureColumn(db, "products", "default_discount_pct", "REAL DEFAULT 0.0");
   ensureColumn(db, "products", "card_surcharge_enabled", "INTEGER DEFAULT 0");
@@ -342,6 +343,47 @@ export function initializeDatabaseSchema(db: Database.Database) {
         FOREIGN KEY(product_id) REFERENCES products(id)
       );
     `);
+  }
+
+  // v3 -> v4: Recreate sale_items to allow nullable product_id (for ad-hoc items)
+  // and add item_name column for the cashier-entered label.
+  if (currentVersion < 4) {
+    db.exec("PRAGMA foreign_keys = OFF");
+    try {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS sale_items_v4 (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          sale_id INTEGER NOT NULL,
+          product_id INTEGER,
+          item_name TEXT,
+          scanned_barcode TEXT NOT NULL DEFAULT '',
+          qty REAL NOT NULL,
+          sold_at_price REAL NOT NULL,
+          item_discount REAL DEFAULT 0.0,
+          cogs_unit_cost REAL,
+          applied_surcharge REAL DEFAULT 0.0,
+          FOREIGN KEY(sale_id) REFERENCES sales(id),
+          FOREIGN KEY(product_id) REFERENCES products(id)
+        );
+
+        INSERT INTO sale_items_v4 (
+          id, sale_id, product_id, item_name, scanned_barcode,
+          qty, sold_at_price, item_discount, cogs_unit_cost, applied_surcharge
+        )
+        SELECT
+          id, sale_id, product_id, NULL, COALESCE(scanned_barcode, ''),
+          qty, sold_at_price, COALESCE(item_discount, 0.0),
+          cogs_unit_cost, COALESCE(applied_surcharge, 0.0)
+        FROM sale_items;
+
+        CREATE INDEX IF NOT EXISTS idx_sale_items_v4_product_id ON sale_items_v4(product_id);
+
+        DROP TABLE sale_items;
+        ALTER TABLE sale_items_v4 RENAME TO sale_items;
+      `);
+    } finally {
+      db.exec("PRAGMA foreign_keys = ON");
+    }
   }
 
   if (currentVersion < CURRENT_SCHEMA_VERSION) {

@@ -1,4 +1,4 @@
-import { CSSProperties, FormEvent, Suspense, lazy, useEffect, useMemo, useState } from "react";
+import { CSSProperties, FormEvent, Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { BarChart3, Boxes, HandCoins, LayoutDashboard, LogOut, PauseCircle, ReceiptText, RefreshCw, RotateCcw, Truck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { LoginView } from "./features/LoginView";
@@ -447,6 +447,29 @@ export default function App() {
     });
   }
 
+  // Decrementing negative counter for ad-hoc cart items.
+  // Negative IDs guarantee no collision with real product IDs.
+  const adhocIdCounterRef = useRef(-1);
+
+  function handleAddAdhocItem(name: string, qty: number, price: number, discount: number) {
+    const tempId = adhocIdCounterRef.current;
+    adhocIdCounterRef.current -= 1;
+    setCart((prev) => [
+      ...prev,
+      {
+        product_id: tempId,
+        barcode_id: "",
+        name,
+        qty,
+        price,
+        discount,
+        is_adhoc: true,
+        item_name: name,
+      },
+    ]);
+    pushMessage(`Custom item "${name}" added to cart.`);
+  }
+
   async function addProductToCartById(productId: string, qtyValue: number, resolvedProductId?: number) {
     const normalizedId = productId.trim();
     if (!normalizedId) {
@@ -673,8 +696,9 @@ export default function App() {
       cashier_id: user.id,
       customer_id: customerId,
       cart_items: cart.map((row) => ({
-        product_id: row.product_id,
-        scanned_barcode: row.scanned_barcode || row.barcode_id,
+        product_id: row.is_adhoc ? 0 : row.product_id,
+        scanned_barcode: row.is_adhoc ? "" : (row.scanned_barcode || row.barcode_id),
+        item_name: row.is_adhoc ? row.item_name : undefined,
         qty: row.qty,
         price: row.price,
         discount: paymentMode === "UNPAID" ? 0 : row.discount,
@@ -732,8 +756,9 @@ export default function App() {
     const payload = {
       cashier_id: user.id,
       cart_items: cart.map((row) => ({
-        product_id: row.product_id,
-        scanned_barcode: row.scanned_barcode || row.barcode_id,
+        product_id: row.is_adhoc ? 0 : row.product_id,
+        scanned_barcode: row.is_adhoc ? "" : (row.scanned_barcode || row.barcode_id),
+        item_name: row.is_adhoc ? row.item_name : undefined,
         qty: row.qty,
         price: row.price,
         discount: paymentMode === "UNPAID" ? 0 : row.discount,
@@ -766,15 +791,33 @@ export default function App() {
       return;
     }
 
-    const recalled = (response.data.items || []).map((item: any) => ({
-      product_id: Number(item.product_id),
-      barcode_id: item.scanned_barcode || item.barcode_id || String(item.product_id),
-      scanned_barcode: item.scanned_barcode || item.barcode_id || String(item.product_id),
-      name: item.name || item.barcode_id || String(item.product_id),
-      qty: Number(item.qty),
-      price: Number(item.sold_at_price),
-      discount: Number(item.item_discount || 0),
-    }));
+    const recalled = (response.data.items || []).map((item: any) => {
+      const isAdhoc = item.product_id === null || item.product_id === 0;
+      if (isAdhoc) {
+        const tempId = adhocIdCounterRef.current;
+        adhocIdCounterRef.current -= 1;
+        return {
+          product_id: tempId,
+          barcode_id: "",
+          scanned_barcode: "",
+          name: item.item_name || item.name || "Custom Item",
+          qty: Number(item.qty),
+          price: Number(item.sold_at_price),
+          discount: Number(item.item_discount || 0),
+          is_adhoc: true,
+          item_name: item.item_name || item.name || "Custom Item",
+        };
+      }
+      return {
+        product_id: Number(item.product_id),
+        barcode_id: item.scanned_barcode || item.barcode_id || String(item.product_id),
+        scanned_barcode: item.scanned_barcode || item.barcode_id || String(item.product_id),
+        name: item.name || item.barcode_id || String(item.product_id),
+        qty: Number(item.qty),
+        price: Number(item.sold_at_price),
+        discount: Number(item.item_discount || 0),
+      };
+    });
 
     setCart(recalled);
     setSelectedHeldId(null);
@@ -1890,6 +1933,7 @@ export default function App() {
                       setSelectedCustomerId(null);
                     }}
                     onProcessSale={processCheckout}
+                    onAddAdhocItem={handleAddAdhocItem}
                   />
                 </>
               ) : null}
@@ -1999,7 +2043,7 @@ export default function App() {
                   onDeleteUser={deleteUserNow}
                   onFindProductByBarcode={async (barcode) => {
                     const result = await posApiClient.findVariantsByBarcode(barcode, 1);
-                    return result.data?.[0] ?? null;
+                    return result.ok ? (result.data[0] ?? null) : null;
                   }}
                 />
               ) : null}
@@ -2009,11 +2053,11 @@ export default function App() {
                   cashierId={user.id}
                   onSearchProducts={async (text, limit) => {
                     const result = await posApiClient.searchProducts(text, limit ?? 10);
-                    return result.data ?? [];
+                    return result.ok ? result.data : [];
                   }}
                   onResolveBarcodeVariants={async (barcode) => {
                     const result = await posApiClient.searchProducts(barcode, 5);
-                    return (result.data ?? []).filter((p: Product) => p.barcode_id === barcode);
+                    return result.ok ? result.data.filter((p: Product) => p.barcode_id === barcode) : [];
                   }}
                   onProcessReturn={async (payload) => posApiClient.processReturn(payload)}
                   onListReturns={async (limit) => posApiClient.listReturns(limit)}
