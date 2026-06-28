@@ -31,6 +31,7 @@ type BillingTabProps = {
   onCustomerSuggestionSelect: (customer: Customer) => void;
   onSearchProducts?: (searchText: string, limit?: number) => Promise<Product[]>;
   onHoldSale: () => void;
+  onClearCart: () => void;
   onProcessSale: (withPrint: boolean) => void;
 };
 
@@ -63,6 +64,7 @@ export function BillingTab({
   onCustomerSuggestionSelect,
   onSearchProducts,
   onHoldSale,
+  onClearCart,
   onProcessSale,
 }: BillingTabProps) {
   const { t } = useTranslation();
@@ -72,6 +74,7 @@ export function BillingTab({
   const [quickQty, setQuickQty] = useState("1");
   const [discountDrafts, setDiscountDrafts] = useState<Record<string, { percent: string; amount: string }>>({});
   const [isCheckoutConfirmOpen, setIsCheckoutConfirmOpen] = useState(false);
+  const [isClearCartConfirmOpen, setIsClearCartConfirmOpen] = useState(false);
   const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
   const [remoteNameSuggestions, setRemoteNameSuggestions] = useState<Product[] | null>(null);
   const [remoteMatchedById, setRemoteMatchedById] = useState<Product | null>(null);
@@ -584,8 +587,28 @@ export function BillingTab({
         </section>
 
         <aside className="rounded-2xl border border-border/80 bg-background/45 p-4 md:p-5">
-          <h3 className="m-0 text-lg font-semibold text-foreground">{t("billing.checkout")}</h3>
-          <p className="mt-1 text-sm text-muted-foreground">{t("billing.itemsInCart", { count: Number(itemCount.toFixed(2)) })}</p>
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <h3 className="m-0 text-lg font-semibold text-foreground">{t("billing.checkout")}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{t("billing.itemsInCart", { count: Number(itemCount.toFixed(2)) })}</p>
+            </div>
+            <button
+              type="button"
+              title={t("billing.clearCartTooltip")}
+              disabled={cart.length === 0}
+              onClick={() => setIsClearCartConfirmOpen(true)}
+              className="!bg-slate-700 !text-rose-100 hover:!bg-slate-600 focus-visible:!ring-rose-300/60 flex shrink-0 items-center gap-1.5 rounded-lg border border-rose-300/40 px-2.5 py-1.5 text-sm font-medium transition-colors disabled:!bg-slate-800 disabled:!text-slate-500 disabled:!border-slate-600 disabled:pointer-events-none"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                <path d="M10 11v6" />
+                <path d="M14 11v6" />
+                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+              </svg>
+              {t("billing.clearCart")}
+            </button>
+          </div>
 
           <div className="mt-4 space-y-3">
             <label className="m-0 text-sm font-medium text-foreground">
@@ -863,6 +886,31 @@ export function BillingTab({
               </button>
               <button type="button" className="!bg-emerald-500 !text-slate-900" onClick={() => confirmCheckout(true)}>
                 {t("billing.printAndCheckout")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {isClearCartConfirmOpen ? (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/70 p-4" role="dialog" aria-modal="true" aria-label={t("billing.clearCartConfirm")}>
+          <div className="w-full max-w-sm rounded-2xl border border-border/80 bg-card p-5 shadow-panel">
+            <h4 className="m-0 text-lg font-semibold text-foreground">{t("billing.clearCartConfirm")}</h4>
+            <p className="mt-2 text-sm text-muted-foreground">{t("billing.clearCartMessage", { count: cart.length })}</p>
+            <p className="mt-1 text-xs text-muted-foreground/70">{t("billing.clearCartUndo")}</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" className="!bg-slate-600 !text-white" onClick={() => setIsClearCartConfirmOpen(false)}>
+                {t("billing.cancel")}
+              </button>
+              <button
+                type="button"
+                className="!bg-red-600 !text-white hover:!bg-red-500"
+                onClick={() => {
+                  onClearCart();
+                  setIsClearCartConfirmOpen(false);
+                }}
+              >
+                {t("billing.clearCart")}
               </button>
             </div>
           </div>

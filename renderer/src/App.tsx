@@ -1890,6 +1890,12 @@ export default function App() {
                     onSearchProducts={searchProductsForLookup}
                     onResolveBarcodeVariants={findVariantsByBarcodeForLookup}
                     onHoldSale={holdCurrentBill}
+                    onClearCart={() => {
+                      clearCart();
+                      setCustomerName("");
+                      setCustomerContact("");
+                      setSelectedCustomerId(null);
+                    }}
                     onProcessSale={processCheckout}
                   />
                 </>

@@ -197,7 +197,12 @@
     "cancel": "Cancel",
     "confirmCheckout": "Confirm Checkout",
     "printAndCheckout": "Print & Checkout",
-    "checkoutWithoutPrint": "Checkout Without Print"
+    "checkoutWithoutPrint": "Checkout Without Print",
+    "clearCart": "Clear Cart",
+    "clearCartConfirm": "Clear Cart?",
+    "clearCartMessage": "This will remove all {{count}} items from the cart.",
+    "clearCartUndo": "This action cannot be undone.",
+    "clearCartTooltip": "Clear all items from cart"
   },
   "customers": {
     "title": "Customer Ledger",

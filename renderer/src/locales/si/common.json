@@ -197,7 +197,12 @@
     "cancel": "අවලංගු කරන්න",
     "confirmCheckout": "Checkout තහවුරු කරන්න",
     "printAndCheckout": "මුද්‍රණය සමග Checkout",
-    "checkoutWithoutPrint": "මුද්‍රණය නැතිව Checkout"
+    "checkoutWithoutPrint": "මුද්‍රණය නැතිව Checkout",
+    "clearCart": "කරත්තය හිස් කරන්න",
+    "clearCartConfirm": "කරත්තය හිස් කරන්නද?",
+    "clearCartMessage": "මෙය කරත්තයේ ඇති සියලු {{count}} අයිතම ඉවත් කරනු ඇත.",
+    "clearCartUndo": "මෙම ක්‍රියාව අවලංගු කළ නොහැක.",
+    "clearCartTooltip": "කරත්තයේ සියලු අයිතම ඉවත් කරන්න"
   },
   "customers": {
     "title": "පාරිභෝගික ලෙජරය",
