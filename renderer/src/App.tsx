@@ -539,6 +539,19 @@ export default function App() {
     );
   }
 
+  function setCartQty(productId: number, qty: number) {
+    const rounded = Number(qty.toFixed(2));
+    if (rounded <= 0) {
+      removeFromCart(productId);
+      return;
+    }
+    setCart((prev) =>
+      prev.map((row) =>
+        row.product_id === productId ? { ...row, qty: rounded } : row,
+      ),
+    );
+  }
+
   function removeFromCart(productId: number) {
     setCart((prev) => prev.filter((row) => row.product_id !== productId));
   }
@@ -1912,6 +1925,7 @@ export default function App() {
                     onQuickAddProduct={addProductToCartById}
                     onUpdateCartDiscount={updateCartDiscount}
                     onAdjustCartQty={adjustCartQty}
+                    onSetCartQty={setCartQty}
                     onRemoveFromCart={removeFromCart}
                     onPaymentModeChange={setPaymentMode}
                     onPaymentMethodChange={setPaymentMethod}

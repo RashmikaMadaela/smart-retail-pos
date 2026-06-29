@@ -21,6 +21,7 @@ type BillingTabProps = {
   onResolveBarcodeVariants?: (barcode: string) => Promise<Product[]>;
   onUpdateCartDiscount: (productId: number, mode: "percent" | "amount", value: string) => void;
   onAdjustCartQty: (productId: number, delta: number) => void;
+  onSetCartQty: (productId: number, qty: number) => void;
   onRemoveFromCart: (productId: number) => void;
   onPaymentModeChange: (value: "PAID" | "PARTIAL" | "UNPAID") => void;
   onPaymentMethodChange: (value: "CASH" | "CARD") => void;
@@ -55,6 +56,7 @@ export function BillingTab({
   onResolveBarcodeVariants,
   onUpdateCartDiscount,
   onAdjustCartQty,
+  onSetCartQty,
   onRemoveFromCart,
   onPaymentModeChange,
   onPaymentMethodChange,
@@ -650,7 +652,29 @@ export function BillingTab({
                             <button type="button" className="!px-2 !py-1" onClick={() => onAdjustCartQty(item.product_id, -1)}>
                               -
                             </button>
-                            <span className="inline-block min-w-12 text-center">{item.qty.toFixed(2)}</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              key={item.qty}
+                              className="h-8 w-16 min-w-[64px] rounded-md border border-input bg-transparent px-2 text-center text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                              defaultValue={item.qty}
+                              onFocus={(e) => e.target.select()}
+                              onBlur={(e) => {
+                                const parsed = parseFloat(e.target.value);
+                                if (!Number.isFinite(parsed) || parsed <= 0) {
+                                  onRemoveFromCart(item.product_id);
+                                } else {
+                                  onSetCartQty(item.product_id, parsed);
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.currentTarget.blur();
+                                  scannerRef.current?.focus();
+                                }
+                              }}
+                            />
                             <button type="button" className="!px-2 !py-1" onClick={() => onAdjustCartQty(item.product_id, 1)}>
                               +
                             </button>
