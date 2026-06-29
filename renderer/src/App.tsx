@@ -1,4 +1,4 @@
-import { CSSProperties, FormEvent, Suspense, lazy, useEffect, useMemo, useState } from "react";
+import { CSSProperties, FormEvent, Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { BarChart3, Boxes, HandCoins, LayoutDashboard, LogOut, PauseCircle, ReceiptText, RefreshCw, RotateCcw, Truck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { LoginView } from "./features/LoginView";
@@ -112,13 +112,12 @@ export default function App() {
     qty_received: "",
     unit_cost: "",
     line_discount_pct: "0",
+    line_discount_amt: "0",
     create_new_item: false,
     new_item_name: "",
     new_item_sell_price: "",
     new_item_buy_price: "",
     new_item_default_discount_pct: "0",
-    new_item_card_surcharge_enabled: false,
-    new_item_card_surcharge_pct: "0",
   });
   const [selectedSupplierBatchId, setSelectedSupplierBatchId] = useState<number | null>(null);
   const [supplierPayAmount, setSupplierPayAmount] = useState("");
@@ -448,6 +447,29 @@ export default function App() {
     });
   }
 
+  // Decrementing negative counter for ad-hoc cart items.
+  // Negative IDs guarantee no collision with real product IDs.
+  const adhocIdCounterRef = useRef(-1);
+
+  function handleAddAdhocItem(name: string, qty: number, price: number, discount: number) {
+    const tempId = adhocIdCounterRef.current;
+    adhocIdCounterRef.current -= 1;
+    setCart((prev) => [
+      ...prev,
+      {
+        product_id: tempId,
+        barcode_id: "",
+        name,
+        qty,
+        price,
+        discount,
+        is_adhoc: true,
+        item_name: name,
+      },
+    ]);
+    pushMessage(`Custom item "${name}" added to cart.`);
+  }
+
   async function addProductToCartById(productId: string, qtyValue: number, resolvedProductId?: number) {
     const normalizedId = productId.trim();
     if (!normalizedId) {
@@ -514,6 +536,19 @@ export default function App() {
         }
         return [{ ...row, qty: nextQty }];
       }),
+    );
+  }
+
+  function setCartQty(productId: number, qty: number) {
+    const rounded = Number(qty.toFixed(2));
+    if (rounded <= 0) {
+      removeFromCart(productId);
+      return;
+    }
+    setCart((prev) =>
+      prev.map((row) =>
+        row.product_id === productId ? { ...row, qty: rounded } : row,
+      ),
     );
   }
 
@@ -674,8 +709,9 @@ export default function App() {
       cashier_id: user.id,
       customer_id: customerId,
       cart_items: cart.map((row) => ({
-        product_id: row.product_id,
-        scanned_barcode: row.scanned_barcode || row.barcode_id,
+        product_id: row.is_adhoc ? 0 : row.product_id,
+        scanned_barcode: row.is_adhoc ? "" : (row.scanned_barcode || row.barcode_id),
+        item_name: row.is_adhoc ? row.item_name : undefined,
         qty: row.qty,
         price: row.price,
         discount: paymentMode === "UNPAID" ? 0 : row.discount,
@@ -733,8 +769,9 @@ export default function App() {
     const payload = {
       cashier_id: user.id,
       cart_items: cart.map((row) => ({
-        product_id: row.product_id,
-        scanned_barcode: row.scanned_barcode || row.barcode_id,
+        product_id: row.is_adhoc ? 0 : row.product_id,
+        scanned_barcode: row.is_adhoc ? "" : (row.scanned_barcode || row.barcode_id),
+        item_name: row.is_adhoc ? row.item_name : undefined,
         qty: row.qty,
         price: row.price,
         discount: paymentMode === "UNPAID" ? 0 : row.discount,
@@ -767,15 +804,33 @@ export default function App() {
       return;
     }
 
-    const recalled = (response.data.items || []).map((item: any) => ({
-      product_id: Number(item.product_id),
-      barcode_id: item.scanned_barcode || item.barcode_id || String(item.product_id),
-      scanned_barcode: item.scanned_barcode || item.barcode_id || String(item.product_id),
-      name: item.name || item.barcode_id || String(item.product_id),
-      qty: Number(item.qty),
-      price: Number(item.sold_at_price),
-      discount: Number(item.item_discount || 0),
-    }));
+    const recalled = (response.data.items || []).map((item: any) => {
+      const isAdhoc = item.product_id === null || item.product_id === 0;
+      if (isAdhoc) {
+        const tempId = adhocIdCounterRef.current;
+        adhocIdCounterRef.current -= 1;
+        return {
+          product_id: tempId,
+          barcode_id: "",
+          scanned_barcode: "",
+          name: item.item_name || item.name || "Custom Item",
+          qty: Number(item.qty),
+          price: Number(item.sold_at_price),
+          discount: Number(item.item_discount || 0),
+          is_adhoc: true,
+          item_name: item.item_name || item.name || "Custom Item",
+        };
+      }
+      return {
+        product_id: Number(item.product_id),
+        barcode_id: item.scanned_barcode || item.barcode_id || String(item.product_id),
+        scanned_barcode: item.scanned_barcode || item.barcode_id || String(item.product_id),
+        name: item.name || item.barcode_id || String(item.product_id),
+        qty: Number(item.qty),
+        price: Number(item.sold_at_price),
+        discount: Number(item.item_discount || 0),
+      };
+    });
 
     setCart(recalled);
     setSelectedHeldId(null);
@@ -983,7 +1038,12 @@ export default function App() {
       ? products.find((product) => product.barcode_id.trim().toLowerCase() === normalizedProductId.toLowerCase())
       : null;
 
-    const createNewItem = !matchedProduct || batchLineDraft.resolution_mode === "create-variant";
+    const incomingSell = Number(batchLineDraft.new_item_sell_price || (matchedProduct ? String(matchedProduct.sell_price || 0) : "0"));
+    const existingSell = Number(matchedProduct?.sell_price || 0);
+    const hasPriceMismatch = matchedProduct
+      ? Number.isFinite(incomingSell) && Number.isFinite(existingSell) && Math.abs(incomingSell - existingSell) >= 0.01
+      : false;
+    const createNewItem = !matchedProduct || ((batchLineDraft.resolution_mode === "create-variant" || Boolean(batchLineDraft.create_new_item)) && hasPriceMismatch);
     if (!createNewItem && !normalizedProductId) {
       pushError("Batch line product id is required.");
       return;
@@ -995,12 +1055,6 @@ export default function App() {
     const defaultDiscount = Number(
       batchLineDraft.new_item_default_discount_pct ||
         (matchedProduct ? String(matchedProduct.default_discount_pct || 0) : batchLineDraft.line_discount_pct || "0"),
-    );
-    const surchargePct = Number(
-      batchLineDraft.new_item_card_surcharge_pct ||
-        (matchedProduct && Number(matchedProduct.card_surcharge_enabled || 0) > 0
-          ? String(matchedProduct.card_surcharge_pct || 0)
-          : "0"),
     );
     if (!Number.isFinite(qty) || qty <= 0 || !Number.isFinite(cost) || cost < 0 || !Number.isFinite(disc) || disc < 0) {
       pushError("Batch line values are invalid.");
@@ -1014,17 +1068,12 @@ export default function App() {
       pushError("Default discount % must be between 0 and 100.");
       return;
     }
-    if (!Number.isFinite(surchargePct) || surchargePct < 0 || surchargePct > 100) {
-      pushError("Card surcharge % must be between 0 and 100.");
-      return;
-    }
 
     if (createNewItem) {
       const name = (batchLineDraft.new_item_name || "").trim();
       const sellPrice = Number(batchLineDraft.new_item_sell_price || "0");
       const buyPrice = Number(batchLineDraft.new_item_buy_price || batchLineDraft.unit_cost || "0");
       const defaultDiscount = Number(batchLineDraft.new_item_default_discount_pct || "0");
-      const surchargePct = Number(batchLineDraft.new_item_card_surcharge_pct || "0");
 
       if (!name) {
         pushError("New item name is required.");
@@ -1036,10 +1085,6 @@ export default function App() {
       }
       if (!Number.isFinite(defaultDiscount) || defaultDiscount < 0 || defaultDiscount > 100) {
         pushError("Default discount % must be between 0 and 100.");
-        return;
-      }
-      if (!Number.isFinite(surchargePct) || surchargePct < 0 || surchargePct > 100) {
-        pushError("Card surcharge % must be between 0 and 100.");
         return;
       }
     }
@@ -1057,8 +1102,6 @@ export default function App() {
         new_item_buy_price: String(Number(batchLineDraft.new_item_buy_price || batchLineDraft.unit_cost || "0")),
         new_item_sell_price: String(sellPrice),
         new_item_default_discount_pct: String(defaultDiscount),
-        new_item_card_surcharge_enabled: surchargePct > 0,
-        new_item_card_surcharge_pct: String(surchargePct),
       },
     ]);
     setBatchLineDraft({
@@ -1066,15 +1109,27 @@ export default function App() {
       qty_received: "",
       unit_cost: "",
       line_discount_pct: "0",
+      line_discount_amt: "0",
       create_new_item: false,
       new_item_name: "",
       new_item_sell_price: "",
       new_item_buy_price: "",
       new_item_default_discount_pct: "0",
-      new_item_card_surcharge_enabled: false,
-      new_item_card_surcharge_pct: "0",
     });
     pushMessage("Batch line added.");
+  }
+
+  function clearSupplierBatchLines() {
+    if (batchLines.length === 0) {
+      return;
+    }
+    setBatchLines([]);
+    pushMessage("Batch lines cleared.");
+  }
+
+  function removeSupplierBatchLine(index: number) {
+    setBatchLines((prev) => prev.filter((_, idx) => idx !== index));
+    pushMessage("Batch line removed.");
   }
 
   async function receiveSupplierBatchNow() {
@@ -1100,8 +1155,6 @@ export default function App() {
       items: batchLines.map((line) => {
         const sellPrice = Number(line.new_item_sell_price || "0");
         const defaultDiscountPct = Number(line.new_item_default_discount_pct || line.line_discount_pct || "0");
-        const surchargePct = Number(line.new_item_card_surcharge_pct || "0");
-        const surchargeEnabled = Boolean(line.new_item_card_surcharge_enabled) || surchargePct > 0;
 
         return {
           product_id: Number(line.matched_product_id || 0) || undefined,
@@ -1117,8 +1170,6 @@ export default function App() {
                 buy_price: Number(line.new_item_buy_price || line.unit_cost || "0"),
                 sell_price: sellPrice,
                 default_discount_pct: defaultDiscountPct,
-                card_surcharge_enabled: surchargeEnabled,
-                card_surcharge_pct: surchargePct,
                 min_stock: 0,
               }
             : undefined,
@@ -1128,8 +1179,6 @@ export default function App() {
                 product_id: Number(line.matched_product_id || 0) || undefined,
                 sell_price: sellPrice,
                 default_discount_pct: defaultDiscountPct,
-                card_surcharge_enabled: surchargeEnabled,
-                card_surcharge_pct: surchargePct,
               },
         };
       }),
@@ -1876,6 +1925,7 @@ export default function App() {
                     onQuickAddProduct={addProductToCartById}
                     onUpdateCartDiscount={updateCartDiscount}
                     onAdjustCartQty={adjustCartQty}
+                    onSetCartQty={setCartQty}
                     onRemoveFromCart={removeFromCart}
                     onPaymentModeChange={setPaymentMode}
                     onPaymentMethodChange={setPaymentMethod}
@@ -1890,7 +1940,14 @@ export default function App() {
                     onSearchProducts={searchProductsForLookup}
                     onResolveBarcodeVariants={findVariantsByBarcodeForLookup}
                     onHoldSale={holdCurrentBill}
+                    onClearCart={() => {
+                      clearCart();
+                      setCustomerName("");
+                      setCustomerContact("");
+                      setSelectedCustomerId(null);
+                    }}
                     onProcessSale={processCheckout}
+                    onAddAdhocItem={handleAddAdhocItem}
                   />
                 </>
               ) : null}
@@ -1975,6 +2032,8 @@ export default function App() {
                   onBatchPaidChange={setBatchPaid}
                   onBatchLineDraftChange={setBatchLineDraft}
                   onAddBatchLine={addSupplierBatchLine}
+                  onClearBatchLines={clearSupplierBatchLines}
+                  onRemoveBatchLine={removeSupplierBatchLine}
                   onReceiveSupplierBatch={receiveSupplierBatchNow}
                   onSelectSupplierBatch={setSelectedSupplierBatchId}
                   onSupplierPayAmountChange={setSupplierPayAmount}
@@ -1998,7 +2057,7 @@ export default function App() {
                   onDeleteUser={deleteUserNow}
                   onFindProductByBarcode={async (barcode) => {
                     const result = await posApiClient.findVariantsByBarcode(barcode, 1);
-                    return result.data?.[0] ?? null;
+                    return result.ok ? (result.data[0] ?? null) : null;
                   }}
                 />
               ) : null}
@@ -2008,11 +2067,11 @@ export default function App() {
                   cashierId={user.id}
                   onSearchProducts={async (text, limit) => {
                     const result = await posApiClient.searchProducts(text, limit ?? 10);
-                    return result.data ?? [];
+                    return result.ok ? result.data : [];
                   }}
                   onResolveBarcodeVariants={async (barcode) => {
                     const result = await posApiClient.searchProducts(barcode, 5);
-                    return (result.data ?? []).filter((p: Product) => p.barcode_id === barcode);
+                    return result.ok ? result.data.filter((p: Product) => p.barcode_id === barcode) : [];
                   }}
                   onProcessReturn={async (payload) => posApiClient.processReturn(payload)}
                   onListReturns={async (limit) => posApiClient.listReturns(limit)}

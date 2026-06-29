@@ -605,8 +605,8 @@ export function receiveSupplierBatch(
         const newStock = Number((oldStock + receiptQty).toFixed(6));
         const weightedBuyPrice =
           newStock <= 0
-            ? Number(item.effective_unit_cost || 0)
-            : Number((((oldStock * oldBuyPrice) + (receiptQty * Number(item.effective_unit_cost || 0))) / newStock).toFixed(6));
+            ? Number(item.unit_cost || 0)
+            : Number((((oldStock * oldBuyPrice) + (receiptQty * Number(item.unit_cost || 0))) / newStock).toFixed(6));
 
         let nextSellPrice = Number(product.sell_price || 0);
         let nextDefaultDiscountPct = Number(product.default_discount_pct || 0);

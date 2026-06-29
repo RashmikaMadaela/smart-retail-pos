@@ -47,6 +47,10 @@ export type CartItem = {
   price: number;
   discount: number;
   scanned_barcode?: string;
+  /** True when this is an ad-hoc/custom item not in inventory. */
+  is_adhoc?: boolean;
+  /** The cashier-entered label for ad-hoc items. */
+  item_name?: string;
 };
 
 export type HeldSale = {
@@ -127,14 +131,13 @@ export type BatchLineDraft = {
   qty_received: string;
   unit_cost: string;
   line_discount_pct: string;
+  line_discount_amt?: string;
   resolution_mode?: "update-existing" | "create-variant";
   create_new_item?: boolean;
   new_item_name?: string;
   new_item_sell_price?: string;
   new_item_buy_price?: string;
   new_item_default_discount_pct?: string;
-  new_item_card_surcharge_enabled?: boolean;
-  new_item_card_surcharge_pct?: string;
 };
 
 export type ActiveTab = "dashboard" | "billing" | "inventory" | "held" | "customers" | "suppliers" | "operations" | "returns";

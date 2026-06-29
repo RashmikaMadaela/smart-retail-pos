@@ -375,6 +375,14 @@ describe("ledger parity", () => {
       return;
     }
 
+    const dbProduct = new Database(dbPath, { fileMustExist: true });
+    const productAfterReceipt = dbProduct
+      .prepare("SELECT buy_price FROM products WHERE barcode_id = 'P100'")
+      .get() as any;
+    dbProduct.close();
+    // Supplier discounts affect payable line total, not persisted inventory buy price.
+    expect(Number(productAfterReceipt.buy_price.toFixed(4))).toBe(Number((((20 * 80) + (10 * 20)) / 30).toFixed(4)));
+
     const pay = recordSupplierPayment(supplierId, Number(batch.data), 30, "BANK", "settle");
     expect(pay.ok).toBe(true);
 

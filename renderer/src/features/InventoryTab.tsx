@@ -56,7 +56,7 @@ export function InventoryTab({
   const [newBuyPrice, setNewBuyPrice] = useState("");
   const [newSellPrice, setNewSellPrice] = useState("");
   const [newDiscPct, setNewDiscPct] = useState("");
-  const [newCardSurchargePct, setNewCardSurchargePct] = useState("");
+  const [newDiscAmt, setNewDiscAmt] = useState("");
   const [barcodeMatched, setBarcodeMatched] = useState(false);
   const [removeBarcode, setRemoveBarcode] = useState("");
   const [removeName, setRemoveName] = useState("");
@@ -141,9 +141,10 @@ export function InventoryTab({
     setNewQty(String(Number(match.stock || 0)));
     setNewBuyPrice(String(Number(match.buy_price || 0)));
     setNewSellPrice(String(Number(match.sell_price || 0)));
-    setNewDiscPct(String(Number(match.default_discount_pct || 0)));
-    const surchargePct = Number(match.card_surcharge_enabled || 0) > 0 ? Number(match.card_surcharge_pct || 0) : 0;
-    setNewCardSurchargePct(String(surchargePct));
+    const pct = Number(match.default_discount_pct || 0);
+    setNewDiscPct(String(pct));
+    const amt = Number(((Number(match.sell_price || 0) * pct) / 100).toFixed(2));
+    setNewDiscAmt(String(amt));
   }, [newBarcode, products, remoteBarcodeMatchedProduct]);
 
   useEffect(() => {
@@ -209,7 +210,7 @@ export function InventoryTab({
     setNewBuyPrice("");
     setNewSellPrice("");
     setNewDiscPct("");
-    setNewCardSurchargePct("");
+    setNewDiscAmt("");
     setBarcodeMatched(false);
     setInventoryVariantModalState(null);
     setInventoryVariantIndex(0);
@@ -224,7 +225,6 @@ export function InventoryTab({
       buy_price: Number(newBuyPrice || "0"),
       sell_price: Number(newSellPrice || "0"),
       default_discount_pct: Number(newDiscPct || "0"),
-      card_surcharge_pct: Number(newCardSurchargePct || "0"),
     };
 
     const normalizedBarcode = (payload.barcode_id || "").trim().toLowerCase();
@@ -499,18 +499,38 @@ export function InventoryTab({
           </label>
           <label className="m-0 block text-sm font-medium text-foreground">
             {t("inventory.discPct")}
-            <input className="no-spinner" type="number" min="0" max="100" step="0.01" value={newDiscPct} onChange={(event) => setNewDiscPct(event.target.value)} />
-          </label>
-          <label className="m-0 block text-sm font-medium text-foreground">
-            {t("inventory.cardSurcharge")}
             <input
               className="no-spinner"
               type="number"
               min="0"
               max="100"
               step="0.01"
-              value={newCardSurchargePct}
-              onChange={(event) => setNewCardSurchargePct(event.target.value)}
+              value={newDiscPct}
+              onChange={(event) => {
+                const pct = event.target.value;
+                setNewDiscPct(pct);
+                const price = Number(newSellPrice || 0);
+                const amt = price > 0 ? Number(((price * Number(pct || 0)) / 100).toFixed(2)) : 0;
+                setNewDiscAmt(String(amt));
+              }}
+            />
+          </label>
+          <label className="m-0 block text-sm font-medium text-foreground">
+            {t("inventory.discAmt")}
+            <input
+              className="no-spinner"
+              type="number"
+              min="0"
+              step="0.01"
+              value={newDiscAmt}
+              disabled={!newSellPrice || Number(newSellPrice) === 0}
+              onChange={(event) => {
+                const amt = event.target.value;
+                setNewDiscAmt(amt);
+                const price = Number(newSellPrice || 0);
+                const pct = price > 0 ? Number(((Number(amt || 0) / price) * 100).toFixed(2)) : 0;
+                setNewDiscPct(String(pct));
+              }}
             />
           </label>
           <button type="button" onClick={() => void addProductRow()}>
@@ -781,7 +801,7 @@ export function InventoryTab({
               <th>{t("inventory.buyPrice")}</th>
               <th>{t("inventory.sellPrice")}</th>
               <th>{t("inventory.discPct")}</th>
-              <th>{t("inventory.cardSurcharge")}</th>
+              <th>{t("inventory.discAmt")}</th>
               <th>{t("inventory.status")}</th>
             </tr>
           </thead>
@@ -796,7 +816,7 @@ export function InventoryTab({
               filtered.map((product) => {
                 const stockValue = Number(product.stock);
                 const status = stockValue <= 0 ? t("inventory.statusOut") : stockValue <= 5 ? t("inventory.statusLow") : t("inventory.statusHealthy");
-                const surcharge = Number(product.card_surcharge_enabled || 0) > 0 ? Number(product.card_surcharge_pct || 0).toFixed(2) : "0.00";
+                const discAmt = Number(((Number(product.sell_price || 0) * Number(product.default_discount_pct || 0)) / 100).toFixed(2));
                 return (
                   <tr key={`${product.barcode_id}-${product.id}`}>
                     <td>{product.barcode_id}</td>
@@ -805,7 +825,7 @@ export function InventoryTab({
                     <td>{Number(product.buy_price || 0).toFixed(2)}</td>
                     <td>{Number(product.sell_price).toFixed(2)}</td>
                     <td>{Number(product.default_discount_pct || 0).toFixed(2)}</td>
-                    <td>{surcharge}</td>
+                    <td>{discAmt.toFixed(2)}</td>
                     <td>{status}</td>
                   </tr>
                 );

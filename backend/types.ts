@@ -35,6 +35,8 @@ export type PeriodBreakdown = {
 export type CartItem = {
   product_id: number;
   scanned_barcode?: string;
+  /** Display name for ad-hoc items (product_id === 0). Not used for inventory items. */
+  item_name?: string;
   qty: number;
   price: number;
   discount: number;
@@ -55,10 +57,11 @@ export type HeldSaleRow = {
 };
 
 export type SaleItemRow = {
-  product_id: number;
+  product_id: number | null;
   scanned_barcode: string;
   barcode_id: string | null;
   name: string | null;
+  item_name: string | null;
   qty: number;
   sold_at_price: number;
   item_discount: number;

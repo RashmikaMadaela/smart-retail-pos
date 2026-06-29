@@ -30,6 +30,7 @@ describe("BillingTab", () => {
         onQuickAddProduct={onQuickAddProduct}
         onUpdateCartDiscount={vi.fn()}
         onAdjustCartQty={onAdjustCartQty}
+        onSetCartQty={vi.fn()}
         onRemoveFromCart={onRemoveFromCart}
         onPaymentModeChange={vi.fn()}
         onPaymentMethodChange={vi.fn()}
@@ -39,6 +40,8 @@ describe("BillingTab", () => {
         customerSuggestions={[]}
         onCustomerSuggestionSelect={vi.fn()}
         onHoldSale={vi.fn()}
+        onClearCart={vi.fn()}
+        onAddAdhocItem={vi.fn()}
         onProcessSale={onProcessSale}
       />,
     );
@@ -81,6 +84,7 @@ describe("BillingTab", () => {
         onQuickAddProduct={onQuickAddProduct}
         onUpdateCartDiscount={vi.fn()}
         onAdjustCartQty={vi.fn()}
+        onSetCartQty={vi.fn()}
         onRemoveFromCart={vi.fn()}
         onPaymentModeChange={vi.fn()}
         onPaymentMethodChange={vi.fn()}
@@ -90,6 +94,8 @@ describe("BillingTab", () => {
         customerSuggestions={[]}
         onCustomerSuggestionSelect={vi.fn()}
         onHoldSale={vi.fn()}
+        onClearCart={vi.fn()}
+        onAddAdhocItem={vi.fn()}
         onProcessSale={vi.fn()}
       />,
     );
@@ -126,6 +132,7 @@ describe("BillingTab", () => {
         onQuickAddProduct={vi.fn()}
         onUpdateCartDiscount={onUpdateCartDiscount}
         onAdjustCartQty={vi.fn()}
+        onSetCartQty={vi.fn()}
         onRemoveFromCart={vi.fn()}
         onPaymentModeChange={vi.fn()}
         onPaymentMethodChange={vi.fn()}
@@ -135,6 +142,8 @@ describe("BillingTab", () => {
         customerSuggestions={[]}
         onCustomerSuggestionSelect={vi.fn()}
         onHoldSale={vi.fn()}
+        onClearCart={vi.fn()}
+        onAddAdhocItem={vi.fn()}
         onProcessSale={vi.fn()}
       />,
     );
@@ -174,6 +183,7 @@ describe("BillingTab", () => {
         onQuickAddProduct={onQuickAddProduct}
         onUpdateCartDiscount={vi.fn()}
         onAdjustCartQty={vi.fn()}
+        onSetCartQty={vi.fn()}
         onRemoveFromCart={vi.fn()}
         onPaymentModeChange={vi.fn()}
         onPaymentMethodChange={vi.fn()}
@@ -183,6 +193,8 @@ describe("BillingTab", () => {
         customerSuggestions={[]}
         onCustomerSuggestionSelect={vi.fn()}
         onHoldSale={vi.fn()}
+        onClearCart={vi.fn()}
+        onAddAdhocItem={vi.fn()}
         onProcessSale={vi.fn()}
       />,
     );
@@ -217,6 +229,7 @@ describe("BillingTab", () => {
         onQuickAddProduct={onQuickAddProduct}
         onUpdateCartDiscount={vi.fn()}
         onAdjustCartQty={vi.fn()}
+        onSetCartQty={vi.fn()}
         onRemoveFromCart={vi.fn()}
         onPaymentModeChange={vi.fn()}
         onPaymentMethodChange={vi.fn()}
@@ -226,6 +239,8 @@ describe("BillingTab", () => {
         customerSuggestions={[]}
         onCustomerSuggestionSelect={vi.fn()}
         onHoldSale={vi.fn()}
+        onClearCart={vi.fn()}
+        onAddAdhocItem={vi.fn()}
         onProcessSale={vi.fn()}
       />,
     );
