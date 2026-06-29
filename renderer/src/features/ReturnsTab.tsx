@@ -62,12 +62,14 @@ export function ReturnsTab({ cashierId, onSearchProducts, onResolveBarcodeVarian
       if (existing) {
         return prev.map((item) => item.product_id === product.id ? { ...item, qty: item.qty + 1 } : item);
       }
+      const discountPct = Number(product.default_discount_pct || 0);
+      const unitDiscount = Number((Number(product.sell_price) * (discountPct / 100)).toFixed(2));
       return [...prev, {
         product_id: product.id,
         barcode_id: product.barcode_id,
         name: product.name,
         qty: 1,
-        return_price: product.sell_price,
+        return_price: Number((Number(product.sell_price) - unitDiscount).toFixed(2)),
       }];
     });
     setScannerInput("");
